@@ -145,7 +145,8 @@ static void parse_commandline(FAR struct pwm_state_s *pwm_state, int argc,
       switch (ch)
         {
           case 'p':
-            strlcpy(pwm_state->devpath, optarg, sizeof(pwm_state->devpath));
+            strncpy(pwm_state->devpath, optarg, sizeof(pwm_state->devpath));
+            pwm_state->devpath[sizeof(pwm_state->devpath) - 1] = '\0';
             break;
           case 'd':
             OPTARG_TO_VALUE(converted, uint8_t, 10);

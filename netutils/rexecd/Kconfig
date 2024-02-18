@@ -8,7 +8,6 @@ config NETUTILS_REXECD
 	default n
 	---help---
 		Enable support for the Remote Execution server.
-		Warning: rexec transmits passwords in cleartext, unencrypted.
 
 if NETUTILS_REXECD
 

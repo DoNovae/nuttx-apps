@@ -20,11 +20,11 @@
 
 include $(APPDIR)/Make.defs
 
-# WGETJSON Example
+# Hello, World! Example
 
 MAINSRC = wgetjson_main.c
 
-# WGETJSON built-in application info
+# Buttons built-in application info
 
 PROGNAME = wgetjson
 PRIORITY = SCHED_PRIORITY_DEFAULT

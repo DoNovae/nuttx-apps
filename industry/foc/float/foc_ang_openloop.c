@@ -259,11 +259,9 @@ static int foc_angle_ol_run_f32(FAR foc_angle_f32_t *h,
   DEBUGASSERT(h->data);
   ol = h->data;
 
-  /* Update open-loop.
-   * NOTE: we don't use dir argument here, instead we use signed velocity.
-   */
+  /* Update open-loop */
 
-  motor_openloop(&ol->data, in->vel, 1.0f);
+  motor_openloop(&ol->data, in->vel, in->dir);
 
   /* Get open-loop angle */
 

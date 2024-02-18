@@ -332,7 +332,7 @@ static int chat_internalise(FAR struct chat *priv,
 
       if (rhs)
         {
-          len = strlen(tok->string) + 1;
+          len = strlen(tok->string);
           if (!tok->no_termin)
             {
               /* Add space for the line terminator */
@@ -340,13 +340,13 @@ static int chat_internalise(FAR struct chat *priv,
               len += 2;
             }
 
-          line->rhs = malloc(len);
+          line->rhs = malloc(len + 1);
           if (line->rhs)
             {
               /* Copy the token and add the line terminator as appropriate */
 
-              snprintf(line->rhs, len,
-                       tok->no_termin ? "%s" : "%s\r\n", tok->string);
+              sprintf(line->rhs, tok->no_termin ? "%s" : "%s\r\n",
+                      tok->string);
             }
           else
             {

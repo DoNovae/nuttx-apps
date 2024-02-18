@@ -52,7 +52,6 @@ static inline void fill_buffer(unsigned char *buf, int offset)
         {
           j = 1;
         }
-
       buf[j] = ch;
     }
 }
@@ -89,14 +88,15 @@ int main(int argc, FAR char *argv[])
 
       /* Set up the server address */
 
-      addrlen = sizeof(CONFIG_EXAMPLES_UDGRAM_ADDR);
-      if (addrlen > UNIX_PATH_MAX)
+      addrlen = strlen(CONFIG_EXAMPLES_UDGRAM_ADDR);
+      if (addrlen > UNIX_PATH_MAX - 1)
         {
-          addrlen = UNIX_PATH_MAX;
+          addrlen = UNIX_PATH_MAX - 1;
         }
 
       server.sun_family = AF_LOCAL;
-      strlcpy(server.sun_path, CONFIG_EXAMPLES_UDGRAM_ADDR, addrlen);
+      strncpy(server.sun_path, CONFIG_EXAMPLES_UDGRAM_ADDR, addrlen);
+      server.sun_path[addrlen] = '\0';
 
       addrlen += sizeof(sa_family_t) + 1;
 

@@ -364,8 +364,8 @@ static int nxscope_put_vector(FAR uint8_t *buff, uint8_t type, FAR void *val,
 
           DEBUGASSERT(val);
 
-          strlcpy((FAR char *)buff, (FAR const char *)val, d);
-          j += strlen((FAR char *)buff);
+          strncpy((FAR char *)buff, (FAR const char *)val, d);
+          j += strnlen((FAR char *)buff, d);
           memset(&buff[j], '\0', d - j);
           j = d;
 
@@ -457,9 +457,7 @@ static int nxscope_put_common_m(FAR struct nxscope_s *s, uint8_t type,
 
   DEBUGASSERT(s);
 
-#ifndef CONFIG_LOGGING_NXSCOPE_DISABLE_PUTLOCK
   nxscope_lock(s);
-#endif
 
   /* Validate data */
 
@@ -508,9 +506,7 @@ static int nxscope_put_common_m(FAR struct nxscope_s *s, uint8_t type,
 #endif
 
 errout:
-#ifndef CONFIG_LOGGING_NXSCOPE_DISABLE_PUTLOCK
   nxscope_unlock(s);
-#endif
 
   return ret;
 }

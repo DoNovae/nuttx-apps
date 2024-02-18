@@ -310,25 +310,18 @@ errout:
  *   Get FOC handler state (float32)
  *
  * Input Parameter:
- *   h         - pointer to FOC handler
- *   state     - pointer to FOC state data
- *   mod_state - pointer to modulation state data (optional)
+ *   h     - pointer to FOC handler
+ *   state - pointer to FOC state data
  *
  ****************************************************************************/
 
 void foc_handler_state_f32(FAR foc_handler_f32_t *h,
-                           FAR struct foc_state_f32_s *state,
-                           FAR void *mod_state)
+                           FAR struct foc_state_f32_s *state)
 {
   DEBUGASSERT(h);
   DEBUGASSERT(state);
 
   h->ops.ctrl->state_get(h, state);
-
-  if (mod_state)
-    {
-      h->ops.mod->state_get(h, mod_state);
-    }
 }
 
 #ifdef CONFIG_INDUSTRY_FOC_HANDLER_PRINT

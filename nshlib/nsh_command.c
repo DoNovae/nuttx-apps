@@ -26,7 +26,6 @@
 
 #include <string.h>
 #include <assert.h>
-#include <stdlib.h>
 
 #ifdef CONFIG_NSH_BUILTIN_APPS
 #  include <nuttx/lib/builtin.h>
@@ -49,16 +48,6 @@
 #define HELP_TABSIZE  4
 #define NUM_CMDS      ((sizeof(g_cmdmap)/sizeof(struct cmdmap_s)) - 1)
 
-/* Help marco for nsh command */
-
-#ifdef CONFIG_NSH_DISABLE_HELP
-#  define CMD_MAP(cmd, handler, min, max, usage) \
-          { cmd, handler, min, max }
-#else
-#  define CMD_MAP(cmd, handler, min, max, usage) \
-          { cmd, handler, min, max, usage }
-#endif
-
 /****************************************************************************
  * Private Types
  ****************************************************************************/
@@ -69,9 +58,7 @@ struct cmdmap_s
   nsh_cmd_t   handler;    /* Function that handles the command */
   uint8_t     minargs;    /* Minimum number of arguments (including command) */
   uint8_t     maxargs;    /* Maximum number of arguments (including command) */
-#ifndef CONFIG_NSH_DISABLE_HELP
   FAR const char *usage;  /* Usage instructions for 'help' command */
-#endif
 };
 
 /****************************************************************************
@@ -92,10 +79,6 @@ static int  cmd_false(FAR struct nsh_vtbl_s *vtbl, int argc,
 static int  cmd_exit(FAR struct nsh_vtbl_s *vtbl, int argc, FAR char **argv);
 #endif
 
-#ifndef CONFIG_NSH_DISABLE_EXPR
-static int cmd_expr(FAR struct nsh_vtbl_s *vtbl, int argc, FAR char **argv);
-#endif
-
 static int  cmd_unrecognized(FAR struct nsh_vtbl_s *vtbl, int argc,
                              FAR char **argv);
 
@@ -106,530 +89,492 @@ static int  cmd_unrecognized(FAR struct nsh_vtbl_s *vtbl, int argc,
 static const struct cmdmap_s g_cmdmap[] =
 {
 #if !defined(CONFIG_NSH_DISABLESCRIPT) && !defined(CONFIG_NSH_DISABLE_SOURCE)
-  CMD_MAP(".",        cmd_source,   2, 2, "<script-path>"),
+  { ".",        cmd_source,   2, 2, "<script-path>" },
 #endif
 
 #if !defined(CONFIG_NSH_DISABLESCRIPT) && !defined(CONFIG_NSH_DISABLE_TEST)
-  CMD_MAP("[",        cmd_lbracket,
-          4, CONFIG_NSH_MAXARGUMENTS, "<expression> ]"),
+  { "[",        cmd_lbracket, 4, CONFIG_NSH_MAXARGUMENTS, "<expression> ]" },
 #endif
 
 #ifndef CONFIG_NSH_DISABLE_HELP
-  CMD_MAP("?",        cmd_help,     1, 1, NULL),
+  { "?",        cmd_help,     1, 1, NULL },
 #endif
 
 #if defined(CONFIG_NET) && defined(CONFIG_NET_ROUTE) && !defined(CONFIG_NSH_DISABLE_ADDROUTE)
-  CMD_MAP("addroute", cmd_addroute, 3, 4, "<target> [<netmask>] <router>"),
+  { "addroute", cmd_addroute, 3, 4, "<target> [<netmask>] <router>" },
 #endif
 
 #ifdef CONFIG_NSH_ALIAS
-  CMD_MAP("alias",    cmd_alias,    1, CONFIG_NSH_MAXARGUMENTS,
-    "[name[=value] ... ]"),
-  CMD_MAP("unalias",  cmd_unalias,  1, CONFIG_NSH_MAXARGUMENTS,
-    "[-a] name [name ... ]"),
+  { "alias",    cmd_alias,   1, CONFIG_NSH_MAXARGUMENTS,
+    "[name[=value] ... ]" },
+  { "unalias",  cmd_unalias, 1, CONFIG_NSH_MAXARGUMENTS,
+    "[-a] name [name ... ]" },
 #endif
 
 #if defined(CONFIG_NET) && defined(CONFIG_NET_ARP) && !defined(CONFIG_NSH_DISABLE_ARP)
-  CMD_MAP("arp",      cmd_arp,      1, 6,
-    "[-i <ifname>] [-a <ipaddr>|-d <ipaddr>|-s <ipaddr> <hwaddr>]"),
+  { "arp",      cmd_arp,      1, 6,
+    "[-i <ifname>] [-a <ipaddr>|-d <ipaddr>|-s <ipaddr> <hwaddr>]" },
 #endif
 
 #if defined(CONFIG_NETUTILS_CODECS) && defined(CONFIG_CODECS_BASE64)
 #  ifndef CONFIG_NSH_DISABLE_BASE64DEC
-  CMD_MAP("base64dec", cmd_base64decode,
-          2, 4, "[-w] [-f] <string or filepath>"),
+  { "base64dec", cmd_base64decode, 2, 4, "[-w] [-f] <string or filepath>" },
 #  endif
 #  ifndef CONFIG_NSH_DISABLE_BASE64ENC
-  CMD_MAP("base64enc", cmd_base64encode,
-          2, 4, "[-w] [-f] <string or filepath>"),
+  { "base64enc", cmd_base64encode, 2, 4, "[-w] [-f] <string or filepath>" },
 #  endif
 #endif
 
 #ifndef CONFIG_NSH_DISABLE_BASENAME
-  CMD_MAP("basename", cmd_basename, 2, 3, "<path> [<suffix>]"),
-#endif
-
-#if defined(CONFIG_BOARDCTL_BOOT_IMAGE) && !defined(CONFIG_NSH_DISABLE_BOOT)
-  CMD_MAP("boot",     cmd_boot,     1, 3, "[<image path> [<header size>]]"),
+  { "basename",  cmd_basename, 2, 3, "<path> [<suffix>]" },
 #endif
 
 #if !defined(CONFIG_NSH_DISABLESCRIPT) && !defined(CONFIG_NSH_DISABLE_LOOPS)
-  CMD_MAP("break",    cmd_break,    1, 1, NULL),
+  { "break",     cmd_break,   1, 1, NULL },
 #endif
 
 #ifndef CONFIG_NSH_DISABLE_CAT
-  CMD_MAP("cat",      cmd_cat,      2, CONFIG_NSH_MAXARGUMENTS,
-    "<path> [<path> [<path> ...]]"),
+  { "cat",      cmd_cat,      2, CONFIG_NSH_MAXARGUMENTS,
+    "<path> [<path> [<path> ...]]" },
 #endif
 
 #ifndef CONFIG_DISABLE_ENVIRON
-#  ifndef CONFIG_NSH_DISABLE_CD
-  CMD_MAP("cd",       cmd_cd,       1, 2, "[<dir-path>|-|~|..]"),
-#  endif
+# ifndef CONFIG_NSH_DISABLE_CD
+  { "cd",       cmd_cd,       1, 2, "[<dir-path>|-|~|..]" },
+# endif
 #endif
 
 #ifndef CONFIG_NSH_DISABLE_CP
-  CMD_MAP("cp",       cmd_cp,       3, 3, "<source-path> <dest-path>"),
+  { "cp",       cmd_cp,       3, 3, "<source-path> <dest-path>" },
 #endif
 
 #ifndef CONFIG_NSH_DISABLE_CMP
-  CMD_MAP("cmp",      cmd_cmp,      3, 3, "<path1> <path2>"),
+  { "cmp",      cmd_cmp,      3, 3, "<path1> <path2>" },
 #endif
 
 #ifndef CONFIG_NSH_DISABLE_DIRNAME
-  CMD_MAP("dirname",  cmd_dirname,  2, 2, "<path>"),
+  { "dirname",  cmd_dirname,  2, 2, "<path>" },
 #endif
 
 #ifndef CONFIG_NSH_DISABLE_DATE
-  CMD_MAP("date",     cmd_date,
-          1, 4, "[-s \"MMM DD HH:MM:SS YYYY\"] [-u] [+format]"),
+  { "date",     cmd_date,     1, 4, "[-s \"MMM DD HH:MM:SS YYYY\"] [-u]" },
 #endif
 
 #ifndef CONFIG_NSH_DISABLE_DD
-  CMD_MAP("dd",       cmd_dd,       3, 7,
+  { "dd",       cmd_dd,       3, 7,
     "if=<infile> of=<outfile> [bs=<sectsize>] [count=<sectors>] "
-    "[skip=<sectors>] [verify]"),
-#endif
+    "[skip=<sectors>] [verify]" },
+# endif
 
 #if defined(CONFIG_NET) && defined(CONFIG_NET_ROUTE) && !defined(CONFIG_NSH_DISABLE_DELROUTE)
-  CMD_MAP("delroute", cmd_delroute, 2, 3, "<target> [<netmask>]"),
+  { "delroute", cmd_delroute, 2, 3, "<target> [<netmask>]" },
 #endif
 
 #if !defined(CONFIG_DISABLE_MOUNTPOINT) && !defined(CONFIG_NSH_DISABLE_DF)
 #ifdef NSH_HAVE_CATFILE
 #if defined(HAVE_DF_HUMANREADBLE) && defined(HAVE_DF_BLOCKOUTPUT)
-  CMD_MAP("df",       cmd_df,       1, 2, "[-h]"),
+  { "df",       cmd_df,       1, 2, "[-h]" },
 #else
-  CMD_MAP("df",       cmd_df,       1, 1, NULL),
+  { "df",       cmd_df,       1, 1, NULL },
 #endif
 #endif
 #endif
 
 #if defined(CONFIG_SYSLOG_DEVPATH) && !defined(CONFIG_NSH_DISABLE_DMESG)
-  CMD_MAP("dmesg",    cmd_dmesg,    1, 2, "[-c,--clear |-C,--read-clear]"),
+  { "dmesg",    cmd_dmesg,    1, 1, NULL },
 #endif
 
 #ifndef CONFIG_NSH_DISABLE_ECHO
-#  ifndef CONFIG_DISABLE_ENVIRON
-  CMD_MAP("echo",     cmd_echo,     1, CONFIG_NSH_MAXARGUMENTS,
-    "[-n] [<string|$name> [<string|$name>...]]"),
-#  else
-  CMD_MAP("echo",     cmd_echo,     1, CONFIG_NSH_MAXARGUMENTS,
-    "[-n] [<string> [<string>...]]"),
-#  endif
+# ifndef CONFIG_DISABLE_ENVIRON
+  { "echo",     cmd_echo,     1, CONFIG_NSH_MAXARGUMENTS,
+    "[-n] [<string|$name> [<string|$name>...]]" },
+# else
+  { "echo",     cmd_echo,     1, CONFIG_NSH_MAXARGUMENTS,
+    "[-n] [<string> [<string>...]]" },
+# endif
 #endif
 
 #ifndef CONFIG_NSH_DISABLE_ENV
-  CMD_MAP("env",      cmd_env,      1, 1, NULL),
+  { "env",      cmd_env,      1, 1, NULL },
 #endif
 
 #ifndef CONFIG_NSH_DISABLE_EXEC
-  CMD_MAP("exec",     cmd_exec,     2, 3, "<hex-address>"),
+  { "exec",     cmd_exec,     2, 3, "<hex-address>" },
 #endif
 
 #ifndef CONFIG_NSH_DISABLE_EXIT
-  CMD_MAP("exit",     cmd_exit,     1, 1, NULL),
-#endif
-
-#ifndef CONFIG_NSH_DISABLE_EXPR
-  CMD_MAP("expr",     cmd_expr,     4, 4,
-    "<operand1> <operator> <operand2>"),
+  { "exit",     cmd_exit,     1, 1, NULL },
 #endif
 
 #ifndef CONFIG_NSH_DISABLE_EXPORT
-  CMD_MAP("export",   cmd_export,   2, 3, "[<name> [<value>]]"),
+  { "export",   cmd_export,   2, 3, "[<name> [<value>]]" },
 #endif
 
 #ifndef CONFIG_NSH_DISABLESCRIPT
-  CMD_MAP("false",    cmd_false,    1, 1, NULL),
-#endif
-
-#ifdef CONFIG_FS_PROCFS
-#  ifndef CONFIG_NSH_DISABLE_FDINFO
-  CMD_MAP("fdinfo",   cmd_fdinfo,   1, 2, "[pid]"),
-#  endif
+  { "false",    cmd_false,    1, 1, NULL },
 #endif
 
 #ifndef CONFIG_NSH_DISABLE_FREE
-  CMD_MAP("free",     cmd_free,     1, 1, NULL),
+  { "free",     cmd_free,     1, 1, NULL },
 #endif
 
 #ifdef CONFIG_DEBUG_MM
-#  ifndef CONFIG_NSH_DISABLE_MEMDUMP
-  CMD_MAP("memdump",  cmd_memdump,
-          1, 4, "[pid/used/free/on/off]" " <minseq> <maxseq>"),
-#  endif
+# ifndef CONFIG_NSH_DISABLE_MEMDUMP
+  { "memdump",  cmd_memdump,  1, 3, "[pid/used/free/on/off]" },
+# endif
 #endif
 
 #ifdef CONFIG_NET_UDP
-#  ifndef CONFIG_NSH_DISABLE_GET
-  CMD_MAP("get",      cmd_get,      4, 7,
-    "[-b|-n] [-f <local-path>] -h <ip-address> <remote-path>"),
-#  endif
+# ifndef CONFIG_NSH_DISABLE_GET
+  { "get",      cmd_get,      4, 7,
+    "[-b|-n] [-f <local-path>] -h <ip-address> <remote-path>" },
+# endif
 #endif
 
 #ifndef CONFIG_NSH_DISABLE_HELP
-#  ifdef CONFIG_NSH_HELP_TERSE
-  CMD_MAP("help",     cmd_help,     1, 2, "[<cmd>]"),
-#  else
-  CMD_MAP("help",     cmd_help,     1, 3, "[-v] [<cmd>]"),
-#  endif
+# ifdef CONFIG_NSH_HELP_TERSE
+  { "help",     cmd_help,     1, 2, "[<cmd>]" },
+#else
+  { "help",     cmd_help,     1, 3, "[-v] [<cmd>]" },
+# endif
 #endif
 
 #ifndef CONFIG_NSH_DISABLE_HEXDUMP
 #ifndef CONFIG_NSH_CMDOPT_HEXDUMP
-  CMD_MAP("hexdump",  cmd_hexdump,  2, 2, "<file or device>"),
+  { "hexdump",  cmd_hexdump,  2, 2, "<file or device>" },
 #else
-  CMD_MAP("hexdump",  cmd_hexdump,  2, 4,
-    "<file or device> [skip=<bytes>] [count=<bytes>]"),
+  { "hexdump",  cmd_hexdump,  2, 4,
+    "<file or device> [skip=<bytes>] [count=<bytes>]" },
 #endif
 #endif
 
 #ifdef CONFIG_NET
-#  ifndef CONFIG_NSH_DISABLE_IFCONFIG
-  CMD_MAP("ifconfig", cmd_ifconfig, 1, 12,
-    "[interface [mtu <len>]|[address_family] [[add|del] <ip-address>|dhcp]]"
+# ifndef CONFIG_NSH_DISABLE_IFCONFIG
+  { "ifconfig", cmd_ifconfig, 1, 12,
+    "[interface [address_family] [<ip-address>|dhcp]] "
     "[dr|gw|gateway <dr-address>] [netmask <net-mask>|prefixlen <len>] "
-    "[dns <dns-address>] [hw <hw-mac>]"),
-#  endif
-#  ifndef CONFIG_NSH_DISABLE_IFUPDOWN
-  CMD_MAP("ifdown",   cmd_ifdown,   2, 2, "<interface>"),
-  CMD_MAP("ifup",     cmd_ifup,     2, 2, "<interface>"),
-#  endif
+    "[dns <dns-address>] [hw <hw-mac>]" },
+# endif
+# ifndef CONFIG_NSH_DISABLE_IFUPDOWN
+  { "ifdown",   cmd_ifdown,   2, 2, "<interface>" },
+  { "ifup",     cmd_ifup,     2, 2, "<interface>" },
+# endif
 #endif
 
 #if defined(CONFIG_MODULE) && !defined(CONFIG_NSH_DISABLE_MODCMDS)
-  CMD_MAP("insmod",   cmd_insmod,   3, 3, "<file-path> <module-name>"),
+  { "insmod",   cmd_insmod,   3, 3, "<file-path> <module-name>" },
 #endif
 
 #ifdef HAVE_IRQINFO
-  CMD_MAP("irqinfo",  cmd_irqinfo,  1, 1, NULL),
+  { "irqinfo",  cmd_irqinfo,  1, 1, NULL },
 #endif
 
 #ifndef CONFIG_NSH_DISABLE_KILL
-  CMD_MAP("kill",     cmd_kill,     2, 3, "[-<signal>] <pid>"),
+  { "kill",     cmd_kill,     2, 3, "[-<signal>] <pid>" },
 #endif
 
 #ifndef CONFIG_DISABLE_MOUNTPOINT
-#  if defined(CONFIG_DEV_LOOP) && !defined(CONFIG_NSH_DISABLE_LOSETUP)
-  CMD_MAP("losetup",  cmd_losetup,  3, 6,
-    "[-d <dev-path>] | [[-o <offset>] [-r] [-b <sect-size>] "
-    "<dev-path> <file-path>]"),
-#  endif
+# if defined(CONFIG_DEV_LOOP) && !defined(CONFIG_NSH_DISABLE_LOSETUP)
+  { "losetup",   cmd_losetup, 3, 6,
+    "[-d <dev-path>] | [[-o <offset>] [-r] [-s <sect-size>] "
+    "<dev-path> <file-path>]" },
+# endif
 #endif
 
 #ifndef CONFIG_DISABLE_MOUNTPOINT
-#  if defined(CONFIG_SMART_DEV_LOOP) && !defined(CONFIG_NSH_DISABLE_LOSMART)
-  CMD_MAP("losmart",  cmd_losmart,  2, 11,
+# if defined(CONFIG_SMART_DEV_LOOP) && !defined(CONFIG_NSH_DISABLE_LOSMART)
+  { "losmart",   cmd_losmart, 2, 11,
     "[-d <dev-path>] | [[-m <minor>] [-o <offset>] [-e <erase-size>] "
-    "[-s <sect-size>] [-r] <file-path>]"),
-#  endif
+    "[-s <sect-size>] [-r] <file-path>]" },
+# endif
 #endif
 
 #ifndef CONFIG_DISABLE_MOUNTPOINT
-#  if defined(CONFIG_MTD_LOOP) && !defined(CONFIG_NSH_DISABLE_LOMTD)
-  CMD_MAP("lomtd",    cmd_lomtd,    3, 9,
+# if defined(CONFIG_MTD_LOOP) && !defined(CONFIG_NSH_DISABLE_LOMTD)
+  { "lomtd",   cmd_lomtd, 3, 9,
     "[-d <dev-path>] | [[-o <offset>] [-e <erase-size>] "
-    "[-b <sect-size>] <dev-path> <file-path>]]"),
-#  endif
+    "[-s <sect-size>] <dev-path> <file-path>]]" },
+# endif
 #endif
 
 #if !defined(CONFIG_NSH_DISABLE_LN) && defined(CONFIG_PSEUDOFS_SOFTLINKS)
-  CMD_MAP("ln",       cmd_ln,       3, 4, "[-s] <target> <link>"),
+  { "ln",       cmd_ln,       3, 4, "[-s] <target> <link>" },
 #endif
 
 #ifndef CONFIG_NSH_DISABLE_LS
-  CMD_MAP("ls",       cmd_ls,       1, 5, "[-lRsh] <dir-path>"),
+  { "ls",       cmd_ls,       1, 5, "[-lRs] <dir-path>" },
 #endif
 
 #if defined(CONFIG_MODULE) && !defined(CONFIG_NSH_DISABLE_MODCMDS)
-#  if defined(CONFIG_FS_PROCFS) && !defined(CONFIG_FS_PROCFS_EXCLUDE_MODULE)
-  CMD_MAP("lsmod",    cmd_lsmod,    1, 1,  NULL),
-#  endif
+#if defined(CONFIG_FS_PROCFS) && !defined(CONFIG_FS_PROCFS_EXCLUDE_MODULE)
+  { "lsmod",    cmd_lsmod,    1, 1,  NULL },
+#endif
 #endif
 
 #ifndef CONFIG_NSH_DISABLE_MB
-  CMD_MAP("mb",       cmd_mb,       2, 3,
-    "<hex-address>[=<hex-value>] [<hex-byte-count>]"),
+  { "mb",       cmd_mb,       2, 3,
+    "<hex-address>[=<hex-value>] [<hex-byte-count>]" },
 #endif
 
 #if defined(CONFIG_NETUTILS_CODECS) && defined(CONFIG_CODECS_HASH_MD5)
 #  ifndef CONFIG_NSH_DISABLE_MD5
-  CMD_MAP("md5",      cmd_md5,      2, 3, "[-f] <string or filepath>"),
+  { "md5",      cmd_md5,      2, 3, "[-f] <string or filepath>" },
 #  endif
 #endif
 
 #ifdef NSH_HAVE_DIROPTS
-#  ifndef CONFIG_NSH_DISABLE_MKDIR
-  CMD_MAP("mkdir",    cmd_mkdir,    2, 3, "[-p] <path>"),
-#  endif
+# ifndef CONFIG_NSH_DISABLE_MKDIR
+  { "mkdir",    cmd_mkdir,    2, 3, "[-p] <path>" },
+# endif
 #endif
 
 #if !defined(CONFIG_DISABLE_MOUNTPOINT) && defined(CONFIG_FSUTILS_MKFATFS)
-#  ifndef CONFIG_NSH_DISABLE_MKFATFS
-  CMD_MAP("mkfatfs",  cmd_mkfatfs,  2, 6,
-    "[-F <fatsize>] [-r <rootdirentries>] <block-driver>"),
-#  endif
+# ifndef CONFIG_NSH_DISABLE_MKFATFS
+  { "mkfatfs",  cmd_mkfatfs,  2, 6,
+    "[-F <fatsize>] [-r <rootdirentries>] <block-driver>" },
+# endif
 #endif
 
 #ifndef CONFIG_DISABLE_MOUNTPOINT
-#  if defined(CONFIG_PIPES) && CONFIG_DEV_FIFO_SIZE > 0 && \
+# if defined(CONFIG_PIPES) && CONFIG_DEV_FIFO_SIZE > 0 && \
     !defined(CONFIG_NSH_DISABLE_MKFIFO)
-  CMD_MAP("mkfifo",   cmd_mkfifo,   2, 2, "<path>"),
-#  endif
+  { "mkfifo",   cmd_mkfifo,   2, 2, "<path>" },
+# endif
 #endif
 
 #ifndef CONFIG_NSH_DISABLE_MKRD
-  CMD_MAP("mkrd",     cmd_mkrd,     2, 6,
-    "[-m <minor>] [-s <sector-size>] <nsectors>"),
+  { "mkrd",     cmd_mkrd,     2, 6,
+    "[-m <minor>] [-s <sector-size>] <nsectors>" },
 #endif
 
 #if !defined(CONFIG_DISABLE_MOUNTPOINT) && defined(CONFIG_FS_SMARTFS) && \
     defined(CONFIG_FSUTILS_MKSMARTFS)
-#  ifndef CONFIG_NSH_DISABLE_MKSMARTFS
-#    ifdef CONFIG_SMARTFS_MULTI_ROOT_DIRS
-  CMD_MAP("mksmartfs", cmd_mksmartfs, 2, 6,
-    "[-s <sector-size>] [-f] <path> [<num-root-directories>]"),
-#    else
-  CMD_MAP("mksmartfs", cmd_mksmartfs,
-          2, 5, "[-s <sector-size>] [-f] <path>"),
-#    endif
+# ifndef CONFIG_NSH_DISABLE_MKSMARTFS
+#  ifdef CONFIG_SMARTFS_MULTI_ROOT_DIRS
+  { "mksmartfs",  cmd_mksmartfs,  2, 6,
+    "[-s <sector-size>] [-f] <path> [<num-root-directories>]" },
+#  else
+  { "mksmartfs",  cmd_mksmartfs,  2, 5, "[-s <sector-size>] [-f] <path>" },
 #  endif
+# endif
 #endif
 
 #ifndef CONFIG_NSH_DISABLE_MH
-  CMD_MAP("mh",       cmd_mh,       2, 3,
-    "<hex-address>[=<hex-value>] [<hex-byte-count>]"),
+  { "mh",       cmd_mh,       2, 3,
+    "<hex-address>[=<hex-value>] [<hex-byte-count>]" },
 #endif
 
 #if !defined(CONFIG_DISABLE_MOUNTPOINT)
-#  ifndef CONFIG_NSH_DISABLE_MOUNT
-#    if defined(NSH_HAVE_CATFILE) && defined(HAVE_MOUNT_LIST)
-  CMD_MAP("mount",    cmd_mount,    1, 7,
-    "[-t <fstype> [-o <options>] [<block-device>] <mount-point>]"),
-#    else
-  CMD_MAP("mount",    cmd_mount,    4, 7,
-    "-t <fstype> [-o <options>] [<block-device>] <mount-point>"),
-#    endif
-#  endif
+#ifndef CONFIG_NSH_DISABLE_MOUNT
+#if defined(NSH_HAVE_CATFILE) && defined(HAVE_MOUNT_LIST)
+  { "mount",    cmd_mount,    1, 7,
+    "[-t <fstype> [-o <options>] [<block-device>] <mount-point>]" },
+#else
+  { "mount",    cmd_mount,    4, 7,
+    "-t <fstype> [-o <options>] [<block-device>] <mount-point>" },
+#endif
+#endif
 #endif
 
 #ifdef NSH_HAVE_DIROPTS
 #  ifndef CONFIG_NSH_DISABLE_MV
-  CMD_MAP("mv",       cmd_mv,       3, 3, "<old-path> <new-path>"),
+  { "mv",       cmd_mv,       3, 3, "<old-path> <new-path>" },
 #  endif
 #endif
 
 #ifndef CONFIG_NSH_DISABLE_MW
-  CMD_MAP("mw",       cmd_mw,       2, 3,
-    "<hex-address>[=<hex-value>] [<hex-byte-count>]"),
+  { "mw",       cmd_mw,       2, 3,
+    "<hex-address>[=<hex-value>] [<hex-byte-count>]" },
 #endif
 
 #if !defined(CONFIG_DISABLE_MOUNTPOINT) && defined(CONFIG_NET) && \
     defined(CONFIG_NFS)
 #  ifndef CONFIG_NSH_DISABLE_NFSMOUNT
-  CMD_MAP("nfsmount", cmd_nfsmount, 4, 5,
-    "<server-address> <mount-point> <remote-path> [udp]"),
+  { "nfsmount", cmd_nfsmount, 4, 5,
+    "<server-address> <mount-point> <remote-path> [udp]" },
 #  endif
 #endif
 
 #if defined(CONFIG_LIBC_NETDB) && !defined(CONFIG_NSH_DISABLE_NSLOOKUP)
-  CMD_MAP("nslookup", cmd_nslookup, 2, 2, "<host-name>"),
+  { "nslookup", cmd_nslookup, 2, 2, "<host-name>" },
 #endif
 
 #if !defined(CONFIG_DISABLE_MOUNTPOINT) && \
      defined(CONFIG_NSH_LOGIN_PASSWD) && \
     !defined(CONFIG_FSUTILS_PASSWD_READONLY)
 #  ifndef CONFIG_NSH_DISABLE_PASSWD
-  CMD_MAP("passwd",   cmd_passwd,   3, 3, "<username> <password>"),
+  { "passwd",   cmd_passwd,   3, 3, "<username> <password>" },
 #  endif
-#endif
-
-#if defined(CONFIG_FS_PROCFS) && !defined(CONFIG_NSH_DISABLE_PIDOF)
-  CMD_MAP("pidof",   cmd_pidof, 2, 2, "<name>"),
 #endif
 
 #if defined(CONFIG_PM) && !defined(CONFIG_NSH_DISABLE_PMCONFIG)
-  CMD_MAP("pmconfig", cmd_pmconfig, 1, 4,
-    "[stay|relax] [normal|idle|standby|sleep] [domain]"),
+  { "pmconfig", cmd_pmconfig,  1, 4,
+    "[stay|relax] [normal|idle|standby|sleep] [domain]" },
 #endif
 
 #if defined(CONFIG_BOARDCTL_POWEROFF) && !defined(CONFIG_NSH_DISABLE_POWEROFF)
-  CMD_MAP("poweroff", cmd_poweroff, 1, 2, NULL),
+  { "poweroff", cmd_poweroff,  1, 2, NULL },
 #endif
 
 #ifndef CONFIG_NSH_DISABLE_PRINTF
-#  ifndef CONFIG_DISABLE_ENVIRON
-  CMD_MAP("printf",   cmd_printf,   1, CONFIG_NSH_MAXARGUMENTS,
-    "[\\xNN] [\\n\\r\\t] [<string|$name> [<string|$name>...]]"),
-#  else
-  CMD_MAP("printf",   cmd_printf,   1, CONFIG_NSH_MAXARGUMENTS,
-    "[\\xNN] [\\n\\r\\t] [<string> [<string>...]]"),
-#  endif
+# ifndef CONFIG_DISABLE_ENVIRON
+  { "printf",   cmd_printf,   1, CONFIG_NSH_MAXARGUMENTS,
+    "[\\xNN] [\\n\\r\\t] [<string|$name> [<string|$name>...]]" },
+# else
+  { "printf",   cmd_printf,   1, CONFIG_NSH_MAXARGUMENTS,
+    "[\\xNN] [\\n\\r\\t] [<string> [<string>...]]" },
+# endif
 #endif
 
 #ifndef CONFIG_NSH_DISABLE_PS
-  CMD_MAP("ps",       cmd_ps,       1, 1, NULL),
+  { "ps",       cmd_ps,       1, 1, NULL },
 #endif
 
 #ifdef CONFIG_NET_UDP
-#  ifndef CONFIG_NSH_DISABLE_PUT
-  CMD_MAP("put",      cmd_put,      4, 7,
-    "[-b|-n] [-f <remote-path>] -h <ip-address> <local-path>"),
-#  endif
+# ifndef CONFIG_NSH_DISABLE_PUT
+  { "put",      cmd_put,      4, 7,
+    "[-b|-n] [-f <remote-path>] -h <ip-address> <local-path>" },
+# endif
 #endif
 
 #ifndef CONFIG_DISABLE_ENVIRON
-#  ifndef CONFIG_NSH_DISABLE_PWD
-  CMD_MAP("pwd",      cmd_pwd,      1, 1, NULL),
-#  endif
+# ifndef CONFIG_NSH_DISABLE_PWD
+  { "pwd",      cmd_pwd,      1, 1, NULL },
+# endif
 #endif
 
 #if !defined(CONFIG_NSH_DISABLE_READLINK) && defined(CONFIG_PSEUDOFS_SOFTLINKS)
-  CMD_MAP("readlink", cmd_readlink, 2, 2, "<link>"),
+  { "readlink", cmd_readlink, 2, 2, "<link>" },
 #endif
 
 #if defined(CONFIG_BOARDCTL_RESET) && !defined(CONFIG_NSH_DISABLE_REBOOT)
-  CMD_MAP("reboot",   cmd_reboot,   1, 2, NULL),
+  { "reboot",   cmd_reboot,   1, 2, NULL },
 #endif
 
 #if defined(CONFIG_BOARDCTL_RESET_CAUSE) && !defined(CONFIG_NSH_DISABLE_RESET_CAUSE)
-  CMD_MAP("resetcause", cmd_reset_cause, 1, 1, NULL),
+  { "resetcause",   cmd_reset_cause,   1, 1, NULL },
 #endif
 
 #ifdef NSH_HAVE_DIROPTS
-#  ifndef CONFIG_NSH_DISABLE_RM
-  CMD_MAP("rm",       cmd_rm,       2, 3, "[-r] <file-path>"),
-#  endif
+# ifndef CONFIG_NSH_DISABLE_RM
+  { "rm",       cmd_rm,       2, 3, "[-r] <file-path>" },
+# endif
 #endif
 
 #ifdef NSH_HAVE_DIROPTS
-#  ifndef CONFIG_NSH_DISABLE_RMDIR
-  CMD_MAP("rmdir",    cmd_rmdir,    2, 2, "<dir-path>"),
-#  endif
+# ifndef CONFIG_NSH_DISABLE_RMDIR
+  { "rmdir",    cmd_rmdir,    2, 2, "<dir-path>" },
+# endif
 #endif
 
 #if defined(CONFIG_MODULE) && !defined(CONFIG_NSH_DISABLE_MODCMDS)
-  CMD_MAP("rmmod",    cmd_rmmod,    2, 2, "<module-name>"),
+  { "rmmod",    cmd_rmmod,    2, 2, "<module-name>" },
 #endif
 
 #ifndef CONFIG_NSH_DISABLE_ROUTE
 #if defined(CONFIG_NET_IPv4) && defined(CONFIG_NET_IPv6)
-  CMD_MAP("route",    cmd_route,    2, 2, "ipv4|ipv6"),
+  { "route",    cmd_route,    2, 2, "ipv4|ipv6" },
 #elif defined(CONFIG_NET_IPv4)
-  CMD_MAP("route",    cmd_route,    1, 2, "[ipv4]"),
+  { "route",    cmd_route,    1, 2, "[ipv4]" },
 #elif defined(CONFIG_NET_IPv6)
-  CMD_MAP("route",    cmd_route,    1, 2, "[ipv6]"),
+  { "route",    cmd_route,    1, 2, "[ipv6]" },
 #endif
-#endif
-
-#if defined(CONFIG_RPMSG) && !defined(CONFIG_NSH_DISABLE_RPMSG)
-  CMD_MAP("rpmsg",    cmd_rpmsg,    2, 7,
-    "<panic|dump|ping> <path|all>"
-    " [value|times length ack sleep]"),
 #endif
 
 #if defined(CONFIG_RPTUN) && !defined(CONFIG_NSH_DISABLE_RPTUN)
-  CMD_MAP("rptun",    cmd_rptun,    2, 7,
+  { "rptun",    cmd_rptun,    3, 7,
     "<start|stop|reset|panic|dump|ping> <path|all>"
-    " [value|times length ack sleep]"),
+    " [value|times length ack sleep]" },
 #endif
 
 #ifndef CONFIG_NSH_DISABLE_SET
 #ifdef CONFIG_NSH_VARS
 #  if !defined(CONFIG_DISABLE_ENVIRON) && !defined(CONFIG_NSH_DISABLESCRIPT)
-  CMD_MAP("set",      cmd_set,
-          1, 4, "[{+|-}{e|x|xe|ex}] [<name> <value>]"),
+  { "set",      cmd_set,      1, 4, "[{+|-}{e|x|xe|ex}] [<name> <value>]" },
 #  elif !defined(CONFIG_DISABLE_ENVIRON) && defined(CONFIG_NSH_DISABLESCRIPT)
-  CMD_MAP("set",      cmd_set,      1, 3, "[<name> <value>]"),
+  { "set",      cmd_set,      1, 3, "[<name> <value>]" },
 #  elif defined(CONFIG_DISABLE_ENVIRON) && !defined(CONFIG_NSH_DISABLESCRIPT)
-  CMD_MAP("set",      cmd_set,      1, 2, "[{+|-}{e|x|xe|ex}]"),
+  { "set",      cmd_set,      1, 2, "[{+|-}{e|x|xe|ex}]" },
 #  endif
 #else
 #  if !defined(CONFIG_DISABLE_ENVIRON) && !defined(CONFIG_NSH_DISABLESCRIPT)
-  CMD_MAP("set",      cmd_set,
-          2, 4, "[{+|-}{e|x|xe|ex}] [<name> <value>]"),
+  { "set",      cmd_set,      2, 4, "[{+|-}{e|x|xe|ex}] [<name> <value>]" },
 #  elif !defined(CONFIG_DISABLE_ENVIRON) && defined(CONFIG_NSH_DISABLESCRIPT)
-  CMD_MAP("set",      cmd_set,      3, 3, "<name> <value>"),
+  { "set",      cmd_set,      3, 3, "<name> <value>" },
 #  elif defined(CONFIG_DISABLE_ENVIRON) && !defined(CONFIG_NSH_DISABLESCRIPT)
-  CMD_MAP("set",      cmd_set,      2, 2, "{+|-}{e|x|xe|ex}"),
+  { "set",      cmd_set,      2, 2, "{+|-}{e|x|xe|ex}" },
 #  endif
 #endif
 #endif /* CONFIG_NSH_DISABLE_SET */
 
 #ifndef CONFIG_NSH_DISABLE_SHUTDOWN
 #if defined(CONFIG_BOARDCTL_POWEROFF) && defined(CONFIG_BOARDCTL_RESET)
-  CMD_MAP("shutdown", cmd_shutdown, 1, 2, "[--reboot]"),
+  { "shutdown", cmd_shutdown, 1, 2, "[--reboot]" },
 #elif defined(CONFIG_BOARDCTL_POWEROFF)
-  CMD_MAP("shutdown", cmd_shutdown, 1, 1, NULL),
+  { "shutdown", cmd_shutdown, 1, 1, NULL },
 #elif defined(CONFIG_BOARDCTL_RESET)
-  CMD_MAP("shutdown", cmd_shutdown, 2, 2, "--reboot"),
+  { "shutdown", cmd_shutdown, 2, 2, "--reboot" },
 #endif
 #endif
 
 #ifndef CONFIG_NSH_DISABLE_SLEEP
-  CMD_MAP("sleep",    cmd_sleep,    2, 2, "<sec>"),
+  { "sleep",    cmd_sleep,    2, 2, "<sec>" },
 #endif
 
 #if !defined(CONFIG_NSH_DISABLESCRIPT) && !defined(CONFIG_NSH_DISABLE_SOURCE)
-  CMD_MAP("source",   cmd_source,   2, 2, "<script-path>"),
-#endif
-
-#if defined(CONFIG_BOARDCTL_SWITCH_BOOT) && !defined(CONFIG_NSH_DISABLE_SWITCHBOOT)
-  CMD_MAP("swtichboot", cmd_switchboot, 2, 2, "<image path>"),
+  { "source",   cmd_source,   2, 2, "<script-path>" },
 #endif
 
 #if !defined(CONFIG_NSH_DISABLESCRIPT) && !defined(CONFIG_NSH_DISABLE_TEST)
-  CMD_MAP("test",     cmd_test,
-          3, CONFIG_NSH_MAXARGUMENTS, "<expression>"),
+  { "test",     cmd_test,     3, CONFIG_NSH_MAXARGUMENTS, "<expression>" },
 #endif
 
 #ifndef CONFIG_NSH_DISABLE_TIME
-  CMD_MAP("time",     cmd_time,     2, 2, "\"<command>\""),
+  { "time",     cmd_time,     2, 2, "\"<command>\"" },
 #endif
 
 #ifndef CONFIG_NSH_DISABLE_TIMEDATECTL
-  CMD_MAP("timedatectl", cmd_timedatectl, 1, 3, "[set-timezone TZ]"),
+  { "timedatectl", cmd_timedatectl, 1, 3, "[set-timezone TZ]" },
 #endif
 
 #ifndef CONFIG_NSH_DISABLESCRIPT
-  CMD_MAP("true",     cmd_true,     1, 1, NULL),
+  { "true",     cmd_true,     1, 1, NULL },
 #endif
 
 #ifndef CONFIG_DISABLE_MOUNTPOINT
-#  ifndef CONFIG_NSH_DISABLE_TRUNCATE
-  CMD_MAP("truncate", cmd_truncate, 4, 4, "-s <length> <file-path>"),
-#  endif
+# ifndef CONFIG_NSH_DISABLE_TRUNCATE
+  { "truncate", cmd_truncate, 4, 4, "-s <length> <file-path>" },
+# endif
 #endif
 
 #ifndef CONFIG_NSH_DISABLE_UNAME
-#  ifdef CONFIG_NET
-  CMD_MAP("uname",    cmd_uname,    1, 7, "[-a | -imnoprsv]"),
-#  else
-  CMD_MAP("uname",    cmd_uname,    1, 7, "[-a | -imoprsv]"),
-#  endif
+#ifdef CONFIG_NET
+  { "uname",    cmd_uname,    1, 7, "[-a | -imnoprsv]" },
+#else
+  { "uname",    cmd_uname,    1, 7, "[-a | -imoprsv]" },
+#endif
 #endif
 
 #if !defined(CONFIG_DISABLE_MOUNTPOINT)
-#  ifndef CONFIG_NSH_DISABLE_UMOUNT
-  CMD_MAP("umount",   cmd_umount,   2, 2, "<dir-path>"),
-#  endif
+# ifndef CONFIG_NSH_DISABLE_UMOUNT
+  { "umount",   cmd_umount,   2, 2, "<dir-path>" },
+# endif
 #endif
 
 #ifndef CONFIG_NSH_DISABLE_UNSET
-  CMD_MAP("unset",    cmd_unset,    2, 2, "<name>"),
+  { "unset",    cmd_unset,    2, 2, "<name>" },
 #endif
 
 #ifndef CONFIG_NSH_DISABLE_UPTIME
-  CMD_MAP("uptime",   cmd_uptime,   1, 2, "[-sph]"),
+  { "uptime",   cmd_uptime,   1, 2, "[-sph]" },
 #endif
 
 #if defined(CONFIG_NETUTILS_CODECS) && defined(CONFIG_CODECS_URLCODE)
 #  ifndef CONFIG_NSH_DISABLE_URLDECODE
-  CMD_MAP("urldecode", cmd_urldecode, 2, 3, "[-f] <string or filepath>"),
+  { "urldecode", cmd_urldecode, 2, 3, "[-f] <string or filepath>" },
 #  endif
 #  ifndef CONFIG_NSH_DISABLE_URLENCODE
-  CMD_MAP("urlencode", cmd_urlencode, 2, 3, "[-f] <string or filepath>"),
+  { "urlencode", cmd_urlencode, 2, 3, "[-f] <string or filepath>" },
 #  endif
 #endif
 
@@ -637,27 +582,27 @@ static const struct cmdmap_s g_cmdmap[] =
      defined(CONFIG_NSH_LOGIN_PASSWD) && \
     !defined(CONFIG_FSUTILS_PASSWD_READONLY)
 #  ifndef CONFIG_NSH_DISABLE_USERADD
-  CMD_MAP("useradd",  cmd_useradd,  3, 3, "<username> <password>"),
+  { "useradd",   cmd_useradd, 3, 3, "<username> <password>" },
 #  endif
 #  ifndef CONFIG_NSH_DISABLE_USERDEL
-  CMD_MAP("userdel",  cmd_userdel,  2, 2, "<username>"),
+  { "userdel",   cmd_userdel, 2, 2, "<username>" },
 #  endif
 #endif
 
 #ifndef CONFIG_NSH_DISABLE_USLEEP
-  CMD_MAP("usleep",   cmd_usleep,   2, 2, "<usec>"),
+  { "usleep",   cmd_usleep,   2, 2, "<usec>" },
 #endif
 
 #ifdef CONFIG_NET_TCP
-#  ifndef CONFIG_NSH_DISABLE_WGET
-  CMD_MAP("wget",     cmd_wget,     2, 4, "[-o <local-path>] <url>"),
-#  endif
+# ifndef CONFIG_NSH_DISABLE_WGET
+  { "wget",     cmd_wget,     2, 4, "[-o <local-path>] <url>" },
+# endif
 #endif
 
 #ifndef CONFIG_NSH_DISABLE_XD
-  CMD_MAP("xd",       cmd_xd,       3, 3, "<hex-address> <byte-count>"),
+  { "xd",       cmd_xd,       3, 3, "<hex-address> <byte-count>" },
 #endif
-  CMD_MAP(NULL,       NULL,         1, 1, NULL)
+  { NULL,       NULL,         1, 1, NULL }
 };
 
 /****************************************************************************
@@ -695,7 +640,7 @@ static inline void help_cmdlist(FAR struct nsh_vtbl_s *vtbl)
         }
     }
 
-  colwidth += HELP_TABSIZE;
+  colwidth += 2;
 
   /* Determine the number of commands to put on one line */
 
@@ -910,7 +855,7 @@ static inline void help_builtins(FAR struct nsh_vtbl_s *vtbl)
       return;
     }
 
-  column_width += HELP_TABSIZE;
+  column_width += 2;
 
   /* Determine the number of commands to put on one line */
 
@@ -933,7 +878,7 @@ static inline void help_builtins(FAR struct nsh_vtbl_s *vtbl)
   nsh_write(vtbl, g_builtin_prompt, strlen(g_builtin_prompt));
   for (i = 0; i < num_builtin_rows; i++)
     {
-      offset = HELP_TABSIZE;
+      offset = 4;
       memset(line, ' ', offset);
 
       for (j = 0, k = i;
@@ -1103,74 +1048,6 @@ static int cmd_exit(FAR struct nsh_vtbl_s *vtbl, int argc, FAR char **argv)
   UNUSED(argv);
 
   nsh_exit(vtbl, 0);
-  return OK;
-}
-#endif
-
-#ifndef CONFIG_NSH_DISABLE_EXPR
-static int cmd_expr(FAR struct nsh_vtbl_s *vtbl, int argc, FAR char **argv)
-{
-  int operand1;
-  int operand2;
-  int result;
-  FAR char *endptr;
-
-  if (argc != 4)
-    {
-      nsh_output(vtbl, "Usage: %s <operand1> <operator> <operand2>\n",
-                 argv[0]);
-      return ERROR;
-    }
-
-  operand1 = strtol(argv[1], &endptr, 0);
-  if (*endptr != '\0')
-    {
-      nsh_output(vtbl, "operand1 invalid\n");
-      return ERROR;
-    }
-
-  operand2 = strtol(argv[3], &endptr, 0);
-  if (*endptr != '\0')
-    {
-      nsh_output(vtbl, "operand2 invalid\n");
-      return ERROR;
-    }
-
-  switch (argv[2][0])
-    {
-      case '+':
-        result = operand1 + operand2;
-        break;
-      case '-':
-        result = operand1 - operand2;
-        break;
-      case '*':
-        result = operand1 * operand2;
-        break;
-      case '/':
-        if (operand2 == 0)
-          {
-            nsh_output(vtbl, "operand2 invalid\n");
-            return ERROR;
-          }
-
-        result = operand1 / operand2;
-        break;
-      case '%':
-        if (operand2 == 0)
-          {
-            nsh_output(vtbl, "operand2 invalid\n");
-            return ERROR;
-          }
-
-        result = operand1 % operand2;
-        break;
-      default:
-        nsh_output(vtbl, "Unknown operator\n");
-        return ERROR;
-    }
-
-  nsh_output(vtbl, "%d\n", result);
   return OK;
 }
 #endif

@@ -91,7 +91,7 @@ static int strlong_compare(const void *v1, const void *v2)
 #endif
 
 #ifdef HAVE_DAY_OF_WEEK /* Day of week not yet supported by NuttX */
-static int strlong_search(char *str, struct strlong *tab, int n, long *lp)
+static int strlong_search(char *str, struct strlong *tab, int n, long *lP)
 {
   int i;
   int h;
@@ -114,7 +114,7 @@ static int strlong_search(char *str, struct strlong *tab, int n, long *lp)
         }
       else
         {
-          *lp = tab[i].l;
+          *lP = tab[i].l;
           return 1;
         }
 
@@ -127,81 +127,63 @@ static int strlong_search(char *str, struct strlong *tab, int n, long *lp)
 #endif
 
 #ifdef HAVE_DAY_OF_WEEK /* Day of week not yet supported by NuttX */
-static int scan_wday(char *str_wday, long *tm_wdayp)
+static int scan_wday(char *str_wday, long *tm_wdayP)
 {
-  static struct strlong wday_tab[] =
-  {
-    {"sun", 0},
-    {"sunday", 0},
-    {"mon", 1},
-    {"monday", 1},
-    {"tue", 2},
-    {"tuesday", 2},
-    {"wed", 3},
-    {"wednesday", 3},
-    {"thu", 4},
-    {"thursday", 4},
-    {"fri", 5},
-    {"friday", 5},
-    {"sat", 6},
-    {"saturday", 6},
+  static struct strlong wday_tab[] = {
+    {"sun", 0}, {"sunday", 0},
+    {"mon", 1}, {"monday", 1},
+    {"tue", 2}, {"tuesday", 2},
+    {"wed", 3}, {"wednesday", 3},
+    {"thu", 4}, {"thursday", 4},
+    {"fri", 5}, {"friday", 5},
+    {"sat", 6}, {"saturday", 6},
   };
 
   static int sorted = 0;
 
   if (!sorted)
     {
-      qsort(wday_tab, nitems(wday_tab),
+      qsort(wday_tab, sizeof(wday_tab) / sizeof(struct strlong),
             sizeof(struct strlong), strlong_compare);
       sorted = 1;
     }
 
   pound_case(str_wday);
-  return strlong_search(str_wday, wday_tab, nitems(wday_tab), tm_wdayp);
+  return strlong_search(str_wday, wday_tab,
+                        sizeof(wday_tab) / sizeof(struct strlong), tm_wdayP);
 }
 #endif /* Day of week not yet supported by NuttX */
 
 #ifdef TDATE_PARSE_WORKS
-static int scan_mon(char *str_mon, long *tm_monp)
+static int scan_mon(char *str_mon, long *tm_monP)
 {
-  static struct strlong mon_tab[] =
-  {
-    {"jan", 0},
-    {"january", 0},
-    {"feb", 1},
-    {"february", 1},
-    {"mar", 2},
-    {"march", 2},
-    {"apr", 3},
-    {"april", 3},
+  static struct strlong mon_tab[] = {
+    {"jan", 0}, {"january", 0},
+    {"feb", 1}, {"february", 1},
+    {"mar", 2}, {"march", 2},
+    {"apr", 3}, {"april", 3},
     {"may", 4},
-    {"jun", 5},
-    {"june", 5},
-    {"jul", 6},
-    {"july", 6},
-    {"aug", 7},
-    {"august", 7},
-    {"sep", 8},
-    {"september", 8},
-    {"oct", 9},
-    {"october", 9},
-    {"nov", 10},
-    {"november", 10},
-    {"dec", 11},
-    {"december", 11},
+    {"jun", 5}, {"june", 5},
+    {"jul", 6}, {"july", 6},
+    {"aug", 7}, {"august", 7},
+    {"sep", 8}, {"september", 8},
+    {"oct", 9}, {"october", 9},
+    {"nov", 10}, {"november", 10},
+    {"dec", 11}, {"december", 11},
   };
 
   static int sorted = 0;
 
   if (!sorted)
     {
-      qsort(mon_tab, nitems(mon_tab),
+      qsort(mon_tab, sizeof(mon_tab) / sizeof(struct strlong),
             sizeof(struct strlong), strlong_compare);
       sorted = 1;
     }
 
   pound_case(str_mon);
-  return strlong_search(str_mon, mon_tab, nitems(mon_tab), tm_monp);
+  return strlong_search(str_mon, mon_tab,
+                        sizeof(mon_tab) / sizeof(struct strlong), tm_monP);
 }
 #endif
 

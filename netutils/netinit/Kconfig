@@ -1,4 +1,5 @@
 #
+#
 # For a description of the syntax of this configuration file,
 # see the file kconfig-language.txt in the NuttX tools repository.
 #
@@ -89,7 +90,7 @@ if NETINIT_MONITOR
 
 config NETINIT_SIGNO
 	int "Notification signal number"
-	default 32
+	default 18
 	---help---
 		The network monitor logic will receive signals when there is any
 		change in the link status.  This setting may be used to customize

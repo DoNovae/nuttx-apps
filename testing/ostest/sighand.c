@@ -43,7 +43,7 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define WAKEUP_SIGNAL SIGRTMIN
+#define WAKEUP_SIGNAL 17
 #define SIGVALUE_INT  42
 
 /****************************************************************************
@@ -128,7 +128,7 @@ static void wakeup_action(int signo, siginfo_t *info, void *ucontext)
     }
 }
 
-static FAR void *waiter_main(FAR void *arg)
+static int waiter_main(int argc, char *argv[])
 {
   sigset_t set;
   struct sigaction act;
@@ -218,7 +218,6 @@ void sighand_test(void)
   sigset_t set;
 #endif
   struct sched_param param;
-  pthread_attr_t attr;
   union sigval sigvalue;
   pid_t waiterpid;
   int status;
@@ -266,11 +265,9 @@ void sighand_test(void)
       param.sched_priority = PTHREAD_DEFAULT_PRIORITY;
     }
 
-  pthread_attr_init(&attr);
-  pthread_attr_setschedparam(&attr, &param);
-  pthread_attr_setstacksize(&attr, STACKSIZE);
-  status = pthread_create(&waiterpid, &attr, waiter_main, NULL);
-  if (status != 0)
+  waiterpid = task_create("waiter", param.sched_priority,
+                           STACKSIZE, waiter_main, NULL);
+  if (waiterpid == ERROR)
     {
       printf("sighand_test: ERROR failed to start waiter_main\n");
       ASSERT(false);
@@ -296,7 +293,7 @@ void sighand_test(void)
     {
       printf("sighand_test: ERROR sigqueue failed\n");
       ASSERT(false);
-      pthread_cancel(waiterpid);
+      task_delete(waiterpid);
     }
 
   /* Wait a bit */
@@ -331,6 +328,4 @@ void sighand_test(void)
 
   printf("sighand_test: done\n");
   FFLUSH();
-  sem_destroy(&sem2);
-  sem_destroy(&sem1);
 }

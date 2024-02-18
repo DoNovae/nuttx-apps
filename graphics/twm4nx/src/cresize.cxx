@@ -413,8 +413,6 @@ bool CResize::setWindowSize(FAR struct nxgl_size_s *size)
 
 void CResize::updateSizeLabel(FAR struct nxgl_size_s &windowSize)
 {
-  int ret;
-
   // Do nothing if the size has not changed
 
   struct nxgl_size_s labelSize;
@@ -426,8 +424,8 @@ void CResize::updateSizeLabel(FAR struct nxgl_size_s &windowSize)
     }
 
   FAR char *str;
-  ret = asprintf(&str, " %4d x %-4d ", windowSize.w, windowSize.h);
-  if (ret < 0)
+  asprintf(&str, " %4d x %-4d ", windowSize.w, windowSize.h);
+  if (str == (FAR char *)0)
     {
       twmerr("ERROR: Failed to get size string\n");
       return;

@@ -33,7 +33,6 @@
 #include <spawn.h>
 #include <assert.h>
 #include <debug.h>
-#include <fcntl.h>
 
 #include "nshlib/nshlib.h"
 
@@ -116,12 +115,11 @@ FILE *popen(FAR const char *command, FAR const char *mode)
   posix_spawn_file_actions_t file_actions;
   FAR char *argv[4];
   int fd[2];
-  int oldfd[2];
-  int newfd[2];
+  int oldfd;
+  int newfd;
   int retfd;
   int errcode;
-  int result = 0;
-  bool rw = false;
+  int result;
 
   /* Allocate a container for returned FILE stream */
 
@@ -132,54 +130,34 @@ FILE *popen(FAR const char *command, FAR const char *mode)
       goto errout;
     }
 
-  oldfd[1] = 0;
-  newfd[1] = 0;
-
   /* Create a pipe.  fd[0] refers to the read end of the pipe; fd[1] refers
    * to the write end of the pipe.
-   * Is the pipe the input to the shell?  Or the output?
    */
 
-  if (strcmp(mode, "r") == 0 &&
-      (result = pipe2(fd, O_CLOEXEC)) >= 0)
-    {
-      /* Pipe is the output from the shell */
-
-      oldfd[0] = 1;     /* Replace stdout with the write side of the pipe */
-      newfd[0] = fd[1];
-      retfd    = fd[0]; /* Use read side of the pipe to create the return stream */
-    }
-  else if (strcmp(mode, "w") == 0 &&
-           (result = pipe2(fd, O_CLOEXEC)) >= 0)
-    {
-      /* Pipe is the input to the shell */
-
-      oldfd[0] = 0;     /* Replace stdin with the read side of the pipe */
-      newfd[0] = fd[0];
-      retfd    = fd[1]; /* Use write side of the pipe to create the return stream */
-    }
-
-  /* Create a socketpair. Using fd[0] as the input and output to the shell */
-
-#if defined(CONFIG_NET_LOCAL) && defined(CONFIG_NET_LOCAL_STREAM)
-  else if ((strcmp(mode, "r+") == 0 || strcmp(mode, "w+") == 0) &&
-           (result = socketpair(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC,
-                                0, fd)) >= 0)
-    {
-      /* Socketpair is the input/output to the shell */
-
-      rw = true;
-      oldfd[0] = 0;     /* Replace stdin with the one side of a socket pair */
-      newfd[0] = fd[0];
-      oldfd[1] = 1;     /* Replace stdout with the one side of a socket pair */
-      newfd[1] = fd[0];
-      retfd    = fd[1]; /* Use other side of the socket pair to create the return stream */
-    }
-#endif
-  else if (result < 0)
+  result = pipe(fd);
+  if (result < 0)
     {
       errcode = errno;
       goto errout_with_container;
+    }
+
+  /* Is the pipe the input to the shell?  Or the output? */
+
+  if (strcmp(mode, "r") == 0)
+    {
+      /* Pipe is the output from the shell */
+
+      oldfd = 1;     /* Replace stdout with the write side of the pipe */
+      newfd = fd[1];
+      retfd = fd[0]; /* Use read side of the pipe to create the return stream */
+    }
+  else if (strcmp(mode, "w") == 0)
+    {
+      /* Pipe is the input to the shell */
+
+      oldfd = 0;     /* Replace stdin with the read side of the pipe */
+      newfd = fd[0];
+      retfd = fd[1]; /* Use write side of the pipe to create the return stream */
     }
   else
     {
@@ -258,21 +236,10 @@ FILE *popen(FAR const char *command, FAR const char *mode)
 
   /* Redirect input or output as determined by the mode parameter */
 
-  errcode = posix_spawn_file_actions_adddup2(&file_actions,
-                                             newfd[0], oldfd[0]);
+  errcode = posix_spawn_file_actions_adddup2(&file_actions, newfd, oldfd);
   if (errcode != 0)
     {
       goto errout_with_actions;
-    }
-
-  if (rw)
-    {
-      errcode = posix_spawn_file_actions_adddup2(&file_actions,
-                                                 newfd[1], oldfd[1]);
-      if (errcode != 0)
-        {
-          goto errout_with_actions;
-        }
     }
 
   /* Call task_spawn() (or posix_spawn), re-directing stdin or stdout
@@ -306,12 +273,7 @@ FILE *popen(FAR const char *command, FAR const char *mode)
    * the interface.
    */
 
-  close(newfd[0]);
-
-  if (rw)
-    {
-      close(newfd[1]);
-    }
+  close(newfd);
 
   /* Free attributes and file actions.  Ignoring return values in the case
    * of an error.
@@ -319,11 +281,6 @@ FILE *popen(FAR const char *command, FAR const char *mode)
 
   posix_spawn_file_actions_destroy(&file_actions);
   posix_spawnattr_destroy(&attr);
-
-  if (strchr(mode, 'e') == NULL)
-    {
-      fcntl(retfd, F_SETFD, 0);
-    }
 
   /* Finale and return input input/output stream */
 

@@ -67,8 +67,7 @@ struct Xref
       {
         struct Pc line;
         struct LineNumber *next;
-      }
-    *lines;
+      } *lines;
     struct Xref *l;
     struct Xref *r;
   };
@@ -163,8 +162,7 @@ static void Xref_print(struct Xref *root,
               FS_putChars(chn, "\n        ");
             }
 
-          snprintf(buf, sizeof(buf), " %ld",
-                   Program_lineNumber(p, &cur->line));
+          sprintf(buf, " %ld", Program_lineNumber(p, &cur->line));
           FS_putChars(chn, buf);
         }
       while (cur != tail);
@@ -176,8 +174,8 @@ static void Xref_print(struct Xref *root,
 
 static int cmpLine(const void *a, const void *b)
 {
-  const register struct Pc *pcA = (const struct Pc *)a;
-  const register struct Pc *pcB = (const struct Pc *)b;
+  const register struct Pc *pcA = (const struct Pc *)a, *pcB =
+    (const struct Pc *)b;
 
   return pcA->line - pcB->line;
 }
@@ -186,15 +184,13 @@ static void printLine(const void *k, struct Program *p, int chn)
 {
   char buf[80];
 
-  snprintf(buf, sizeof(buf), "%8ld",
-           Program_lineNumber(p, (const struct Pc *)k));
+  sprintf(buf, "%8ld", Program_lineNumber(p, (const struct Pc *)k));
   FS_putChars(chn, buf);
 }
 
 static int cmpName(const void *a, const void *b)
 {
-  const register char *funcA = (const char *)a;
-  const register char *funcB = (const char *)b;
+  const register char *funcA = (const char *)a, *funcB = (const char *)b;
 
   return strcmp(funcA, funcB);
 }
@@ -214,153 +210,151 @@ static void printName(const void *k, struct Program *p, int chn)
  * Public Functions
  ****************************************************************************/
 
-struct Program *Program_new(struct Program *self)
+struct Program *Program_new(struct Program *this)
 {
-  self->trace = 0;
-  self->size = 0;
-  self->numbered = 1;
-  self->capacity = 0;
-  self->runnable = 0;
-  self->unsaved = 0;
-  self->code = (struct Token **)0;
-  self->scope = (struct Scope *)0;
-  String_new(&self->name);
-  return self;
+  this->trace = 0;
+  this->size = 0;
+  this->numbered = 1;
+  this->capacity = 0;
+  this->runnable = 0;
+  this->unsaved = 0;
+  this->code = (struct Token **)0;
+  this->scope = (struct Scope *)0;
+  String_new(&this->name);
+  return this;
 }
 
-void Program_destroy(struct Program *self)
+void Program_destroy(struct Program *this)
 {
-  while (self->size)
+  while (this->size)
     {
-      Token_destroy(self->code[--self->size]);
+      Token_destroy(this->code[--this->size]);
     }
 
-  if (self->capacity)
+  if (this->capacity)
     {
-      free(self->code);
+      free(this->code);
     }
 
-  self->code = (struct Token **)0;
-  self->scope = (struct Scope *)0;
-  String_destroy(&self->name);
+  this->code = (struct Token **)0;
+  this->scope = (struct Scope *)0;
+  String_destroy(&this->name);
 }
 
-void Program_norun(struct Program *self)
+void Program_norun(struct Program *this)
 {
-  self->runnable = 0;
-  self->scope = (struct Scope *)0;
+  this->runnable = 0;
+  this->scope = (struct Scope *)0;
 }
 
-void Program_store(struct Program *self, struct Token *line, long int where)
+void Program_store(struct Program *this, struct Token *line, long int where)
 {
   int i;
 
   assert(line->type == T_INTEGER || line->type == T_UNNUMBERED);
-  self->runnable = 0;
-  self->unsaved = 1;
+  this->runnable = 0;
+  this->unsaved = 1;
   if (line->type == T_UNNUMBERED)
     {
-      self->numbered = 0;
+      this->numbered = 0;
     }
 
   if (where)
     {
       int last = -1;
 
-      for (i = 0; i < self->size; ++i)
+      for (i = 0; i < this->size; ++i)
         {
-          assert(self->code[i]->type == T_INTEGER ||
-                 self->code[i]->type == T_UNNUMBERED);
-          if (where > last && where < self->code[i]->u.integer)
+          assert(this->code[i]->type == T_INTEGER ||
+                 this->code[i]->type == T_UNNUMBERED);
+          if (where > last && where < this->code[i]->u.integer)
             {
-              if ((self->size + 1) >= self->capacity)
+              if ((this->size + 1) >= this->capacity)
                 {
-                  self->code =
-                    realloc(self->code,
+                  this->code =
+                    realloc(this->code,
                             sizeof(struct Token *) *
-                            (self->capacity ? (self->capacity *=
-                                               2) : (self->capacity = 256)));
+                            (this->capacity ? (this->capacity *=
+                                               2) : (this->capacity = 256)));
                 }
 
-              memmove(&self->code[i + 1], &self->code[i],
-                      (self->size - i) * sizeof(struct Token *));
-              self->code[i] = line;
-              ++self->size;
+              memmove(&this->code[i + 1], &this->code[i],
+                      (this->size - i) * sizeof(struct Token *));
+              this->code[i] = line;
+              ++this->size;
               return;
             }
-          else if (where == self->code[i]->u.integer)
+          else if (where == this->code[i]->u.integer)
             {
-              Token_destroy(self->code[i]);
-              self->code[i] = line;
+              Token_destroy(this->code[i]);
+              this->code[i] = line;
               return;
             }
 
-          last = self->code[i]->u.integer;
+          last = this->code[i]->u.integer;
         }
     }
   else
     {
-      i = self->size;
+      i = this->size;
     }
 
-  if ((self->size + 1) >= self->capacity)
+  if ((this->size + 1) >= this->capacity)
     {
-      self->code =
-        realloc(self->code,
+      this->code =
+        realloc(this->code,
                 sizeof(struct Token *) *
-                (self->capacity ? (self->capacity *= 2)
-                 : (self->capacity = 256)));
+                (this->capacity ? (this->capacity *= 2)
+                 : (this->capacity = 256)));
     }
 
-  self->code[i] = line;
-  ++self->size;
+  this->code[i] = line;
+  ++this->size;
 }
 
-void Program_delete(struct Program *self, const struct Pc *from,
+void Program_delete(struct Program *this, const struct Pc *from,
                     const struct Pc *to)
 {
-  int i;
-  int first;
-  int last;
+  int i, first, last;
 
-  self->runnable = 0;
-  self->unsaved = 1;
+  this->runnable = 0;
+  this->unsaved = 1;
   first = from ? from->line : 0;
-  last = to ? to->line : self->size - 1;
+  last = to ? to->line : this->size - 1;
   for (i = first; i <= last; ++i)
     {
-      Token_destroy(self->code[i]);
+      Token_destroy(this->code[i]);
     }
 
-  if ((last + 1) != self->size)
+  if ((last + 1) != this->size)
     {
-      memmove(&self->code[first], &self->code[last + 1],
-              (self->size - last + 1) * sizeof(struct Token *));
+      memmove(&this->code[first], &this->code[last + 1],
+              (this->size - last + 1) * sizeof(struct Token *));
     }
 
-  self->size -= (last - first + 1);
+  this->size -= (last - first + 1);
 }
 
-void Program_addScope(struct Program *self, struct Scope *scope)
+void Program_addScope(struct Program *this, struct Scope *scope)
 {
   struct Scope *s;
 
-  s = self->scope;
-  self->scope = scope;
+  s = this->scope;
+  this->scope = scope;
   scope->next = s;
 }
 
-struct Pc *Program_goLine(struct Program *self, long int line, struct Pc *pc)
+struct Pc *Program_goLine(struct Program *this, long int line, struct Pc *pc)
 {
   int i;
 
-  for (i = 0; i < self->size; ++i)
+  for (i = 0; i < this->size; ++i)
     {
-      if (self->code[i]->type == T_INTEGER &&
-          line == self->code[i]->u.integer)
+      if (this->code[i]->type == T_INTEGER &&
+          line == this->code[i]->u.integer)
         {
           pc->line = i;
-          pc->token = self->code[i] + 1;
+          pc->token = this->code[i] + 1;
           return pc;
         }
     }
@@ -368,18 +362,18 @@ struct Pc *Program_goLine(struct Program *self, long int line, struct Pc *pc)
   return (struct Pc *)0;
 }
 
-struct Pc *Program_fromLine(struct Program *self, long int line,
+struct Pc *Program_fromLine(struct Program *this, long int line,
                             struct Pc *pc)
 {
   int i;
 
-  for (i = 0; i < self->size; ++i)
+  for (i = 0; i < this->size; ++i)
     {
-      if (self->code[i]->type == T_INTEGER &&
-          self->code[i]->u.integer >= line)
+      if (this->code[i]->type == T_INTEGER &&
+          this->code[i]->u.integer >= line)
         {
           pc->line = i;
-          pc->token = self->code[i] + 1;
+          pc->token = this->code[i] + 1;
           return pc;
         }
     }
@@ -387,17 +381,17 @@ struct Pc *Program_fromLine(struct Program *self, long int line,
   return (struct Pc *)0;
 }
 
-struct Pc *Program_toLine(struct Program *self, long int line, struct Pc *pc)
+struct Pc *Program_toLine(struct Program *this, long int line, struct Pc *pc)
 {
   int i;
 
-  for (i = self->size - 1; i >= 0; --i)
+  for (i = this->size - 1; i >= 0; --i)
     {
-      if (self->code[i]->type == T_INTEGER &&
-          self->code[i]->u.integer <= line)
+      if (this->code[i]->type == T_INTEGER &&
+          this->code[i]->u.integer <= line)
         {
           pc->line = i;
-          pc->token = self->code[i] + 1;
+          pc->token = this->code[i] + 1;
           return pc;
         }
     }
@@ -405,13 +399,13 @@ struct Pc *Program_toLine(struct Program *self, long int line, struct Pc *pc)
   return (struct Pc *)0;
 }
 
-int Program_scopeCheck(struct Program *self, struct Pc *pc, struct Pc *fn)
+int Program_scopeCheck(struct Program *this, struct Pc *pc, struct Pc *fn)
 {
   struct Scope *scope;
 
   if (fn == (struct Pc *)0)     /* jump from global block must go to global pc */
     {
-      for (scope = self->scope; scope; scope = scope->next)
+      for (scope = this->scope; scope; scope = scope->next)
         {
           if (pc->line < scope->begin.line)
             {
@@ -467,10 +461,10 @@ int Program_scopeCheck(struct Program *self, struct Pc *pc, struct Pc *fn)
   return 0;
 }
 
-struct Pc *Program_dataLine(struct Program *self, long int line,
+struct Pc *Program_dataLine(struct Program *this, long int line,
                             struct Pc *pc)
 {
-  if ((pc = Program_goLine(self, line, pc)) == (struct Pc *)0)
+  if ((pc = Program_goLine(this, line, pc)) == (struct Pc *)0)
     {
       return (struct Pc *)0;
     }
@@ -490,10 +484,10 @@ struct Pc *Program_dataLine(struct Program *self, long int line,
   return pc;
 }
 
-struct Pc *Program_imageLine(struct Program *self, long int line,
+struct Pc *Program_imageLine(struct Program *this, long int line,
                              struct Pc *pc)
 {
-  if ((pc = Program_goLine(self, line, pc)) == (struct Pc *)0)
+  if ((pc = Program_goLine(this, line, pc)) == (struct Pc *)0)
     {
       return (struct Pc *)0;
     }
@@ -519,16 +513,16 @@ struct Pc *Program_imageLine(struct Program *self, long int line,
   return pc;
 }
 
-long int Program_lineNumber(const struct Program *self, const struct Pc *pc)
+long int Program_lineNumber(const struct Program *this, const struct Pc *pc)
 {
   if (pc->line == -1)
     {
       return 0;
     }
 
-  if (self->numbered)
+  if (this->numbered)
     {
-      return (self->code[pc->line]->u.integer);
+      return (this->code[pc->line]->u.integer);
     }
   else
     {
@@ -536,30 +530,30 @@ long int Program_lineNumber(const struct Program *self, const struct Pc *pc)
     }
 }
 
-struct Pc *Program_beginning(struct Program *self, struct Pc *pc)
+struct Pc *Program_beginning(struct Program *this, struct Pc *pc)
 {
-  if (self->size == 0)
+  if (this->size == 0)
     {
       return (struct Pc *)0;
     }
   else
     {
       pc->line = 0;
-      pc->token = self->code[0] + 1;
+      pc->token = this->code[0] + 1;
       return pc;
     }
 }
 
-struct Pc *Program_end(struct Program *self, struct Pc *pc)
+struct Pc *Program_end(struct Program *this, struct Pc *pc)
 {
-  if (self->size == 0)
+  if (this->size == 0)
     {
       return (struct Pc *)0;
     }
   else
     {
-      pc->line = self->size - 1;
-      pc->token = self->code[self->size - 1];
+      pc->line = this->size - 1;
+      pc->token = this->code[this->size - 1];
       while (pc->token->type != T_EOL)
         {
           ++pc->token;
@@ -569,31 +563,31 @@ struct Pc *Program_end(struct Program *self, struct Pc *pc)
     }
 }
 
-struct Pc *Program_nextLine(struct Program *self, struct Pc *pc)
+struct Pc *Program_nextLine(struct Program *this, struct Pc *pc)
 {
-  if (pc->line + 1 == self->size)
+  if (pc->line + 1 == this->size)
     {
       return (struct Pc *)0;
     }
   else
     {
-      pc->token = self->code[++pc->line] + 1;
+      pc->token = this->code[++pc->line] + 1;
       return pc;
     }
 }
 
-int Program_skipEOL(struct Program *self, struct Pc *pc, int dev, int tr)
+int Program_skipEOL(struct Program *this, struct Pc *pc, int dev, int tr)
 {
   if (pc->token->type == T_EOL)
     {
-      if (pc->line == -1 || pc->line + 1 == self->size)
+      if (pc->line == -1 || pc->line + 1 == this->size)
         {
           return 0;
         }
       else
         {
-          pc->token = self->code[++pc->line] + 1;
-          Program_trace(self, pc, dev, tr);
+          pc->token = this->code[++pc->line] + 1;
+          Program_trace(this, pc, dev, tr);
           return 1;
         }
     }
@@ -603,32 +597,31 @@ int Program_skipEOL(struct Program *self, struct Pc *pc, int dev, int tr)
     }
 }
 
-void Program_trace(struct Program *self, struct Pc *pc, int dev, int tr)
+void Program_trace(struct Program *this, struct Pc *pc, int dev, int tr)
 {
-  if (tr && self->trace && pc->line != -1)
+  if (tr && this->trace && pc->line != -1)
     {
       char buf[40];
 
-      snprintf(buf, sizeof(buf), "<%ld>\n",
-               self->code[pc->line]->u.integer);
+      sprintf(buf, "<%ld>\n", this->code[pc->line]->u.integer);
       FS_putChars(dev, buf);
     }
 }
 
-void Program_PCtoError(struct Program *self, struct Pc *pc, struct Value *v)
+void Program_PCtoError(struct Program *this, struct Pc *pc, struct Value *v)
 {
   struct String s;
 
   String_new(&s);
   if (pc->line >= 0)
     {
-      if (pc->line < (self->size - 1) || pc->token->type != T_EOL)
+      if (pc->line < (this->size - 1) || pc->token->type != T_EOL)
         {
           String_appendPrintf(&s, _(" in line %ld at:\n"),
-                              Program_lineNumber(self, pc));
-          Token_toString(self->code[pc->line], (struct Token *)0, &s,
+                              Program_lineNumber(this, pc));
+          Token_toString(this->code[pc->line], (struct Token *)0, &s,
                          (int *)0, -1);
-          Token_toString(self->code[pc->line], pc->token, &s, (int *)0, -1);
+          Token_toString(this->code[pc->line], pc->token, &s, (int *)0, -1);
           String_appendPrintf(&s, "^\n");
         }
       else
@@ -653,7 +646,7 @@ void Program_PCtoError(struct Program *self, struct Pc *pc, struct Value *v)
   String_destroy(&s);
 }
 
-struct Value *Program_merge(struct Program *self, int dev,
+struct Value *Program_merge(struct Program *this, int dev,
                             struct Value *value)
 {
   struct String s;
@@ -672,12 +665,12 @@ struct Value *Program_merge(struct Program *self, int dev,
           line = Token_newCode(s.character);
           if (line->type == T_INTEGER && line->u.integer > 0)
             {
-              Program_store(self, line,
-                            self->numbered ? line->u.integer : 0);
+              Program_store(this, line,
+                            this->numbered ? line->u.integer : 0);
             }
           else if (line->type == T_UNNUMBERED)
             {
-              Program_store(self, line, 0);
+              Program_store(this, line, 0);
             }
           else
             {
@@ -698,19 +691,16 @@ struct Value *Program_merge(struct Program *self, int dev,
   return (struct Value *)0;
 }
 
-int Program_lineNumberWidth(struct Program *self)
+int Program_lineNumberWidth(struct Program *this)
 {
-  int i;
-  int w = 0;
+  int i, w = 0;
 
-  for (i = 0; i < self->size; ++i)
+  for (i = 0; i < this->size; ++i)
     {
-      if (self->code[i]->type == T_INTEGER)
+      if (this->code[i]->type == T_INTEGER)
         {
-          int nw;
-          int ln;
-
-          for (ln = self->code[i]->u.integer, nw = 1; ln /= 10; ++nw);
+          int nw, ln;
+          for (ln = this->code[i]->u.integer, nw = 1; ln /= 10; ++nw);
           if (nw > w)
             {
               w = nw;
@@ -721,20 +711,19 @@ int Program_lineNumberWidth(struct Program *self)
   return w;
 }
 
-struct Value *Program_list(struct Program *self, int dev, int watchIntr,
+struct Value *Program_list(struct Program *this, int dev, int watchIntr,
                            struct Pc *from, struct Pc *to,
                            struct Value *value)
 {
-  int i;
-  int w;
+  int i, w;
   int indent = 0;
   struct String s;
 
-  w = Program_lineNumberWidth(self);
-  for (i = 0; i < self->size; ++i)
+  w = Program_lineNumberWidth(this);
+  for (i = 0; i < this->size; ++i)
     {
       String_new(&s);
-      Token_toString(self->code[i], (struct Token *)0, &s, &indent, w);
+      Token_toString(this->code[i], (struct Token *)0, &s, &indent, w);
       if ((from == (struct Pc *)0 || from->line <= i) &&
           (to == (struct Pc *)0 || to->line >= i))
         {
@@ -750,14 +739,14 @@ struct Value *Program_list(struct Program *self, int dev, int watchIntr,
   return (struct Value *)0;
 }
 
-struct Value *Program_analyse(struct Program *self, struct Pc *pc,
+struct Value *Program_analyse(struct Program *this, struct Pc *pc,
                               struct Value *value)
 {
   int i;
 
-  for (i = 0; i < self->size; ++i)
+  for (i = 0; i < this->size; ++i)
     {
-      pc->token = self->code[i];
+      pc->token = this->code[i];
       pc->line = i;
       if (pc->token->type == T_INTEGER || pc->token->type == T_UNNUMBERED)
         {
@@ -819,14 +808,14 @@ struct Value *Program_analyse(struct Program *self, struct Pc *pc,
   return (struct Value *)0;
 }
 
-void Program_renum(struct Program *self, int first, int inc)
+void Program_renum(struct Program *this, int first, int inc)
 {
   int i;
   struct Token *token;
 
-  for (i = 0; i < self->size; ++i)
+  for (i = 0; i < this->size; ++i)
     {
-      for (token = self->code[i]; token->type != T_EOL; )
+      for (token = this->code[i]; token->type != T_EOL; )
         {
           if (token->type == T_GOTO || token->type == T_GOSUB ||
               token->type == T_RESTORE || token->type == T_RESUME ||
@@ -837,7 +826,7 @@ void Program_renum(struct Program *self, int first, int inc)
                 {
                   struct Pc dst;
 
-                  if (Program_goLine(self, token->u.integer, &dst))
+                  if (Program_goLine(this, token->u.integer, &dst))
                     {
                       token->u.integer = first + dst.line * inc;
                     }
@@ -860,30 +849,30 @@ void Program_renum(struct Program *self, int first, int inc)
         }
     }
 
-  for (i = 0; i < self->size; ++i)
+  for (i = 0; i < this->size; ++i)
     {
-      assert(self->code[i]->type == T_INTEGER ||
-             self->code[i]->type == T_UNNUMBERED);
-      self->code[i]->type = T_INTEGER;
-      self->code[i]->u.integer = first + i * inc;
+      assert(this->code[i]->type == T_INTEGER ||
+             this->code[i]->type == T_UNNUMBERED);
+      this->code[i]->type = T_INTEGER;
+      this->code[i]->u.integer = first + i * inc;
     }
 
-  self->numbered = 1;
-  self->runnable = 0;
-  self->unsaved = 1;
+  this->numbered = 1;
+  this->runnable = 0;
+  this->unsaved = 1;
 }
 
-void Program_unnum(struct Program *self)
+void Program_unnum(struct Program *this)
 {
   char *ref;
   int i;
   struct Token *token;
 
-  ref = malloc(self->size);
-  memset(ref, 0, self->size);
-  for (i = 0; i < self->size; ++i)
+  ref = malloc(this->size);
+  memset(ref, 0, this->size);
+  for (i = 0; i < this->size; ++i)
     {
-      for (token = self->code[i]; token->type != T_EOL; ++token)
+      for (token = this->code[i]; token->type != T_EOL; ++token)
         {
           if (token->type == T_GOTO || token->type == T_GOSUB ||
               token->type == T_RESTORE || token->type == T_RESUME)
@@ -893,7 +882,7 @@ void Program_unnum(struct Program *self)
                 {
                   struct Pc dst;
 
-                  if (Program_goLine(self, token->u.integer, &dst))
+                  if (Program_goLine(this, token->u.integer, &dst))
                     {
                       ref[dst.line] = 1;
                     }
@@ -912,32 +901,32 @@ void Program_unnum(struct Program *self)
         }
     }
 
-  for (i = 0; i < self->size; ++i)
+  for (i = 0; i < this->size; ++i)
     {
-      assert(self->code[i]->type == T_INTEGER ||
-             self->code[i]->type == T_UNNUMBERED);
+      assert(this->code[i]->type == T_INTEGER ||
+             this->code[i]->type == T_UNNUMBERED);
       if (!ref[i])
         {
-          self->code[i]->type = T_UNNUMBERED;
-          self->numbered = 0;
+          this->code[i]->type = T_UNNUMBERED;
+          this->numbered = 0;
         }
     }
 
   free(ref);
-  self->runnable = 0;
-  self->unsaved = 1;
+  this->runnable = 0;
+  this->unsaved = 1;
 }
 
-int Program_setname(struct Program *self, const char *filename)
+int Program_setname(struct Program *this, const char *filename)
 {
-  if (self->name.length)
+  if (this->name.length)
     {
-      String_delete(&self->name, 0, self->name.length);
+      String_delete(&this->name, 0, this->name.length);
     }
 
   if (filename)
     {
-      return String_appendChars(&self->name, filename);
+      return String_appendChars(&this->name, filename);
     }
   else
     {
@@ -945,26 +934,23 @@ int Program_setname(struct Program *self, const char *filename)
     }
 }
 
-void Program_xref(struct Program *self, int chn)
+void Program_xref(struct Program *this, int chn)
 {
   struct Pc pc;
-  struct Xref *func;
-  struct Xref *var;
-  struct Xref *gosub;
-  struct Xref *goto_;
+  struct Xref *func, *var, *gosub, *goto_;
   int nl = 0;
 
-  assert(self->runnable);
+  assert(this->runnable);
   func = (struct Xref *)0;
   var = (struct Xref *)0;
   gosub = (struct Xref *)0;
   goto_ = (struct Xref *)0;
 
-  for (pc.line = 0; pc.line < self->size; ++pc.line)
+  for (pc.line = 0; pc.line < this->size; ++pc.line)
     {
       struct On *on;
 
-      for (on = (struct On *)0, pc.token = self->code[pc.line];
+      for (on = (struct On *)0, pc.token = this->code[pc.line];
            pc.token->type != T_EOL; ++pc.token)
         {
           switch (pc.token->type)
@@ -1021,9 +1007,9 @@ void Program_xref(struct Program *self, int chn)
         }
     }
 
-  for (pc.line = 0; pc.line < self->size; ++pc.line)
+  for (pc.line = 0; pc.line < this->size; ++pc.line)
     {
-      for (pc.token = self->code[pc.line]; pc.token->type != T_EOL;
+      for (pc.token = this->code[pc.line]; pc.token->type != T_EOL;
            ++pc.token)
         {
           switch (pc.token->type)
@@ -1075,7 +1061,7 @@ void Program_xref(struct Program *self, int chn)
   if (func)
     {
       FS_putChars(chn, _("Function Referenced in line\n"));
-      Xref_print(func, printName, self, chn);
+      Xref_print(func, printName, this, chn);
       Xref_destroy(func);
       nl = 1;
     }
@@ -1088,7 +1074,7 @@ void Program_xref(struct Program *self, int chn)
         }
 
       FS_putChars(chn, _("Variable Referenced in line\n"));
-      Xref_print(var, printName, self, chn);
+      Xref_print(var, printName, this, chn);
       Xref_destroy(func);
       nl = 1;
     }
@@ -1101,7 +1087,7 @@ void Program_xref(struct Program *self, int chn)
         }
 
       FS_putChars(chn, _("Gosub    Referenced in line\n"));
-      Xref_print(gosub, printLine, self, chn);
+      Xref_print(gosub, printLine, this, chn);
       Xref_destroy(gosub);
       nl = 1;
     }
@@ -1114,7 +1100,7 @@ void Program_xref(struct Program *self, int chn)
         }
 
       FS_putChars(chn, _("Goto     Referenced in line\n"));
-      Xref_print(goto_, printLine, self, chn);
+      Xref_print(goto_, printLine, this, chn);
       Xref_destroy(goto_);
     }
 }

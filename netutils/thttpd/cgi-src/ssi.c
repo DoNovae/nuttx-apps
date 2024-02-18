@@ -216,7 +216,7 @@ static int get_filename(char *vfilename, char *filename,
           return -1;
         }
 
-      strlcpy(fn, filename, fnsize);
+      strncpy(fn, filename, size);
       strlcpy(&fn[size], val, fnsize - size);
     }
   else if (strcmp(tag, "file") == 0)
@@ -324,8 +324,7 @@ static int check_filename(char *filename)
       *cp = '\0';
     }
 
-  fnl = strlen(dirname) + 1 + sizeof(CONFIG_AUTH_FILE);
-  authname = malloc(fnl);
+  authname = malloc(strlen(dirname) + 1 + sizeof(CONFIG_AUTH_FILE));
   if (!authname)
     {
       /* out of memory */
@@ -334,7 +333,7 @@ static int check_filename(char *filename)
       return 0;
     }
 
-  snprintf(authname, fnl, "%s/%s", dirname, CONFIG_AUTH_FILE);
+  sprintf(authname, "%s/%s", dirname, CONFIG_AUTH_FILE);
   r = stat(authname, &sb);
 
   free(dirname);
@@ -419,7 +418,8 @@ static void do_config(FILE *instream, char *vfilename, char *filename,
 
   if (strcmp(tag, "g_timeformat") == 0)
     {
-      strlcpy(g_timeformat, val, TIMEFMT_SIZE);
+      strncpy(g_timeformat, val, TIMEFMT_SIZE - 1);
+      g_timeformat[TIMEFMT_SIZE - 1] = '\0';
     }
   else if (strcmp(tag, "g_sizefmt") == 0)
     {
@@ -907,7 +907,6 @@ int main(int argc, char *argv[])
   char *script_name;
   char *path_info;
   char *path_translated;
-  size_t len;
   int errcode = 0;
 
   /* Default formats. */
@@ -936,15 +935,14 @@ int main(int argc, char *argv[])
       path_info = "";
     }
 
-  len = strlen(script_name) + strlen(path_info) + 1;
-  g_url = (char *)malloc(len);
+  g_url = (char *)malloc(strlen(script_name) + strlen(path_info) + 1);
   if (!g_url)
     {
       internal_error("Out of memory.");
       return 2;
     }
 
-  snprintf(g_url, len, "%s%s", script_name, path_info);
+  sprintf(g_url, "%s%s", script_name, path_info);
 
   /* Get the name of the file to parse. */
 

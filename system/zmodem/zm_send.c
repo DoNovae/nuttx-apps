@@ -705,7 +705,7 @@ static int zms_sendzsinit(FAR struct zm_state_s *pzm)
 static int zms_sendfilename(FAR struct zm_state_s *pzm)
 {
   FAR struct zms_state_s *pzms = (FAR struct zms_state_s *)pzm;
-  FAR char *ptr = (FAR char *)pzm->scratch;
+  FAR uint8_t *ptr = pzm->scratch;
   int len;
   int ret;
 
@@ -768,19 +768,19 @@ static int zms_sendfilename(FAR struct zm_state_s *pzm)
    */
 
 #ifdef CONFIG_SYSTEM_ZMODEM_TIMESTAMPS
-  snprintf(ptr, sizeof(pzm->scratch), "%ld %lo 0 %d 1 %ld 0",
-           (unsigned long)pzms->filesize, (unsigned long)pzms->timestamp,
-           CONFIG_SYSTEM_ZMODEM_SERIALNO, (unsigned long)pzms->filesize);
+  sprintf((FAR char *)ptr, "%ld %lo 0 %d 1 %ld 0",
+          (unsigned long)pzms->filesize, (unsigned long)pzms->timestamp,
+          CONFIG_SYSTEM_ZMODEM_SERIALNO, (unsigned long)pzms->filesize);
 #else
-  snprintf(ptr, sizeof(pzm->scratch), "%ld 0 0 %d 1 %ld 0",
-           (unsigned long)pzms->filesize, CONFIG_SYSTEM_ZMODEM_SERIALNO,
-           (unsigned long)pzms->filesize);
+  sprintf((FAR char *)ptr, "%ld 0 0 %d 1 %ld 0",
+          (unsigned long)pzms->filesize, CONFIG_SYSTEM_ZMODEM_SERIALNO,
+          (unsigned long)pzms->filesize);
 #endif
 
-  ptr += strlen(ptr);
+  ptr += strlen((FAR char *)ptr);
   *ptr++ = '\0';
 
-  len = ptr - (FAR char *)pzm->scratch;
+  len =  ptr - pzm->scratch;
   DEBUGASSERT(len < CONFIG_SYSTEM_ZMODEM_SNDBUFSIZE);
   return zm_senddata(pzm, pzm->scratch, len);
 }

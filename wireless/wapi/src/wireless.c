@@ -83,7 +83,6 @@ FAR const char *g_wapi_essid_flags[] =
 {
   "WAPI_ESSID_OFF",
   "WAPI_ESSID_ON",
-  "WAPI_ESSID_DELAY_ON",
   NULL
 };
 
@@ -129,17 +128,6 @@ FAR const char *g_wapi_alg_flags[] =
   "WPA_ALG_WEP",
   "WPA_ALG_TKIP",
   "WPA_ALG_CCMP",
-  NULL
-};
-
-/* Passphrase WPA Version */
-
-FAR const char *g_wapi_wpa_ver_flags[] =
-{
-  "WPA_VER_NONE",
-  "WPA_VER_1",
-  "WPA_VER_2",
-  "WPA_VER_3",
   NULL
 };
 
@@ -219,7 +207,7 @@ static int wapi_parse_mode(int iw_mode, FAR enum wapi_mode_e *wapi_mode)
 
     default:
       WAPI_ERROR("ERROR: Unknown mode: %d\n", iw_mode);
-      return -EINVAL;
+      return -1;
     }
 }
 
@@ -264,24 +252,25 @@ static void wapi_event_stream_init(FAR struct wapi_event_stream_s *stream,
 static int wapi_event_stream_extract(FAR struct wapi_event_stream_s *stream,
                                      FAR struct iw_event *iwe)
 {
-  int ret = 1;
+  int ret;
   FAR struct iw_event *iwe_stream;
 
-  iwe_stream = (FAR struct iw_event *)stream->current;
-
-  if (stream->current + offsetof(struct iw_event, u) > stream->end ||
-      iwe_stream->len == 0)
+  if (stream->current + offsetof(struct iw_event, u) > stream->end)
     {
       /* Nothing to process */
 
       return 0;
     }
 
+  iwe_stream = (FAR struct iw_event *)stream->current;
+
   if (stream->current + iwe_stream->len > stream->end ||
       iwe_stream->len < offsetof(struct iw_event, u))
     {
-      return -EINVAL;
+      return -1;
     }
+
+  ret = 1;
 
   switch (iwe_stream->cmd)
     {
@@ -347,7 +336,7 @@ static int wapi_scan_event(FAR struct iw_event *event,
         if (!temp)
           {
             WAPI_STRERROR("malloc()");
-            return -ENOMEM;
+            return -1;
           }
 
         /* Reset it. */
@@ -522,7 +511,7 @@ int wapi_get_freq(int sock, FAR const char *ifname, FAR double *freq,
       else
         {
           WAPI_ERROR("ERROR: Unknown flag: %d\n", wrq.u.freq.flags);
-          return -EINVAL;
+          return -1;
         }
 
       /* Set freq. */
@@ -982,7 +971,7 @@ int wapi_get_bitrate(int sock, FAR const char *ifname,
       if (wrq.u.bitrate.disabled)
         {
           WAPI_ERROR("ERROR: Bitrate is disabled\n");
-          return -EINVAL;
+          return -1;
         }
 
       /* Get bitrate. */
@@ -1086,7 +1075,7 @@ int wapi_get_txpower(int sock, FAR const char *ifname, FAR int *power,
 
       if (wrq.u.txpower.disabled)
         {
-          return -EINVAL;
+          return -1;
         }
 
       /* Get flag. */
@@ -1105,7 +1094,7 @@ int wapi_get_txpower(int sock, FAR const char *ifname, FAR int *power,
 
           default:
             WAPI_ERROR("ERROR: Unknown flag: %d\n", wrq.u.txpower.flags);
-            return -EINVAL;
+            return -1;
         }
 
       /* Get power. */
@@ -1184,23 +1173,6 @@ int wapi_scan_channel_init(int sock, FAR const char *ifname,
                            FAR const char *essid,
                            uint8_t *channels, int num_channels)
 {
-  return wapi_escan_channel_init(sock, ifname, IW_SCAN_TYPE_ACTIVE, essid,
-                                 channels, num_channels);
-}
-
-/****************************************************************************
- * Name: wapi_escan_channel_init
- *
- * Description:
- *   Starts a scan on the given interface. Root privileges are required to
- *   start a scan with specified channels.
- *
- ****************************************************************************/
-
-int wapi_escan_channel_init(int sock, FAR const char *ifname,
-                           uint8_t scan_type, FAR const char *essid,
-                           uint8_t *channels, int num_channels)
-{
   struct iw_scan_req req;
   struct iwreq wrq =
   {
@@ -1210,13 +1182,16 @@ int wapi_escan_channel_init(int sock, FAR const char *ifname,
   int ret;
   int i;
 
-  memset(&req, 0, sizeof(req));
-
   if (essid && (essid_len = strlen(essid)) > 0)
     {
-      req.essid_len    = essid_len;
+      memset(&req, 0, sizeof(req));
+      req.essid_len       = essid_len;
+      req.bssid.sa_family = ARPHRD_ETHER;
+      memset(req.bssid.sa_data, 0xff, IFHWADDRLEN);
       memcpy(req.essid, essid, essid_len);
-      wrq.u.data.flags = IW_SCAN_THIS_ESSID;
+      wrq.u.data.pointer  = (caddr_t)&req;
+      wrq.u.data.length   = sizeof(req);
+      wrq.u.data.flags    = IW_SCAN_THIS_ESSID;
     }
 
   if (channels && num_channels > 0)
@@ -1227,12 +1202,6 @@ int wapi_escan_channel_init(int sock, FAR const char *ifname,
           req.channel_list[i].m = channels[i];
         }
     }
-
-  req.scan_type       = scan_type;
-  req.bssid.sa_family = ARPHRD_ETHER;
-  memset(req.bssid.sa_data, 0xff, IFHWADDRLEN);
-  wrq.u.data.pointer  = (caddr_t)&req;
-  wrq.u.data.length   = sizeof(req);
 
   strlcpy(wrq.ifr_name, ifname, IFNAMSIZ);
   ret = ioctl(sock, SIOCSIWSCAN, (unsigned long)((uintptr_t)&wrq));
@@ -1258,21 +1227,6 @@ int wapi_escan_channel_init(int sock, FAR const char *ifname,
 int wapi_scan_init(int sock, FAR const char *ifname, FAR const char *essid)
 {
   return wapi_scan_channel_init(sock, ifname, essid, NULL, 0);
-}
-
-/****************************************************************************
- * Name: wapi_escan_init
- *
- * Description:
- *   Starts a extended scan on the given interface, you can specify the scan
- *   type. Root privileges are required to start a scan.
- *
- ****************************************************************************/
-
-int wapi_escan_init(int sock, FAR const char *ifname,
-                   uint8_t scan_type, FAR const char *essid)
-{
-  return wapi_escan_channel_init(sock, ifname, scan_type, essid, NULL, 0);
 }
 
 /****************************************************************************
@@ -1351,15 +1305,14 @@ int wapi_scan_coll(int sock, FAR const char *ifname,
   WAPI_VALIDATE_PTR(aps);
 
   buflen = CONFIG_WIRELESS_WAPI_SCAN_MAX_DATA;
-  buf = malloc(buflen);
+  buf = malloc(buflen * sizeof(char));
   if (!buf)
     {
       WAPI_STRERROR("malloc()");
-      return -ENOMEM;
+      return -1;
     }
 
-retry:
-  memset(buf, 0, buflen);
+alloc:
 
   /* Collect results. */
 
@@ -1374,16 +1327,16 @@ retry:
       FAR char *tmp;
 
       buflen *= 2;
-      tmp = malloc(buflen);
-      free(buf);
+      tmp = realloc(buf, buflen);
       if (!tmp)
         {
-          WAPI_STRERROR("malloc()");
-          return -ENOMEM;
+          WAPI_STRERROR("realloc()");
+          free(buf);
+          return -1;
         }
 
       buf = tmp;
-      goto retry;
+      goto alloc;
     }
 
   /* There is still something wrong. It's either EAGAIN or some other ioctl()

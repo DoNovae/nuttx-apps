@@ -44,7 +44,6 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/ioctl.h>
-#include <sys/param.h>
 #include <arpa/inet.h>
 
 #include <nuttx/queue.h>
@@ -102,6 +101,8 @@ static const struct i8sak_command_s g_i8sak_commands[] =
   {"startpan",    (CODE void *)i8sak_startpan_cmd},
   {"tx",          (CODE void *)i8sak_tx_cmd},
 };
+
+#define NCOMMANDS (sizeof(g_i8sak_commands) / sizeof(struct i8sak_command_s))
 
 static sq_queue_t g_i8sak_free;
 static sq_queue_t g_i8sak_instances;
@@ -892,7 +893,7 @@ int main(int argc, FAR char *argv[])
   /* Find the command in the g_i8sak_command[] list */
 
   i8sakcmd = NULL;
-  for (i = 0; i < nitems(g_i8sak_commands); i++)
+  for (i = 0; i < NCOMMANDS; i++)
     {
       FAR const struct i8sak_command_s *cmd = &g_i8sak_commands[i];
       if (strcmp(argv[argind], cmd->name) == 0)

@@ -24,7 +24,6 @@
 
 #include <nuttx/config.h>
 
-#include <sys/param.h>
 #include <sys/stat.h>
 
 #include <stdarg.h>
@@ -759,7 +758,7 @@ static void vi_setcursor(FAR struct vi_s *vi, uint16_t row, uint16_t column)
 
   /* Send the VT100 CURSORPOS command */
 
-  vi_write(vi, buffer, MIN(len, sizeof(buffer)));
+  vi_write(vi, buffer, len);
 }
 
 /****************************************************************************
@@ -859,13 +858,10 @@ static void vi_printf(FAR struct vi_s *vi, FAR const char *prefix,
 
   /* Expand the prefix message in the scratch buffer */
 
-  len = prefix ? snprintf(vi->scratch,
-                          sizeof(vi->scratch), "%s", prefix) : 0;
-  len = MIN(len, sizeof(vi->scratch));
+  len = prefix ? snprintf(vi->scratch, SCRATCH_BUFSIZE, "%s", prefix) : 0;
 
   va_start(ap, fmt);
-  len += vsnprintf(vi->scratch + len, sizeof(vi->scratch) - len, fmt, ap);
-  len = MIN(len, sizeof(vi->scratch));
+  len += vsnprintf(vi->scratch + len, SCRATCH_BUFSIZE - len, fmt, ap);
   vvidbg(fmt, ap);
   va_end(ap);
 
@@ -1303,8 +1299,8 @@ static bool vi_savetext(FAR struct vi_s *vi, FAR const char *filename,
 
   fclose(stream);
 
-  len = snprintf(vi->scratch, sizeof(vi->scratch), "%dC written", nwritten);
-  vi_write(vi, vi->scratch, MIN(len, sizeof(vi->scratch)));
+  len = sprintf(vi->scratch, "%dC written", nwritten);
+  vi_write(vi, vi->scratch, len);
   return true;
 }
 
@@ -1959,10 +1955,10 @@ static void vi_showlinecol(FAR struct vi_s *vi)
   vi_cursoroff(vi);
   vi_setcursor(vi, vi->display.row - 1, vi->display.column - 15);
 
-  len = snprintf(vi->scratch, sizeof(vi->scratch), "%jd,%d",
+  len = snprintf(vi->scratch, SCRATCH_BUFSIZE, "%jd,%d",
                  (uintmax_t)(vi->cursor.row + vi->vscroll + 1),
                  vi->cursor.column + vi->hscroll + 1);
-  vi_write(vi, vi->scratch, MIN(len, sizeof(vi->scratch)));
+  vi_write(vi, vi->scratch, len);
 
   vi_clrtoeol(vi);
   vi_cursoron(vi);
@@ -4432,7 +4428,13 @@ static void vi_parsecolon(FAR struct vi_s *vi)
                * as unmodified.
                */
 
-              strlcpy(vi->filename, filename, MAX_FILENAME);
+              strncpy(vi->filename, filename, MAX_FILENAME - 1);
+
+             /* Make sure that the (possibly truncated) file name is NUL
+              * terminated
+              */
+
+              vi->filename[MAX_FILENAME - 1] = '\0';
               vi->modified = false;
             }
           else
@@ -4456,7 +4458,13 @@ static void vi_parsecolon(FAR struct vi_s *vi)
 
       if (filename)
         {
-          strlcpy(vi->filename, filename, MAX_FILENAME);
+          strncpy(vi->filename, filename, MAX_FILENAME - 1);
+
+         /* Make sure that the (possibly truncated) file name is NUL
+          * terminated
+          */
+
+          vi->filename[MAX_FILENAME - 1] = '\0';
         }
 
       /* If it is not a new file and if there are no changes to the text
@@ -4771,7 +4779,13 @@ static void vi_parsefind(FAR struct vi_s *vi, bool revfind)
     {
       /* Copy the new search string from the scratch to the find buffer */
 
-      strlcpy(vi->findstr, vi->scratch, MAX_STRING);
+      strncpy(vi->findstr, vi->scratch, MAX_STRING - 1);
+
+      /* Make sure that the (possibly truncated) search string is NUL
+       * terminated
+       */
+
+      vi->findstr[MAX_STRING - 1] = '\0';
     }
 
   /* Then attempt to find the string */
@@ -5625,15 +5639,15 @@ int main(int argc, FAR char *argv[])
 
       if (argv[optind][0] == '/')
         {
-          strlcpy(vi->filename, argv[optind], MAX_STRING);
+          strncpy(vi->filename, argv[optind], MAX_STRING - 1);
         }
       else
         {
           /* Make file relative to current working directory */
 
-          getcwd(vi->filename, MAX_STRING);
-          strlcat(vi->filename, "/", MAX_STRING);
-          strlcat(vi->filename, argv[optind], MAX_STRING);
+          getcwd(vi->filename, MAX_STRING - 1);
+          strncat(vi->filename, "/", MAX_STRING - 1);
+          strncat(vi->filename, argv[optind], MAX_STRING - 1);
         }
 
       /* Make sure the (possibly truncated) file name is NUL terminated */

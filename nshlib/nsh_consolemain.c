@@ -65,10 +65,6 @@ int nsh_consolemain(int argc, FAR char *argv[])
   int ret;
 
   DEBUGASSERT(pstate != NULL);
-  if (pstate == NULL)
-    {
-      return -ENOMEM;
-    }
 
   /* Execute the session */
 

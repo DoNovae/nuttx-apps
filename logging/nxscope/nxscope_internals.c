@@ -61,15 +61,12 @@ int nxscope_stream_send(FAR struct nxscope_s *s, FAR uint8_t *buff,
 
   /* Finalize stream frame */
 
-  if (!s->stream_retry)
+  ret = PROTO_FRAME_FINAL(s, s->proto_stream,
+                          NXSCOPE_HDRID_STREAM, buff, buff_i);
+  if (ret < 0)
     {
-      ret = PROTO_FRAME_FINAL(s, s->proto_stream,
-                              NXSCOPE_HDRID_STREAM, buff, buff_i);
-      if (ret < 0)
-        {
-          _err("ERROR: PROTO_FRAME_FINAL failed %d\n", ret);
-          goto errout;
-        }
+      _err("ERROR: PROTO_FRAME_FINAL failed %d\n", ret);
+      goto errout;
     }
 
   /* Send stream data */
@@ -78,11 +75,6 @@ int nxscope_stream_send(FAR struct nxscope_s *s, FAR uint8_t *buff,
   if (ret < 0)
     {
       _err("ERROR: INTF_SEND failed %d\n", ret);
-      s->stream_retry = true;
-    }
-  else
-    {
-      s->stream_retry = false;
     }
 
 errout:

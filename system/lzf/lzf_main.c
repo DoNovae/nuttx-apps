@@ -333,14 +333,14 @@ static int compose_name(FAR const char *fname, FAR char *oname, int namelen)
           return -1;
         }
 
-      strlcpy(oname, fname, namelen);
+      strncpy(oname, fname, namelen);
       p = strchr(oname, '.');
       if (p != NULL)
         {
           *p = '_';  /* _ for dot */
         }
 
-       strlcat(oname, ".lzf", namelen);
+       strcat (oname, ".lzf");
     }
   else
     {
@@ -372,12 +372,13 @@ static int compose_name(FAR const char *fname, FAR char *oname, int namelen)
 static int run_file(FAR const char *fname)
 {
   struct stat mystat;
-  char oname[PATH_MAX];
+  char oname[PATH_MAX + 1];
   int fd;
   int fd2;
   int ret;
 
-  if (compose_name(fname, oname, sizeof(oname)))
+  memset(oname, 0, sizeof(oname));
+  if (compose_name(fname, oname, PATH_MAX + 1))
     {
       return -1;
     }

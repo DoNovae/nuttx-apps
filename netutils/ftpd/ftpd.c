@@ -65,7 +65,7 @@
 #include <arpa/inet.h>
 
 #ifdef CONFIG_FTPD_LOGIN_PASSWD
-#  include "fsutils/passwd.h"
+  #include "fsutils/passwd.h"
 #endif
 
 #include "netutils/ftpd.h"
@@ -1007,13 +1007,12 @@ static ssize_t ftpd_response(int sd, int timeout, FAR const char *fmt, ...)
   FAR char *buffer;
   ssize_t bytessent;
   va_list ap;
-  int ret;
 
   va_start(ap, fmt);
-  ret = vasprintf(&buffer, fmt, ap);
+  vasprintf(&buffer, fmt, ap);
   va_end(ap);
 
-  if (ret < 0)
+  if (buffer == NULL)
     {
       return -ENOMEM;
     }
@@ -1383,9 +1382,8 @@ static FAR char *ftpd_node2path(FAR struct ftpd_pathnode_s *node,
   FAR struct ftpd_pathnode_s *node1;
   FAR struct ftpd_pathnode_s *node2;
   FAR char *path;
-  size_t allocsize;
-  size_t namelen;
-  size_t next;
+  FAR size_t allocsize;
+  FAR size_t namelen;
 
   if (node == NULL)
     {
@@ -1425,7 +1423,7 @@ static FAR char *ftpd_node2path(FAR struct ftpd_pathnode_s *node,
             }
           else
             {
-              allocsize += namelen + 1;
+              allocsize += namelen +1;
             }
         }
       else
@@ -1442,7 +1440,7 @@ static FAR char *ftpd_node2path(FAR struct ftpd_pathnode_s *node,
       return NULL;
     }
 
-  next = 0;
+  allocsize = 0;
   node1 = node;
   while (node1 != NULL)
     {
@@ -1472,20 +1470,19 @@ static FAR char *ftpd_node2path(FAR struct ftpd_pathnode_s *node,
         {
           if (namelen <= 0)
             {
-              snprintf(&path[next], allocsize - next, "/");
+              allocsize += sprintf(&path[allocsize], "/");
             }
           else
             {
-              snprintf(&path[next], allocsize - next, "%s", node1->name);
+              allocsize += sprintf(&path[allocsize], "%s", node1->name);
             }
         }
       else
         {
-          snprintf(&path[next], allocsize - next, "%s%s", node1->name, "/");
+          allocsize += sprintf(&path[allocsize], "%s%s", node1->name, "/");
         }
 
       node1 = node1->flink;
-      next += strlen(&path[next]);
     }
 
   return path;
@@ -2420,8 +2417,8 @@ static int fptd_listscan(FAR struct ftpd_session_s *session, FAR char *path,
             }
         }
 
-      ret = asprintf(&temp, "%s/%s", path, entry->d_name);
-      if (ret < 0)
+      asprintf(&temp, "%s/%s", path, entry->d_name);
+      if (temp == NULL)
         {
           continue;
         }

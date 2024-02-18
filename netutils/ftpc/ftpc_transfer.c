@@ -247,10 +247,7 @@ static FAR char *ftpc_abspath(FAR struct ftpc_session_s *session,
 
       else if (relpath[1] == '/')
         {
-          if (asprintf(&ptr, "%s%s", homedir, &relpath[1]) < 0)
-            {
-              ptr = NULL;
-            }
+          asprintf(&ptr, "%s%s", homedir, &relpath[1]);
         }
 
       /* Hmmm... this pretty much guaranteed to fail */
@@ -267,10 +264,7 @@ static FAR char *ftpc_abspath(FAR struct ftpc_session_s *session,
 
   else if (strncmp(relpath, "./", 2) == 0)
     {
-      if (asprintf(&ptr, "%s%s", curdir, relpath + 1) < 0)
-        {
-          ptr = NULL;
-        }
+      asprintf(&ptr, "%s%s", curdir, relpath + 1);
     }
 
   /* Check for an absolute path */
@@ -284,10 +278,7 @@ static FAR char *ftpc_abspath(FAR struct ftpc_session_s *session,
 
   else
     {
-      if (asprintf(&ptr, "%s/%s", curdir, relpath) < 0)
-        {
-          ptr = NULL;
-        }
+      asprintf(&ptr, "%s/%s", curdir, relpath);
     }
 
   return ptr;

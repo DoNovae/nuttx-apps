@@ -302,8 +302,7 @@ int tftpput_cb(FAR const char *remote, in_addr_t addr, bool binary,
   retry   = 0;
   for (; ; )
     {
-      packetlen = tftp_mkreqpacket(packet, TFTP_IOBUFSIZE,
-                                   TFTP_WRQ, remote, binary);
+      packetlen = tftp_mkreqpacket(packet, TFTP_WRQ, remote, binary);
       ret = tftp_sendto(sd, packet, packetlen, &server);
       if (ret != packetlen)
         {

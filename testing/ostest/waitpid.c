@@ -35,11 +35,7 @@
 
 #include "ostest.h"
 
-/* REVISIT: This could be implemented for CONFIG_BUILD_KERNEL as well, by
- * starting a new process instead of using task_create()
- */
-
-#if defined(CONFIG_SCHED_WAITPID) && !defined(CONFIG_BUILD_KERNEL)
+#ifdef CONFIG_SCHED_WAITPID
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -124,7 +120,7 @@ static void waitpid_last(void)
   printf("waitpid_last: Waiting for PID=%d with waitpid()\n",
          g_waitpids[NCHILDREN - 1]);
 
-  ret = waitpid(g_waitpids[NCHILDREN - 1], &stat_loc, 0);
+  ret = (int)waitpid(g_waitpids[NCHILDREN - 1], &stat_loc, 0);
   if (ret < 0)
     {
       int errcode = errno;
@@ -396,4 +392,4 @@ int waitpid_test(void)
   return 0;
 }
 
-#endif /* defined(CONFIG_SCHED_WAITPID) && !defined(CONFIG_BUILD_KERNEL) */
+#endif /* CONFIG_SCHED_WAITPID */

@@ -218,89 +218,89 @@ double Value_vald(const char *s, char **end, int *overflow)
   return d;
 }
 
-struct Value *Value_new_NIL(struct Value *self)
+struct Value *Value_new_NIL(struct Value *this)
 {
-  assert(self != (struct Value *)0);
-  self->type = V_NIL;
-  return self;
+  assert(this != (struct Value *)0);
+  this->type = V_NIL;
+  return this;
 }
 
-struct Value *Value_new_ERROR(struct Value *self, int code,
+struct Value *Value_new_ERROR(struct Value *this, int code,
                               const char *error, ...)
 {
   va_list ap;
   char buf[128];
 
-  assert(self != (struct Value *)0);
+  assert(this != (struct Value *)0);
   va_start(ap, error);
   vsprintf(buf, error, ap);
   va_end(ap);
-  self->type = V_ERROR;
-  self->u.error.code = code;
-  self->u.error.msg  = strdup(buf);
-  return self;
+  this->type = V_ERROR;
+  this->u.error.code = code;
+  this->u.error.msg  = strdup(buf);
+  return this;
 }
 
-struct Value *Value_new_INTEGER(struct Value *self, int n)
+struct Value *Value_new_INTEGER(struct Value *this, int n)
 {
-  assert(self != (struct Value *)0);
-  self->type = V_INTEGER;
-  self->u.integer = n;
-  return self;
+  assert(this != (struct Value *)0);
+  this->type = V_INTEGER;
+  this->u.integer = n;
+  return this;
 }
 
-struct Value *Value_new_REAL(struct Value *self, double n)
+struct Value *Value_new_REAL(struct Value *this, double n)
 {
-  assert(self != (struct Value *)0);
-  self->type = V_REAL;
-  self->u.real = n;
-  return self;
+  assert(this != (struct Value *)0);
+  this->type = V_REAL;
+  this->u.real = n;
+  return this;
 }
 
-struct Value *Value_new_STRING(struct Value *self)
+struct Value *Value_new_STRING(struct Value *this)
 {
-  assert(self != (struct Value *)0);
-  self->type = V_STRING;
-  String_new(&self->u.string);
-  return self;
+  assert(this != (struct Value *)0);
+  this->type = V_STRING;
+  String_new(&this->u.string);
+  return this;
 }
 
-struct Value *Value_new_VOID(struct Value *self)
+struct Value *Value_new_VOID(struct Value *this)
 {
-  assert(self != (struct Value *)0);
-  self->type = V_VOID;
-  return self;
+  assert(this != (struct Value *)0);
+  this->type = V_VOID;
+  return this;
 }
 
-struct Value *Value_new_null(struct Value *self, enum ValueType type)
+struct Value *Value_new_null(struct Value *this, enum ValueType type)
 {
-  assert(self != (struct Value *)0);
+  assert(this != (struct Value *)0);
   switch (type)
     {
     case V_INTEGER:
       {
-        self->type = V_INTEGER;
-        self->u.integer = 0;
+        this->type = V_INTEGER;
+        this->u.integer = 0;
         break;
       }
 
     case V_REAL:
       {
-        self->type = V_REAL;
-        self->u.real = 0.0;
+        this->type = V_REAL;
+        this->u.real = 0.0;
         break;
       }
 
     case V_STRING:
       {
-        self->type = V_STRING;
-        String_new(&self->u.string);
+        this->type = V_STRING;
+        String_new(&this->u.string);
         break;
       }
 
     case V_VOID:
       {
-        self->type = V_VOID;
+        this->type = V_VOID;
         break;
       }
 
@@ -308,21 +308,21 @@ struct Value *Value_new_null(struct Value *self, enum ValueType type)
       assert(0);
     }
 
-  return self;
+  return this;
 }
 
-int Value_isNull(const struct Value *self)
+int Value_isNull(const struct Value *this)
 {
-  switch (self->type)
+  switch (this->type)
     {
     case V_INTEGER:
-      return (self->u.integer == 0);
+      return (this->u.integer == 0);
 
     case V_REAL:
-      return (self->u.real == 0.0);
+      return (this->u.real == 0.0);
 
     case V_STRING:
-      return (self->u.string.length == 0);
+      return (this->u.string.length == 0);
 
     default:
       assert(0);
@@ -331,13 +331,13 @@ int Value_isNull(const struct Value *self)
   return -1;
 }
 
-void Value_destroy(struct Value *self)
+void Value_destroy(struct Value *this)
 {
-  assert(self != (struct Value *)0);
-  switch (self->type)
+  assert(this != (struct Value *)0);
+  switch (this->type)
     {
     case V_ERROR:
-      free(self->u.error.msg);
+      free(this->u.error.msg);
       break;
 
     case V_INTEGER:
@@ -350,7 +350,7 @@ void Value_destroy(struct Value *self)
       break;
 
     case V_STRING:
-      String_destroy(&self->u.string);
+      String_destroy(&this->u.string);
       break;
 
     case V_VOID:
@@ -360,49 +360,49 @@ void Value_destroy(struct Value *self)
       assert(0);
     }
 
-  self->type = 0;
+  this->type = 0;
 }
 
-struct Value *Value_clone(struct Value *self, const struct Value *original)
+struct Value *Value_clone(struct Value *this, const struct Value *original)
 {
-  assert(self != (struct Value *)0);
+  assert(this != (struct Value *)0);
   assert(original != (struct Value *)0);
 
   switch (original->type)
     {
     case V_ERROR:
       {
-        self->u.error.msg = strdup(original->u.error.msg);
-        self->u.error.code = original->u.error.code;
+        this->u.error.msg = strdup(original->u.error.msg);
+        this->u.error.code = original->u.error.code;
         break;
       }
 
     case V_INTEGER:
-      self->u.integer = original->u.integer;
+      this->u.integer = original->u.integer;
       break;
 
     case V_NIL:
       break;
 
     case V_REAL:
-      self->u.real = original->u.real;
+      this->u.real = original->u.real;
       break;
 
     case V_STRING:
-      String_clone(&self->u.string, &original->u.string);
+      String_clone(&this->u.string, &original->u.string);
       break;
 
     default:
       assert(0);
     }
 
-  self->type = original->type;
-  return self;
+  this->type = original->type;
+  return this;
 }
 
-struct Value *Value_uplus(struct Value *self, int calc)
+struct Value *Value_uplus(struct Value *this, int calc)
 {
-  switch (self->type)
+  switch (this->type)
     {
     case V_INTEGER:
     case V_REAL:
@@ -412,8 +412,8 @@ struct Value *Value_uplus(struct Value *self, int calc)
 
     case V_STRING:
       {
-        Value_destroy(self);
-        Value_new_ERROR(self, INVALIDUOPERAND);
+        Value_destroy(this);
+        Value_new_ERROR(this, INVALIDUOPERAND);
         break;
       }
 
@@ -421,18 +421,18 @@ struct Value *Value_uplus(struct Value *self, int calc)
       assert(0);
     }
 
-  return self;
+  return this;
 }
 
-struct Value *Value_uneg(struct Value *self, int calc)
+struct Value *Value_uneg(struct Value *this, int calc)
 {
-  switch (self->type)
+  switch (this->type)
     {
     case V_INTEGER:
       {
         if (calc)
           {
-            self->u.integer = -self->u.integer;
+            this->u.integer = -this->u.integer;
           }
         break;
       }
@@ -441,15 +441,15 @@ struct Value *Value_uneg(struct Value *self, int calc)
       {
         if (calc)
           {
-            self->u.real = -self->u.real;
+            this->u.real = -this->u.real;
           }
         break;
       }
 
     case V_STRING:
       {
-        Value_destroy(self);
-        Value_new_ERROR(self, INVALIDUOPERAND);
+        Value_destroy(this);
+        Value_new_ERROR(this, INVALIDUOPERAND);
         break;
       }
 
@@ -457,36 +457,36 @@ struct Value *Value_uneg(struct Value *self, int calc)
       assert(0);
     }
 
-  return self;
+  return this;
 }
 
-struct Value *Value_unot(struct Value *self, int calc)
+struct Value *Value_unot(struct Value *this, int calc)
 {
-  switch (self->type)
+  switch (this->type)
     {
     case V_INTEGER:
       {
         if (calc)
           {
-            self->u.integer = ~self->u.integer;
+            this->u.integer = ~this->u.integer;
           }
         break;
       }
 
     case V_REAL:
       {
-        Value_retype(self, V_INTEGER);
+        Value_retype(this, V_INTEGER);
         if (calc)
           {
-            self->u.integer = ~self->u.integer;
+            this->u.integer = ~this->u.integer;
           }
         break;
       }
 
     case V_STRING:
       {
-        Value_destroy(self);
-        Value_new_ERROR(self, INVALIDUOPERAND);
+        Value_destroy(this);
+        Value_new_ERROR(this, INVALIDUOPERAND);
         break;
       }
 
@@ -494,31 +494,31 @@ struct Value *Value_unot(struct Value *self, int calc)
       assert(0);
     }
 
-  return self;
+  return this;
 }
 
-struct Value *Value_add(struct Value *self, struct Value *x, int calc)
+struct Value *Value_add(struct Value *this, struct Value *x, int calc)
 {
-  switch (Value_commonType[self->type][x->type])
+  switch (Value_commonType[this->type][x->type])
     {
     case V_INTEGER:
       {
-        VALUE_RETYPE(self, V_INTEGER);
+        VALUE_RETYPE(this, V_INTEGER);
         VALUE_RETYPE(x, V_INTEGER);
         if (calc)
           {
-            self->u.integer += x->u.integer;
+            this->u.integer += x->u.integer;
           }
         break;
       }
 
     case V_REAL:
       {
-        VALUE_RETYPE(self, V_REAL);
+        VALUE_RETYPE(this, V_REAL);
         VALUE_RETYPE(x, V_REAL);
         if (calc)
           {
-            self->u.real += x->u.real;
+            this->u.real += x->u.real;
           }
         break;
       }
@@ -527,7 +527,7 @@ struct Value *Value_add(struct Value *self, struct Value *x, int calc)
       {
         if (calc)
           {
-            String_appendString(&self->u.string, &x->u.string);
+            String_appendString(&this->u.string, &x->u.string);
           }
         break;
       }
@@ -536,39 +536,39 @@ struct Value *Value_add(struct Value *self, struct Value *x, int calc)
       assert(0);
     }
 
-  return self;
+  return this;
 }
 
-struct Value *Value_sub(struct Value *self, struct Value *x, int calc)
+struct Value *Value_sub(struct Value *this, struct Value *x, int calc)
 {
-  switch (Value_commonType[self->type][x->type])
+  switch (Value_commonType[this->type][x->type])
     {
     case V_INTEGER:
       {
-        VALUE_RETYPE(self, V_INTEGER);
+        VALUE_RETYPE(this, V_INTEGER);
         VALUE_RETYPE(x, V_INTEGER);
         if (calc)
           {
-            self->u.integer -= x->u.integer;
+            this->u.integer -= x->u.integer;
           }
         break;
       }
 
     case V_REAL:
       {
-        VALUE_RETYPE(self, V_REAL);
+        VALUE_RETYPE(this, V_REAL);
         VALUE_RETYPE(x, V_REAL);
         if (calc)
           {
-            self->u.real -= x->u.real;
+            this->u.real -= x->u.real;
           }
         break;
       }
 
     case V_STRING:
       {
-        Value_destroy(self);
-        Value_new_ERROR(self, INVALIDOPERAND);
+        Value_destroy(this);
+        Value_new_ERROR(this, INVALIDOPERAND);
         break;
       }
 
@@ -576,20 +576,20 @@ struct Value *Value_sub(struct Value *self, struct Value *x, int calc)
       assert(0);
     }
 
-  return self;
+  return this;
 }
 
-struct Value *Value_mult(struct Value *self, struct Value *x, int calc)
+struct Value *Value_mult(struct Value *this, struct Value *x, int calc)
 {
-  switch (Value_commonType[self->type][x->type])
+  switch (Value_commonType[this->type][x->type])
     {
     case V_INTEGER:
       {
-        VALUE_RETYPE(self, V_INTEGER);
+        VALUE_RETYPE(this, V_INTEGER);
         VALUE_RETYPE(x, V_INTEGER);
         if (calc)
           {
-            self->u.integer *= x->u.integer;
+            this->u.integer *= x->u.integer;
           }
 
         break;
@@ -597,19 +597,19 @@ struct Value *Value_mult(struct Value *self, struct Value *x, int calc)
 
     case V_REAL:
       {
-        VALUE_RETYPE(self, V_REAL);
+        VALUE_RETYPE(this, V_REAL);
         VALUE_RETYPE(x, V_REAL);
         if (calc)
           {
-            self->u.real *= x->u.real;
+            this->u.real *= x->u.real;
           }
         break;
       }
 
     case V_STRING:
       {
-        Value_destroy(self);
-        Value_new_ERROR(self, INVALIDOPERAND);
+        Value_destroy(this);
+        Value_new_ERROR(this, INVALIDOPERAND);
         break;
       }
 
@@ -617,27 +617,27 @@ struct Value *Value_mult(struct Value *self, struct Value *x, int calc)
       assert(0);
     }
 
-  return self;
+  return this;
 }
 
-struct Value *Value_div(struct Value *self, struct Value *x, int calc)
+struct Value *Value_div(struct Value *this, struct Value *x, int calc)
 {
-  switch (Value_commonType[self->type][x->type])
+  switch (Value_commonType[this->type][x->type])
     {
     case V_INTEGER:
       {
-        VALUE_RETYPE(self, V_REAL);
+        VALUE_RETYPE(this, V_REAL);
         VALUE_RETYPE(x, V_REAL);
         if (calc)
           {
             if (x->u.real == 0)
               {
-                Value_destroy(self);
-                Value_new_ERROR(self, UNDEFINED, "Division by zero");
+                Value_destroy(this);
+                Value_new_ERROR(this, UNDEFINED, "Division by zero");
               }
             else
               {
-                self->u.real /= x->u.real;
+                this->u.real /= x->u.real;
               }
           }
         break;
@@ -645,18 +645,18 @@ struct Value *Value_div(struct Value *self, struct Value *x, int calc)
 
     case V_REAL:
       {
-        VALUE_RETYPE(self, V_REAL);
+        VALUE_RETYPE(this, V_REAL);
         VALUE_RETYPE(x, V_REAL);
         if (calc)
           {
             if (x->u.real == 0.0)
               {
-                Value_destroy(self);
-                Value_new_ERROR(self, UNDEFINED, "Division by zero");
+                Value_destroy(this);
+                Value_new_ERROR(this, UNDEFINED, "Division by zero");
               }
             else
               {
-                self->u.real /= x->u.real;
+                this->u.real /= x->u.real;
               }
           }
         break;
@@ -664,8 +664,8 @@ struct Value *Value_div(struct Value *self, struct Value *x, int calc)
 
     case V_STRING:
       {
-        Value_destroy(self);
-        Value_new_ERROR(self, INVALIDOPERAND);
+        Value_destroy(this);
+        Value_new_ERROR(this, INVALIDOPERAND);
         break;
       }
 
@@ -673,27 +673,27 @@ struct Value *Value_div(struct Value *self, struct Value *x, int calc)
       assert(0);
     }
 
-  return self;
+  return this;
 }
 
-struct Value *Value_idiv(struct Value *self, struct Value *x, int calc)
+struct Value *Value_idiv(struct Value *this, struct Value *x, int calc)
 {
-  switch (Value_commonType[self->type][x->type])
+  switch (Value_commonType[this->type][x->type])
     {
     case V_INTEGER:
       {
-        VALUE_RETYPE(self, V_INTEGER);
+        VALUE_RETYPE(this, V_INTEGER);
         VALUE_RETYPE(x, V_INTEGER);
         if (calc)
           {
             if (x->u.integer == 0)
               {
-                Value_destroy(self);
-                Value_new_ERROR(self, UNDEFINED, "Division by zero");
+                Value_destroy(this);
+                Value_new_ERROR(this, UNDEFINED, "Division by zero");
               }
             else
               {
-                self->u.integer /= x->u.integer;
+                this->u.integer /= x->u.integer;
               }
           }
         break;
@@ -701,18 +701,18 @@ struct Value *Value_idiv(struct Value *self, struct Value *x, int calc)
 
     case V_REAL:
       {
-        VALUE_RETYPE(self, V_REAL);
+        VALUE_RETYPE(this, V_REAL);
         VALUE_RETYPE(x, V_REAL);
         if (calc)
           {
             if (x->u.real == 0.0)
               {
-                Value_destroy(self);
-                Value_new_ERROR(self, UNDEFINED, "Division by zero");
+                Value_destroy(this);
+                Value_new_ERROR(this, UNDEFINED, "Division by zero");
               }
             else
               {
-                self->u.real = Value_trunc(self->u.real / x->u.real);
+                this->u.real = Value_trunc(this->u.real / x->u.real);
               }
           }
         break;
@@ -720,8 +720,8 @@ struct Value *Value_idiv(struct Value *self, struct Value *x, int calc)
 
     case V_STRING:
       {
-        Value_destroy(self);
-        Value_new_ERROR(self, INVALIDOPERAND);
+        Value_destroy(this);
+        Value_new_ERROR(this, INVALIDOPERAND);
         break;
       }
 
@@ -729,27 +729,27 @@ struct Value *Value_idiv(struct Value *self, struct Value *x, int calc)
       assert(0);
     }
 
-  return self;
+  return this;
 }
 
-struct Value *Value_mod(struct Value *self, struct Value *x, int calc)
+struct Value *Value_mod(struct Value *this, struct Value *x, int calc)
 {
-  switch (Value_commonType[self->type][x->type])
+  switch (Value_commonType[this->type][x->type])
     {
     case V_INTEGER:
       {
-        VALUE_RETYPE(self, V_INTEGER);
+        VALUE_RETYPE(this, V_INTEGER);
         VALUE_RETYPE(x, V_INTEGER);
         if (calc)
           {
             if (x->u.integer == 0)
               {
-                Value_destroy(self);
-                Value_new_ERROR(self, UNDEFINED, "Modulo by zero");
+                Value_destroy(this);
+                Value_new_ERROR(this, UNDEFINED, "Modulo by zero");
               }
             else
               {
-                self->u.integer %= x->u.integer;
+                this->u.integer %= x->u.integer;
               }
           }
         break;
@@ -757,18 +757,18 @@ struct Value *Value_mod(struct Value *self, struct Value *x, int calc)
 
     case V_REAL:
       {
-        VALUE_RETYPE(self, V_REAL);
+        VALUE_RETYPE(this, V_REAL);
         VALUE_RETYPE(x, V_REAL);
         if (calc)
           {
             if (x->u.real == 0.0)
               {
-                Value_destroy(self);
-                Value_new_ERROR(self, UNDEFINED, "Modulo by zero");
+                Value_destroy(this);
+                Value_new_ERROR(this, UNDEFINED, "Modulo by zero");
               }
             else
               {
-                self->u.real = fmod(self->u.real, x->u.real);
+                this->u.real = fmod(this->u.real, x->u.real);
               }
           }
         break;
@@ -776,8 +776,8 @@ struct Value *Value_mod(struct Value *self, struct Value *x, int calc)
 
     case V_STRING:
       {
-        Value_destroy(self);
-        Value_new_ERROR(self, INVALIDOPERAND);
+        Value_destroy(this);
+        Value_new_ERROR(this, INVALIDOPERAND);
         break;
       }
 
@@ -785,33 +785,33 @@ struct Value *Value_mod(struct Value *self, struct Value *x, int calc)
       assert(0);
     }
 
-  return self;
+  return this;
 }
 
-struct Value *Value_pow(struct Value *self, struct Value *x, int calc)
+struct Value *Value_pow(struct Value *this, struct Value *x, int calc)
 {
-  switch (Value_commonType[self->type][x->type])
+  switch (Value_commonType[this->type][x->type])
     {
     case V_INTEGER:
       {
-        VALUE_RETYPE(self, V_INTEGER);
+        VALUE_RETYPE(this, V_INTEGER);
         VALUE_RETYPE(x, V_INTEGER);
         if (calc)
           {
-            if (self->u.integer == 0 && x->u.integer == 0)
+            if (this->u.integer == 0 && x->u.integer == 0)
               {
-                Value_destroy(self);
-                Value_new_ERROR(self, UNDEFINED, "0^0");
+                Value_destroy(this);
+                Value_new_ERROR(this, UNDEFINED, "0^0");
               }
             else if (x->u.integer > 0)
               {
-                self->u.integer = pow(self->u.integer, x->u.integer);
+                this->u.integer = pow(this->u.integer, x->u.integer);
               }
             else
               {
-                long int thisi = self->u.integer;
-                Value_destroy(self);
-                Value_new_REAL(self, pow(thisi, x->u.integer));
+                long int thisi = this->u.integer;
+                Value_destroy(this);
+                Value_new_REAL(this, pow(thisi, x->u.integer));
               }
           }
         break;
@@ -819,18 +819,18 @@ struct Value *Value_pow(struct Value *self, struct Value *x, int calc)
 
     case V_REAL:
       {
-        VALUE_RETYPE(self, V_REAL);
+        VALUE_RETYPE(this, V_REAL);
         VALUE_RETYPE(x, V_REAL);
         if (calc)
           {
-            if (self->u.real == 0.0 && x->u.real == 0.0)
+            if (this->u.real == 0.0 && x->u.real == 0.0)
               {
-                Value_destroy(self);
-                Value_new_ERROR(self, UNDEFINED, "0^0");
+                Value_destroy(this);
+                Value_new_ERROR(this, UNDEFINED, "0^0");
               }
             else
               {
-                self->u.real = pow(self->u.real, x->u.real);
+                this->u.real = pow(this->u.real, x->u.real);
               }
           }
         break;
@@ -838,8 +838,8 @@ struct Value *Value_pow(struct Value *self, struct Value *x, int calc)
 
     case V_STRING:
       {
-        Value_destroy(self);
-        Value_new_ERROR(self, INVALIDOPERAND);
+        Value_destroy(this);
+        Value_new_ERROR(this, INVALIDOPERAND);
         break;
       }
 
@@ -847,29 +847,29 @@ struct Value *Value_pow(struct Value *self, struct Value *x, int calc)
       assert(0);
     }
 
-  return self;
+  return this;
 }
 
-struct Value *Value_and(struct Value *self, struct Value *x, int calc)
+struct Value *Value_and(struct Value *this, struct Value *x, int calc)
 {
-  switch (Value_commonType[self->type][x->type])
+  switch (Value_commonType[this->type][x->type])
     {
     case V_INTEGER:
     case V_REAL:
       {
-        VALUE_RETYPE(self, V_INTEGER);
+        VALUE_RETYPE(this, V_INTEGER);
         VALUE_RETYPE(x, V_INTEGER);
         if (calc)
           {
-            self->u.integer &= x->u.integer;
+            this->u.integer &= x->u.integer;
           }
         break;
       }
 
     case V_STRING:
       {
-        Value_destroy(self);
-        Value_new_ERROR(self, INVALIDOPERAND);
+        Value_destroy(this);
+        Value_new_ERROR(this, INVALIDOPERAND);
         break;
       }
 
@@ -877,29 +877,29 @@ struct Value *Value_and(struct Value *self, struct Value *x, int calc)
       assert(0);
     }
 
-  return self;
+  return this;
 }
 
-struct Value *Value_or(struct Value *self, struct Value *x, int calc)
+struct Value *Value_or(struct Value *this, struct Value *x, int calc)
 {
-  switch (Value_commonType[self->type][x->type])
+  switch (Value_commonType[this->type][x->type])
     {
     case V_INTEGER:
     case V_REAL:
       {
-        VALUE_RETYPE(self, V_INTEGER);
+        VALUE_RETYPE(this, V_INTEGER);
         VALUE_RETYPE(x, V_INTEGER);
         if (calc)
           {
-            self->u.integer |= x->u.integer;
+            this->u.integer |= x->u.integer;
           }
         break;
       }
 
     case V_STRING:
       {
-        Value_destroy(self);
-        Value_new_ERROR(self, INVALIDOPERAND);
+        Value_destroy(this);
+        Value_new_ERROR(this, INVALIDOPERAND);
         break;
       }
 
@@ -907,29 +907,29 @@ struct Value *Value_or(struct Value *self, struct Value *x, int calc)
       assert(0);
     }
 
-  return self;
+  return this;
 }
 
-struct Value *Value_xor(struct Value *self, struct Value *x, int calc)
+struct Value *Value_xor(struct Value *this, struct Value *x, int calc)
 {
-  switch (Value_commonType[self->type][x->type])
+  switch (Value_commonType[this->type][x->type])
     {
     case V_INTEGER:
     case V_REAL:
       {
-        VALUE_RETYPE(self, V_INTEGER);
+        VALUE_RETYPE(this, V_INTEGER);
         VALUE_RETYPE(x, V_INTEGER);
         if (calc)
           {
-            self->u.integer ^= x->u.integer;
+            this->u.integer ^= x->u.integer;
           }
         break;
       }
 
     case V_STRING:
       {
-        Value_destroy(self);
-        Value_new_ERROR(self, INVALIDOPERAND);
+        Value_destroy(this);
+        Value_new_ERROR(this, INVALIDOPERAND);
         break;
       }
 
@@ -937,29 +937,29 @@ struct Value *Value_xor(struct Value *self, struct Value *x, int calc)
       assert(0);
     }
 
-  return self;
+  return this;
 }
 
-struct Value *Value_eqv(struct Value *self, struct Value *x, int calc)
+struct Value *Value_eqv(struct Value *this, struct Value *x, int calc)
 {
-  switch (Value_commonType[self->type][x->type])
+  switch (Value_commonType[this->type][x->type])
     {
     case V_INTEGER:
     case V_REAL:
       {
-        VALUE_RETYPE(self, V_INTEGER);
+        VALUE_RETYPE(this, V_INTEGER);
         VALUE_RETYPE(x, V_INTEGER);
         if (calc)
           {
-            self->u.integer = ~(self->u.integer ^ x->u.integer);
+            this->u.integer = ~(this->u.integer ^ x->u.integer);
           }
         break;
       }
 
     case V_STRING:
       {
-        Value_destroy(self);
-        Value_new_ERROR(self, INVALIDOPERAND);
+        Value_destroy(this);
+        Value_new_ERROR(this, INVALIDOPERAND);
         break;
       }
 
@@ -967,29 +967,29 @@ struct Value *Value_eqv(struct Value *self, struct Value *x, int calc)
       assert(0);
     }
 
-  return self;
+  return this;
 }
 
-struct Value *Value_imp(struct Value *self, struct Value *x, int calc)
+struct Value *Value_imp(struct Value *this, struct Value *x, int calc)
 {
-  switch (Value_commonType[self->type][x->type])
+  switch (Value_commonType[this->type][x->type])
     {
     case V_INTEGER:
     case V_REAL:
       {
-        VALUE_RETYPE(self, V_INTEGER);
+        VALUE_RETYPE(this, V_INTEGER);
         VALUE_RETYPE(x, V_INTEGER);
         if (calc)
           {
-            self->u.integer = (~self->u.integer) | x->u.integer;
+            this->u.integer = (~this->u.integer) | x->u.integer;
           }
         break;
       }
 
     case V_STRING:
       {
-        Value_destroy(self);
-        Value_new_ERROR(self, INVALIDOPERAND);
+        Value_destroy(this);
+        Value_new_ERROR(this, INVALIDOPERAND);
         break;
       }
 
@@ -997,20 +997,20 @@ struct Value *Value_imp(struct Value *self, struct Value *x, int calc)
       assert(0);
     }
 
-  return self;
+  return this;
 }
 
-struct Value *Value_lt(struct Value *self, struct Value *x, int calc)
+struct Value *Value_lt(struct Value *this, struct Value *x, int calc)
 {
-  switch (Value_commonType[self->type][x->type])
+  switch (Value_commonType[this->type][x->type])
     {
     case V_INTEGER:
       {
-        VALUE_RETYPE(self, V_INTEGER);
+        VALUE_RETYPE(this, V_INTEGER);
         VALUE_RETYPE(x, V_INTEGER);
         if (calc)
           {
-            self->u.integer = (self->u.integer < x->u.integer) ? -1 : 0;
+            this->u.integer = (this->u.integer < x->u.integer) ? -1 : 0;
           }
         break;
       }
@@ -1019,19 +1019,19 @@ struct Value *Value_lt(struct Value *self, struct Value *x, int calc)
       {
         int v;
 
-        VALUE_RETYPE(self, V_REAL);
+        VALUE_RETYPE(this, V_REAL);
         VALUE_RETYPE(x, V_REAL);
         if (calc)
           {
-            v = (self->u.real < x->u.real) ? -1 : 0;
+            v = (this->u.real < x->u.real) ? -1 : 0;
           }
         else
           {
             v = 0;
           }
 
-        Value_destroy(self);
-        Value_new_INTEGER(self, v);
+        Value_destroy(this);
+        Value_new_INTEGER(this, v);
         break;
       }
 
@@ -1041,15 +1041,15 @@ struct Value *Value_lt(struct Value *self, struct Value *x, int calc)
 
         if (calc)
           {
-            v = (String_cmp(&self->u.string, &x->u.string) < 0) ? -1 : 0;
+            v = (String_cmp(&this->u.string, &x->u.string) < 0) ? -1 : 0;
           }
         else
           {
             v = 0;
           }
 
-        Value_destroy(self);
-        Value_new_INTEGER(self, v);
+        Value_destroy(this);
+        Value_new_INTEGER(this, v);
         break;
       }
 
@@ -1057,20 +1057,20 @@ struct Value *Value_lt(struct Value *self, struct Value *x, int calc)
       assert(0);
     }
 
-  return self;
+  return this;
 }
 
-struct Value *Value_le(struct Value *self, struct Value *x, int calc)
+struct Value *Value_le(struct Value *this, struct Value *x, int calc)
 {
-  switch (Value_commonType[self->type][x->type])
+  switch (Value_commonType[this->type][x->type])
     {
     case V_INTEGER:
       {
-        VALUE_RETYPE(self, V_INTEGER);
+        VALUE_RETYPE(this, V_INTEGER);
         VALUE_RETYPE(x, V_INTEGER);
         if (calc)
           {
-            self->u.integer = (self->u.integer <= x->u.integer) ? -1 : 0;
+            this->u.integer = (this->u.integer <= x->u.integer) ? -1 : 0;
           }
         break;
       }
@@ -1079,19 +1079,19 @@ struct Value *Value_le(struct Value *self, struct Value *x, int calc)
       {
         int v;
 
-        VALUE_RETYPE(self, V_REAL);
+        VALUE_RETYPE(this, V_REAL);
         VALUE_RETYPE(x, V_REAL);
         if (calc)
           {
-            v = (self->u.real <= x->u.real) ? -1 : 0;
+            v = (this->u.real <= x->u.real) ? -1 : 0;
           }
         else
           {
             v = 0;
           }
 
-        Value_destroy(self);
-        Value_new_INTEGER(self, v);
+        Value_destroy(this);
+        Value_new_INTEGER(this, v);
         break;
       }
 
@@ -1101,15 +1101,15 @@ struct Value *Value_le(struct Value *self, struct Value *x, int calc)
 
         if (calc)
           {
-            v = (String_cmp(&self->u.string, &x->u.string) <= 0) ? -1 : 0;
+            v = (String_cmp(&this->u.string, &x->u.string) <= 0) ? -1 : 0;
           }
         else
           {
             v = 0;
           }
 
-        Value_destroy(self);
-        Value_new_INTEGER(self, v);
+        Value_destroy(this);
+        Value_new_INTEGER(this, v);
         break;
       }
 
@@ -1117,20 +1117,20 @@ struct Value *Value_le(struct Value *self, struct Value *x, int calc)
       assert(0);
     }
 
-  return self;
+  return this;
 }
 
-struct Value *Value_eq(struct Value *self, struct Value *x, int calc)
+struct Value *Value_eq(struct Value *this, struct Value *x, int calc)
 {
-  switch (Value_commonType[self->type][x->type])
+  switch (Value_commonType[this->type][x->type])
     {
     case V_INTEGER:
       {
-        VALUE_RETYPE(self, V_INTEGER);
+        VALUE_RETYPE(this, V_INTEGER);
         VALUE_RETYPE(x, V_INTEGER);
         if (calc)
           {
-            self->u.integer = (self->u.integer == x->u.integer) ? -1 : 0;
+            this->u.integer = (this->u.integer == x->u.integer) ? -1 : 0;
           }
         break;
       }
@@ -1139,19 +1139,19 @@ struct Value *Value_eq(struct Value *self, struct Value *x, int calc)
       {
         int v;
 
-        VALUE_RETYPE(self, V_REAL);
+        VALUE_RETYPE(this, V_REAL);
         VALUE_RETYPE(x, V_REAL);
         if (calc)
           {
-            v = (self->u.real == x->u.real) ? -1 : 0;
+            v = (this->u.real == x->u.real) ? -1 : 0;
           }
         else
           {
             v = 0;
           }
 
-        Value_destroy(self);
-        Value_new_INTEGER(self, v);
+        Value_destroy(this);
+        Value_new_INTEGER(this, v);
         break;
       }
 
@@ -1161,15 +1161,15 @@ struct Value *Value_eq(struct Value *self, struct Value *x, int calc)
 
         if (calc)
           {
-            v = (String_cmp(&self->u.string, &x->u.string) == 0) ? -1 : 0;
+            v = (String_cmp(&this->u.string, &x->u.string) == 0) ? -1 : 0;
           }
         else
           {
             v = 0;
           }
 
-        Value_destroy(self);
-        Value_new_INTEGER(self, v);
+        Value_destroy(this);
+        Value_new_INTEGER(this, v);
         break;
       }
 
@@ -1177,20 +1177,20 @@ struct Value *Value_eq(struct Value *self, struct Value *x, int calc)
       assert(0);
     }
 
-  return self;
+  return this;
 }
 
-struct Value *Value_ge(struct Value *self, struct Value *x, int calc)
+struct Value *Value_ge(struct Value *this, struct Value *x, int calc)
 {
-  switch (Value_commonType[self->type][x->type])
+  switch (Value_commonType[this->type][x->type])
     {
     case V_INTEGER:
       {
-        VALUE_RETYPE(self, V_INTEGER);
+        VALUE_RETYPE(this, V_INTEGER);
         VALUE_RETYPE(x, V_INTEGER);
         if (calc)
           {
-            self->u.integer = (self->u.integer >= x->u.integer) ? -1 : 0;
+            this->u.integer = (this->u.integer >= x->u.integer) ? -1 : 0;
           }
         break;
       }
@@ -1199,19 +1199,19 @@ struct Value *Value_ge(struct Value *self, struct Value *x, int calc)
       {
         int v;
 
-        VALUE_RETYPE(self, V_REAL);
+        VALUE_RETYPE(this, V_REAL);
         VALUE_RETYPE(x, V_REAL);
         if (calc)
           {
-            v = (self->u.real >= x->u.real) ? -1 : 0;
+            v = (this->u.real >= x->u.real) ? -1 : 0;
           }
         else
           {
             v = 0;
           }
 
-        Value_destroy(self);
-        Value_new_INTEGER(self, v);
+        Value_destroy(this);
+        Value_new_INTEGER(this, v);
         break;
       }
 
@@ -1221,15 +1221,15 @@ struct Value *Value_ge(struct Value *self, struct Value *x, int calc)
 
         if (calc)
           {
-            v = (String_cmp(&self->u.string, &x->u.string) >= 0) ? -1 : 0;
+            v = (String_cmp(&this->u.string, &x->u.string) >= 0) ? -1 : 0;
           }
         else
           {
             v = 0;
           }
 
-        Value_destroy(self);
-        Value_new_INTEGER(self, v);
+        Value_destroy(this);
+        Value_new_INTEGER(this, v);
         break;
       }
 
@@ -1237,20 +1237,20 @@ struct Value *Value_ge(struct Value *self, struct Value *x, int calc)
       assert(0);
     }
 
-  return self;
+  return this;
 }
 
-struct Value *Value_gt(struct Value *self, struct Value *x, int calc)
+struct Value *Value_gt(struct Value *this, struct Value *x, int calc)
 {
-  switch (Value_commonType[self->type][x->type])
+  switch (Value_commonType[this->type][x->type])
     {
     case V_INTEGER:
       {
-        VALUE_RETYPE(self, V_INTEGER);
+        VALUE_RETYPE(this, V_INTEGER);
         VALUE_RETYPE(x, V_INTEGER);
         if (calc)
           {
-            self->u.integer = (self->u.integer > x->u.integer) ? -1 : 0;
+            this->u.integer = (this->u.integer > x->u.integer) ? -1 : 0;
           }
         break;
       }
@@ -1259,19 +1259,19 @@ struct Value *Value_gt(struct Value *self, struct Value *x, int calc)
       {
         int v;
 
-        VALUE_RETYPE(self, V_REAL);
+        VALUE_RETYPE(this, V_REAL);
         VALUE_RETYPE(x, V_REAL);
         if (calc)
           {
-            v = (self->u.real > x->u.real) ? -1 : 0;
+            v = (this->u.real > x->u.real) ? -1 : 0;
           }
         else
           {
             v = 0;
           }
 
-        Value_destroy(self);
-        Value_new_INTEGER(self, v);
+        Value_destroy(this);
+        Value_new_INTEGER(this, v);
         break;
       }
 
@@ -1281,15 +1281,15 @@ struct Value *Value_gt(struct Value *self, struct Value *x, int calc)
 
         if (calc)
           {
-            v = (String_cmp(&self->u.string, &x->u.string) > 0) ? -1 : 0;
+            v = (String_cmp(&this->u.string, &x->u.string) > 0) ? -1 : 0;
           }
         else
           {
             v = 0;
           }
 
-        Value_destroy(self);
-        Value_new_INTEGER(self, v);
+        Value_destroy(this);
+        Value_new_INTEGER(this, v);
         break;
       }
 
@@ -1297,20 +1297,20 @@ struct Value *Value_gt(struct Value *self, struct Value *x, int calc)
       assert(0);
     }
 
-  return self;
+  return this;
 }
 
-struct Value *Value_ne(struct Value *self, struct Value *x, int calc)
+struct Value *Value_ne(struct Value *this, struct Value *x, int calc)
 {
-  switch (Value_commonType[self->type][x->type])
+  switch (Value_commonType[this->type][x->type])
     {
     case V_INTEGER:
       {
-        VALUE_RETYPE(self, V_INTEGER);
+        VALUE_RETYPE(this, V_INTEGER);
         VALUE_RETYPE(x, V_INTEGER);
         if (calc)
           {
-            self->u.integer = (self->u.integer != x->u.integer) ? -1 : 0;
+            this->u.integer = (this->u.integer != x->u.integer) ? -1 : 0;
           }
         break;
       }
@@ -1319,19 +1319,19 @@ struct Value *Value_ne(struct Value *self, struct Value *x, int calc)
       {
         int v;
 
-        VALUE_RETYPE(self, V_REAL);
+        VALUE_RETYPE(this, V_REAL);
         VALUE_RETYPE(x, V_REAL);
         if (calc)
           {
-            v = (self->u.real != x->u.real) ? -1 : 0;
+            v = (this->u.real != x->u.real) ? -1 : 0;
           }
         else
           {
             v = 0;
           }
 
-        Value_destroy(self);
-        Value_new_INTEGER(self, v);
+        Value_destroy(this);
+        Value_new_INTEGER(this, v);
         break;
       }
 
@@ -1341,15 +1341,15 @@ struct Value *Value_ne(struct Value *self, struct Value *x, int calc)
 
         if (calc)
           {
-            v = String_cmp(&self->u.string, &x->u.string) ? -1 : 0;
+            v = String_cmp(&this->u.string, &x->u.string) ? -1 : 0;
           }
         else
           {
             v = 0;
           }
 
-        Value_destroy(self);
-        Value_new_INTEGER(self, v);
+        Value_destroy(this);
+        Value_new_INTEGER(this, v);
         break;
       }
 
@@ -1357,27 +1357,27 @@ struct Value *Value_ne(struct Value *self, struct Value *x, int calc)
       assert(0);
     }
 
-  return self;
+  return this;
 }
 
-int Value_exitFor(struct Value *self,
+int Value_exitFor(struct Value *this,
                   struct Value *limit, struct Value *step)
 {
-  switch (self->type)
+  switch (this->type)
     {
     case V_INTEGER:
       return
         (step->u.integer < 0
-         ? (self->u.integer < limit->u.integer)
-         : (self->u.integer > limit->u.integer));
+         ? (this->u.integer < limit->u.integer)
+         : (this->u.integer > limit->u.integer));
 
     case V_REAL:
       return
         (step->u.real < 0.0
-         ? (self->u.real < limit->u.real) : (self->u.real > limit->u.real));
+         ? (this->u.real < limit->u.real) : (this->u.real > limit->u.real));
 
     case V_STRING:
-      return (String_cmp(&self->u.string, &limit->u.string) > 0);
+      return (String_cmp(&this->u.string, &limit->u.string) > 0);
 
     default:
       assert(0);
@@ -1386,53 +1386,53 @@ int Value_exitFor(struct Value *self,
   return -1;
 }
 
-void Value_errorPrefix(struct Value *self, const char *prefix)
+void Value_errorPrefix(struct Value *this, const char *prefix)
 {
   size_t prefixlen;
   size_t msglen;
 
-  assert(self->type == V_ERROR);
+  assert(this->type == V_ERROR);
   prefixlen = strlen(prefix);
-  msglen = strlen(self->u.error.msg);
-  self->u.error.msg = realloc(self->u.error.msg, prefixlen + msglen + 1);
-  memmove(self->u.error.msg + prefixlen, self->u.error.msg, msglen);
-  memcpy(self->u.error.msg, prefix, prefixlen);
+  msglen = strlen(this->u.error.msg);
+  this->u.error.msg = realloc(this->u.error.msg, prefixlen + msglen + 1);
+  memmove(this->u.error.msg + prefixlen, this->u.error.msg, msglen);
+  memcpy(this->u.error.msg, prefix, prefixlen);
 }
 
-void Value_errorSuffix(struct Value *self, const char *suffix)
+void Value_errorSuffix(struct Value *this, const char *suffix)
 {
   size_t suffixlen;
   size_t msglen;
 
-  assert(self->type == V_ERROR);
+  assert(this->type == V_ERROR);
   suffixlen = strlen(suffix);
-  msglen = strlen(self->u.error.msg);
-  self->u.error.msg = realloc(self->u.error.msg, suffixlen + msglen + 1);
-  memcpy(self->u.error.msg + msglen, suffix, suffixlen + 1);
+  msglen = strlen(this->u.error.msg);
+  this->u.error.msg = realloc(this->u.error.msg, suffixlen + msglen + 1);
+  memcpy(this->u.error.msg + msglen, suffix, suffixlen + 1);
 }
 
-struct Value *Value_new_typeError(struct Value *self, enum ValueType t1,
+struct Value *Value_new_typeError(struct Value *this, enum ValueType t1,
                                   enum ValueType t2)
 {
   assert(typestr[t1]);
   assert(typestr[t2]);
-  return Value_new_ERROR(self, TYPEMISMATCH1,
+  return Value_new_ERROR(this, TYPEMISMATCH1,
                          _(typestr[t1]), _(typestr[t2]));
 }
 
-static void retypeError(struct Value *self, enum ValueType to)
+static void retypeError(struct Value *this, enum ValueType to)
 {
-  enum ValueType thisType = self->type;
+  enum ValueType thisType = this->type;
 
   assert(typestr[thisType]);
   assert(typestr[to]);
-  Value_destroy(self);
-  Value_new_ERROR(self, TYPEMISMATCH1, _(typestr[thisType]), _(typestr[to]));
+  Value_destroy(this);
+  Value_new_ERROR(this, TYPEMISMATCH1, _(typestr[thisType]), _(typestr[to]));
 }
 
-struct Value *Value_retype(struct Value *self, enum ValueType type)
+struct Value *Value_retype(struct Value *this, enum ValueType type)
 {
-  switch (self->type)
+  switch (this->type)
     {
     case V_INTEGER:
       {
@@ -1442,17 +1442,17 @@ struct Value *Value_retype(struct Value *self, enum ValueType type)
             break;
 
           case V_REAL:
-            self->u.real = self->u.integer;
-            self->type = type;
+            this->u.real = this->u.integer;
+            this->type = type;
             break;
 
           case V_VOID:
-            Value_destroy(self);
-            Value_new_VOID(self);
+            Value_destroy(this);
+            Value_new_VOID(this);
             break;
 
           default:
-            retypeError(self, type);
+            retypeError(this, type);
             break;
           }
         break;
@@ -1466,12 +1466,12 @@ struct Value *Value_retype(struct Value *self, enum ValueType type)
           {
           case V_INTEGER:
             {
-              self->u.integer = Value_toi(self->u.real, &overflow);
-              self->type = V_INTEGER;
+              this->u.integer = Value_toi(this->u.real, &overflow);
+              this->type = V_INTEGER;
               if (overflow)
                 {
-                  Value_destroy(self);
-                  Value_new_ERROR(self, OUTOFRANGE, typestr[V_INTEGER]);
+                  Value_destroy(this);
+                  Value_new_ERROR(this, OUTOFRANGE, typestr[V_INTEGER]);
                 }
               break;
             }
@@ -1480,12 +1480,12 @@ struct Value *Value_retype(struct Value *self, enum ValueType type)
             break;
 
           case V_VOID:
-            Value_destroy(self);
-            Value_new_VOID(self);
+            Value_destroy(this);
+            Value_new_VOID(this);
             break;
 
           default:
-            retypeError(self, type);
+            retypeError(this, type);
             break;
           }
         break;
@@ -1499,12 +1499,12 @@ struct Value *Value_retype(struct Value *self, enum ValueType type)
             break;
 
           case V_VOID:
-            Value_destroy(self);
-            Value_new_VOID(self);
+            Value_destroy(this);
+            Value_new_VOID(this);
             break;
 
           default:
-            retypeError(self, type);
+            retypeError(this, type);
             break;
           }
         break;
@@ -1518,7 +1518,7 @@ struct Value *Value_retype(struct Value *self, enum ValueType type)
             break;
 
           default:
-            retypeError(self, type);
+            retypeError(this, type);
           }
         break;
       }
@@ -1530,20 +1530,20 @@ struct Value *Value_retype(struct Value *self, enum ValueType type)
       assert(0);
     }
 
-  return self;
+  return this;
 }
 
-struct String *Value_toString(struct Value *self, struct String *s, char pad,
+struct String *Value_toString(struct Value *this, struct String *s, char pad,
                               int headingsign, size_t width, int commas,
                               int dollar, int dollarleft, int precision,
                               int exponent, int trailingsign)
 {
   size_t oldlength = s->length;
 
-  switch (self->type)
+  switch (this->type)
     {
     case V_ERROR:
-      String_appendChars(s, self->u.error.msg);
+      String_appendChars(s, this->u.error.msg);
       break;
 
     case V_REAL:
@@ -1554,14 +1554,14 @@ struct String *Value_toString(struct Value *self, struct String *s, char pad,
         size_t totalwidth = width;
 
         String_new(&buf);
-        if (self->type == V_INTEGER)
+        if (this->type == V_INTEGER)
           {
-            if (self->u.integer < 0)
+            if (this->u.integer < 0)
               {
                 sign = -1;
-                self->u.integer = -self->u.integer;
+                this->u.integer = -this->u.integer;
               }
-            else if (self->u.integer == 0)
+            else if (this->u.integer == 0)
               {
                 sign = 0;
               }
@@ -1572,12 +1572,12 @@ struct String *Value_toString(struct Value *self, struct String *s, char pad,
           }
         else
           {
-            if (self->u.real < 0.0)
+            if (this->u.real < 0.0)
               {
                 sign = -1;
-                self->u.real = -self->u.real;
+                this->u.real = -this->u.real;
               }
-            else if (self->u.real == 0.0)
+            else if (this->u.real == 0.0)
               {
                 sign = 0;
               }
@@ -1620,25 +1620,25 @@ struct String *Value_toString(struct Value *self, struct String *s, char pad,
           }
 
         totalwidth += exponent;
-        if (self->type == V_INTEGER)
+        if (this->type == V_INTEGER)
           {
             if (precision > 0 || exponent)
               {
-                format_double(&buf, (double)self->u.integer, width,
+                format_double(&buf, (double)this->u.integer, width,
                               precision, exponent);
               }
             else if (precision == 0)
               {
-                String_appendPrintf(&buf, "%lu.", self->u.integer);
+                String_appendPrintf(&buf, "%lu.", this->u.integer);
               }
             else
               {
-                String_appendPrintf(&buf, "%lu", self->u.integer);
+                String_appendPrintf(&buf, "%lu", this->u.integer);
               }
           }
         else
           {
-            format_double(&buf, self->u.real, width, precision, exponent);
+            format_double(&buf, this->u.real, width, precision, exponent);
           }
 
         if (commas)
@@ -1703,21 +1703,21 @@ struct String *Value_toString(struct Value *self, struct String *s, char pad,
         if (width > 0)
           {
             size_t blanks =
-              (self->u.string.length <
-               width ? (width - self->u.string.length) : 0);
+              (this->u.string.length <
+               width ? (width - this->u.string.length) : 0);
 
             String_size(s, oldlength + width);
-            memcpy(s->character + oldlength, self->u.string.character,
-                   blanks ? self->u.string.length : width);
+            memcpy(s->character + oldlength, this->u.string.character,
+                   blanks ? this->u.string.length : width);
             if (blanks)
               {
-                memset(s->character + oldlength + self->u.string.length, ' ',
+                memset(s->character + oldlength + this->u.string.length, ' ',
                        blanks);
               }
           }
         else
           {
-            String_appendString(s, &self->u.string);
+            String_appendString(s, &this->u.string);
           }
         break;
       }
@@ -1730,7 +1730,7 @@ struct String *Value_toString(struct Value *self, struct String *s, char pad,
   return s;
 }
 
-struct Value *Value_toStringUsing(struct Value *self, struct String *s,
+struct Value *Value_toStringUsing(struct Value *this, struct String *s,
                                   struct String *using, size_t * usingpos)
 {
   char pad = ' ';
@@ -1762,8 +1762,8 @@ struct Value *Value_toStringUsing(struct Value *self, struct String *s,
               }
             else
               {
-                Value_destroy(self);
-                return Value_new_ERROR(self, MISSINGCHARACTER);
+                Value_destroy(this);
+                return Value_new_ERROR(this, MISSINGCHARACTER);
               }
 
             break;
@@ -1796,8 +1796,8 @@ struct Value *Value_toStringUsing(struct Value *self, struct String *s,
               }
             else
               {
-                Value_destroy(self);
-                return Value_new_ERROR(self, IOERROR,
+                Value_destroy(this);
+                return Value_new_ERROR(this, IOERROR,
                                        _("unpaired \\ in format"));
               }
 
@@ -1879,8 +1879,8 @@ struct Value *Value_toStringUsing(struct Value *self, struct String *s,
 
                 if (width == 1 && precision == 0)
                   {
-                    Value_destroy(self);
-                    return Value_new_ERROR(self, BADFORMAT);
+                    Value_destroy(this);
+                    return Value_new_ERROR(this, BADFORMAT);
                   }
               }
 
@@ -1925,9 +1925,9 @@ struct Value *Value_toStringUsing(struct Value *self, struct String *s,
     }
 
 work:
-  Value_toString(self, s, pad, headingsign, width, commas, dollar,
+  Value_toString(this, s, pad, headingsign, width, commas, dollar,
                  dollarleft, precision, exponent, trailingsign);
-  if ((self->type == V_INTEGER || self->type == V_REAL) && width == 0 &&
+  if ((this->type == V_INTEGER || this->type == V_REAL) && width == 0 &&
       precision == -1)
     {
       String_appendChar(s, ' ');
@@ -1946,8 +1946,8 @@ work:
               }
             else
               {
-                Value_destroy(self);
-                return Value_new_ERROR(self, MISSINGCHARACTER);
+                Value_destroy(this);
+                return Value_new_ERROR(this, MISSINGCHARACTER);
               }
             break;
           }
@@ -1960,7 +1960,7 @@ work:
         case '+':
         case '#':
         case '.':
-          return self;
+          return this;
 
         default:
           {
@@ -1969,15 +1969,15 @@ work:
         }
     }
 
-  return self;
+  return this;
 }
 
-struct String *Value_toWrite(struct Value *self, struct String *s)
+struct String *Value_toWrite(struct Value *this, struct String *s)
 {
-  switch (self->type)
+  switch (this->type)
     {
     case V_INTEGER:
-      String_appendPrintf(s, "%ld", self->u.integer);
+      String_appendPrintf(s, "%ld", this->u.integer);
       break;
 
     case V_REAL:
@@ -1987,7 +1987,7 @@ struct String *Value_toWrite(struct Value *self, struct String *s)
         int n;
         int o;
 
-        x = (self->u.real < 0.0 ? -self->u.real : self->u.real);
+        x = (this->u.real < 0.0 ? -this->u.real : this->u.real);
         while (x > 1.0 && p > 0)
           {
             x /= 10.0;
@@ -1995,7 +1995,7 @@ struct String *Value_toWrite(struct Value *self, struct String *s)
           }
 
         o = s->length;
-        String_appendPrintf(s, "%.*f", p, self->u.real);
+        String_appendPrintf(s, "%.*f", p, this->u.real);
         n = s->length;
         if (memchr(s->character + o, '.', n - o))
           {
@@ -2014,8 +2014,8 @@ struct String *Value_toWrite(struct Value *self, struct String *s)
 
     case V_STRING:
       {
-        size_t l = self->u.string.length;
-        char *data = self->u.string.character;
+        size_t l = this->u.string.length;
+        char *data = this->u.string.character;
 
         String_appendChar(s, '"');
         while (l--)

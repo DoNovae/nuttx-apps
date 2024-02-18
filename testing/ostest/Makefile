@@ -29,13 +29,9 @@ MODULE = $(CONFIG_TESTING_OSTEST)
 
 # NuttX OS Test
 
-CSRCS   = getopt.c restart.c sigprocmask.c sighand.c signest.c
+CSRCS   = getopt.c dev_null.c restart.c sigprocmask.c sighand.c signest.c
 CSRCS  += sighelper.c
 MAINSRC = ostest_main.c
-
-ifeq ($(CONFIG_DEV_NULL),y)
-CSRCS += dev_null.c
-endif
 
 ifeq ($(CONFIG_SIG_SIGSTOP_ACTION),y)
 ifeq ($(CONFIG_SIG_SIGKILL_ACTION),y)
@@ -67,17 +63,14 @@ endif
 
 ifneq ($(CONFIG_DISABLE_PTHREAD),y)
 CSRCS += cancel.c cond.c mutex.c timedmutex.c sem.c semtimed.c barrier.c
-CSRCS += timedwait.c pthread_rwlock.c pthread_rwlock_cancel.c schedlock.c
-
-ifeq ($(CONFIG_SCHED_WAITPID),y)
-CSRCS += pthread_exit.c
-endif
+CSRCS += timedwait.c
+CSRCS += pthread_rwlock.c pthread_rwlock_cancel.c
 
 ifneq ($(CONFIG_TLS_NELEM),0)
 CSRCS += specific.c
 endif
 
-ifneq ($(CONFIG_PTHREAD_CLEANUP_STACKSIZE),0)
+ifeq ($(CONFIG_PTHREAD_CLEANUP),y)
 CSRCS += pthread_cleanup.c
 endif
 
@@ -104,10 +97,6 @@ endif
 ifeq ($(CONFIG_SCHED_WORKQUEUE),y)
 CSRCS += wqueue.c
 endif
-
-ifeq ($(CONFIG_PRIORITY_INHERITANCE),y)
-CSRCS += prioinherit.c
-endif
 endif # CONFIG_DISABLE_PTHREAD
 
 ifneq ($(CONFIG_DISABLE_MQUEUE),y)
@@ -123,18 +112,20 @@ CSRCS += sigev_thread.c
 endif
 endif
 
-ifeq ($(CONFIG_ARCH_HAVE_FORK),y)
+ifeq ($(CONFIG_ARCH_HAVE_VFORK),y)
 ifeq ($(CONFIG_SCHED_WAITPID),y)
 CSRCS += vfork.c
 endif
 endif
 
+ifneq ($(CONFIG_DISABLE_PTHREAD),y)
+ifeq ($(CONFIG_PRIORITY_INHERITANCE),y)
+CSRCS += prioinherit.c
+endif # CONFIG_PRIORITY_INHERITANCE
+endif # CONFIG_DISABLE_PTHREAD
+
 ifeq ($(CONFIG_ARCH_SETJMP_H),y)
 CSRCS += setjmp.c
-endif
-
-ifeq ($(CONFIG_SMP_CALL),y)
-CSRCS += smp_call.c
 endif
 
 include $(APPDIR)/Application.mk

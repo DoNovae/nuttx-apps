@@ -647,8 +647,7 @@ int main(int argc, FAR char *argv[])
 
       /* read a line from the terminal */
 
-      len = readline_stream(buffer, sizeof(buffer),
-                            stdin, stdout);
+      len = readline(buffer, sizeof(buffer), stdin, stdout);
       buffer[len] = '\0';
       if (len > 0)
         {

@@ -63,10 +63,8 @@ static int nsh_consoleioctl(FAR struct nsh_vtbl_s *vtbl,
                             int cmd, unsigned long arg);
 static int nsh_consoleoutput(FAR struct nsh_vtbl_s *vtbl,
                              FAR const char *fmt, ...) printf_like(2, 3);
-#ifndef CONFIG_NSH_DISABLE_ERROR_PRINT
 static int nsh_erroroutput(FAR struct nsh_vtbl_s *vtbl,
                            FAR const char *fmt, ...) printf_like(2, 3);
-#endif
 static FAR char *nsh_consolelinebuffer(FAR struct nsh_vtbl_s *vtbl);
 static void nsh_consoleredirect(FAR struct nsh_vtbl_s *vtbl, int fd,
                                 FAR uint8_t *save);
@@ -178,7 +176,6 @@ static int nsh_consoleoutput(FAR struct nsh_vtbl_s *vtbl,
  *
  ****************************************************************************/
 
-#ifndef CONFIG_NSH_DISABLE_ERROR_PRINT
 static int nsh_erroroutput(FAR struct nsh_vtbl_s *vtbl,
                            FAR const char *fmt, ...)
 {
@@ -192,7 +189,6 @@ static int nsh_erroroutput(FAR struct nsh_vtbl_s *vtbl,
 
   return ret;
 }
-#endif
 
 /****************************************************************************
  * Name: nsh_consolelinebuffer
@@ -372,9 +368,7 @@ FAR struct console_stdio_s *nsh_newconsole(bool isctty)
       pstate->cn_vtbl.write       = nsh_consolewrite;
       pstate->cn_vtbl.ioctl       = nsh_consoleioctl;
       pstate->cn_vtbl.output      = nsh_consoleoutput;
-#ifndef CONFIG_NSH_DISABLE_ERROR_PRINT
       pstate->cn_vtbl.error       = nsh_erroroutput;
-#endif
       pstate->cn_vtbl.linebuffer  = nsh_consolelinebuffer;
       pstate->cn_vtbl.exit        = nsh_consoleexit;
       pstate->cn_vtbl.isctty      = isctty;

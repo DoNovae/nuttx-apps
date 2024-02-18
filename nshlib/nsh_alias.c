@@ -47,13 +47,9 @@
 #define alias_head(list)        (FAR struct nsh_alias_s *)sq_peek(list)
 #define alias_remfirst(list)    (FAR struct nsh_alias_s *)sq_remfirst(list)
 
-/* Alias message format */
-
-#define g_savefail_format       "alias %s='%s' failed\n"
-
-/* Common for both alias / unalias */
-
-#define g_noalias_format        "%s: %s not found\n"
+/****************************************************************************
+ * Private Types
+ ****************************************************************************/
 
 /****************************************************************************
  * Private Data
@@ -62,6 +58,11 @@
 /* Alias message format */
 
 static const char g_aliasfmt[]    = "alias %s='%s'\n";
+static const char g_savefailfmt[] = "alias %s='%s' failed\n";
+
+/* Common for both alias / unalias */
+
+static const char g_noaliasfmt[]  = "%s: %s not found\n";
 
 /****************************************************************************
  * Private Functions
@@ -347,7 +348,7 @@ int cmd_alias(FAR struct nsh_vtbl_s *vtbl, int argc, FAR char **argv)
           ret = alias_save(vtbl, *arg, value);
           if (ret < 0)
             {
-              nsh_error(vtbl, g_savefail_format, *arg, value);
+              nsh_error(vtbl, g_savefailfmt, *arg, value);
             }
         }
       else if ((alias = alias_find(vtbl, *arg)) != NULL)
@@ -360,7 +361,7 @@ int cmd_alias(FAR struct nsh_vtbl_s *vtbl, int argc, FAR char **argv)
         {
           /* Nothing found */
 
-          nsh_error(vtbl, g_noalias_format, "alias", *arg);
+          nsh_error(vtbl, g_noaliasfmt, "alias", *arg);
           ret = -ENOENT;
         }
     }
@@ -408,7 +409,7 @@ int cmd_unalias(FAR struct nsh_vtbl_s *vtbl, int argc, FAR char **argv)
 
   /* If '-a' is provided, then just wipe them all */
 
-  if ((option = getopt(argc, argv, "a")) == 'a')
+  if ((option = getopt(argc, argv, "a")) != ERROR)
     {
       alias_removeall(vtbl);
       return ret;
@@ -428,7 +429,7 @@ int cmd_unalias(FAR struct nsh_vtbl_s *vtbl, int argc, FAR char **argv)
         {
           /* Nothing found */
 
-          nsh_error(vtbl, g_noalias_format, "unalias", *arg);
+          nsh_error(vtbl, g_noaliasfmt, "unalias", *arg);
           ret = -ENOENT;
         }
     }

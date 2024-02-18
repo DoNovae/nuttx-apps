@@ -153,7 +153,8 @@ int passwd_find(FAR const char *username, FAR struct passwd_s *passwd)
             }
 
           passwd->offset = offset;
-          strlcpy(passwd->encrypted, encrypted, MAX_ENCRYPTED);
+          strncpy(passwd->encrypted, encrypted, MAX_ENCRYPTED);
+          passwd->encrypted[MAX_ENCRYPTED] = '\0';
 
           ret = OK;
           break;

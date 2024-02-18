@@ -80,10 +80,10 @@ static int getstr(int fd, FAR char *buf)
 static FAR void *doit(pthread_addr_t pvarg)
 {
   char buf[REXECD_BUFSIZE];
-  struct pollfd fds[2];
   FAR FILE *fp;
   int sock = (int)pvarg;
   int ret;
+  int len;
 
   /* we need to read err_sock, user and passwd, but ignore them */
 
@@ -94,61 +94,31 @@ static FAR void *doit(pthread_addr_t pvarg)
   /* we need to read command */
 
   getstr(sock, buf);
-  fp = popen(buf, "r+");
+  fp = popen(buf, "r");
   if (!fp)
     {
       goto errout;
     }
 
-  memset(fds, 0, sizeof(fds));
-  fds[0].fd = fileno(fp);
-  fds[0].events = POLLIN;
-  fds[1].fd = sock;
-  fds[1].events = POLLIN;
-
   while (1)
     {
-      ret = poll(fds, 2, -1);
+      ret = fread(buf, 1, REXECD_BUFSIZE, fp);
       if (ret <= 0)
-        {
-          continue;
-        }
-
-      if (fds[0].revents & POLLIN)
-        {
-          ret = read(fileno(fp), buf, REXECD_BUFSIZE);
-          if (ret <= 0)
-            {
-              break;
-            }
-
-          ret = write(sock, buf, ret);
-          if (ret < 0)
-            {
-              break;
-            }
-        }
-
-      if (fds[1].revents & POLLIN)
-        {
-          ret = read(sock, buf, REXECD_BUFSIZE);
-          if (ret <= 0)
-            {
-              break;
-            }
-
-          ret = write(fileno(fp), buf, ret);
-          if (ret < 0)
-            {
-              break;
-            }
-        }
-
-      if (((fds[0].revents | fds[1].revents) & POLLHUP) &&
-          ((fds[0].revents | fds[1].revents) & POLLIN) == 0)
         {
           break;
         }
+
+      do
+        {
+          len = write(sock, buf, ret);
+          if (len <= 0)
+            {
+              break;
+            }
+
+          ret -= len;
+        }
+      while (ret > 0);
     }
 
   pclose(fp);
@@ -256,7 +226,7 @@ int main(int argc, FAR char **argv)
 
   while (1)
     {
-      sock = accept4(serv, NULL, 0, SOCK_CLOEXEC);
+      sock = accept(serv, NULL, 0);
       if (sock < 0)
         {
           if (errno == EINTR)

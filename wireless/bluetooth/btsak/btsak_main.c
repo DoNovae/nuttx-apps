@@ -31,7 +31,6 @@
 #include <stdlib.h>
 #include <strings.h>
 #include <errno.h>
-#include <sys/param.h>
 
 #include <nuttx/wireless/bluetooth/bt_core.h>
 #include <nuttx/net/bluetooth.h>
@@ -69,93 +68,89 @@ static const struct btsak_command_s g_btsak_commands[] =
 {
   {
     "help",
-    btsak_cmd_help,
+    (CODE void *)btsak_cmd_help,
     NULL
   },
-  {
-    "info",
-    btsak_cmd_info,
+  {"info",
+    (CODE void *)btsak_cmd_info,
     "[-h]"
   },
-  {
-    "features",
-    btsak_cmd_features,
+  {"features",
+    (CODE void *)btsak_cmd_features,
     "[-h] [le]"
   },
-  {
-    "scan",
-    btsak_cmd_scan,
+  {"scan",
+    (CODE void *)btsak_cmd_scan,
     "[-h] <start [-d]|get|stop>"
   },
   {
     "advertise",
-    btsak_cmd_advertise,
+    (CODE void *)btsak_cmd_advertise,
     "[-h] <start|stop>"
   },
   {
     "security",
-    btsak_cmd_security,
-    "[-h] <addr> public|random <level>"
+    (CODE void *)btsak_cmd_security,
+    "[-h] <addr> public|private <level>"
   },
   {
     "gatt",
-    btsak_cmd_gatt,
+    (CODE void *)btsak_cmd_gatt,
     "[-h] <cmd> [option [option [option...]]]"
   }
 };
 
-#define NCOMMANDS nitems(g_btsak_commands)
+#define NCOMMANDS (sizeof(g_btsak_commands) / sizeof(struct btsak_command_s))
 
 static const struct btsak_command_s g_btsak_gatt_commands[] =
 {
-  {
-    "exchange-mtu",
-    btsak_cmd_gatt_exchange_mtu,
-    "[-h] <addr> public|random"
+  {"exchange-mtu",
+    (CODE void *)btsak_cmd_gatt_exchange_mtu,
+    "[-h] <addr> public|private"
   },
   {
     "connect",
-    btsak_cmd_connect,
-    "[-h] <addr> public|random"
+    (CODE void *)btsak_cmd_connect,
+    "[-h] <addr> public|private"
   },
   {
     "disconnect",
-    btsak_cmd_disconnect,
-    "[-h] <addr> public|random"
+    (CODE void *)btsak_cmd_disconnect,
+    "[-h] <addr> public|private"
   },
   {
     "discover",
-    btsak_cmd_discover,
-    "[-h] <addr> public|random <uuid16> [<start> [<end>]]"
+    (CODE void *)btsak_cmd_discover,
+    "[-h] <addr> public|private <uuid16> [<start> [<end>]]"
   },
   {
     "characteristic",
-    btsak_cmd_gatt_discover_characteristic,
-    "[-h] <addr> public|random [<start> [<end>]]"
+    (CODE void *)btsak_cmd_gatt_discover_characteristic,
+    "[-h] <addr> public|private [<start> [<end>]]"
   },
   {
     "descriptor",
-    btsak_cmd_gatt_discover_descriptor,
-    "[-h] <addr> public|random [<start> [<end>]]"
+    (CODE void *)btsak_cmd_gatt_discover_descriptor,
+    "[-h] <addr> public|private [<start> [<end>]]"
   },
   {
     "read",
-    btsak_cmd_gatt_read,
-    "[-h] <addr> public|random <handle> [<offset>]"
+    (CODE void *)btsak_cmd_gatt_read,
+    "[-h] <addr> public|private <handle> [<offset>]"
   },
   {
     "read-multiple",
-    btsak_cmd_gatt_read_multiple,
-    "[-h] <addr> public|random <handle> [<handle> [<handle>]..]"
+    (CODE void *)btsak_cmd_gatt_read_multiple,
+    "[-h] <addr> public|private <handle> [<handle> [<handle>]..]"
   },
   {
     "write",
-    btsak_cmd_gatt_write,
-    "[-h] <addr> public|random <handle> <byte> [<byte> [<byte>]..]"
+    (CODE void *)btsak_cmd_gatt_write,
+    "[-h] <addr> public|private <handle> <byte> [<byte> [<byte>]..]"
   }
 };
 
-#define GATT_NCOMMANDS nitems(g_btsak_gatt_commands)
+#define GATT_NCOMMANDS (sizeof(g_btsak_gatt_commands) / sizeof(struct btsak_command_s))
 
 static const bt_addr_t g_default_epaddr =
 {
@@ -544,7 +539,7 @@ int btsak_str2addr(FAR const char *str, FAR uint8_t *addr)
  *
  * Description:
  *   Convert a string to an address type.  String options are "public" or
- *   "random".
+ *   "private".
  *
  ****************************************************************************/
 

@@ -25,7 +25,6 @@
 #include <string.h>
 #include <unistd.h>
 #include <sys/ioctl.h>
-#include <sys/param.h>
 #include <crypto/cryptodev.h>
 #include <crypto/md5.h>
 #include <crypto/sha1.h>
@@ -193,7 +192,7 @@ int main(void)
 {
   char output[32];
   int ret = 0;
-  for (int i = 0; i < nitems(testcase); i++)
+  for (int i = 0; i < sizeof(testcase) / sizeof(struct tb); i++)
     {
       ret += syshmac(CRYPTO_MD5_HMAC, testcase[i].key,
                      testcase[i].keylen,
@@ -216,7 +215,7 @@ int main(void)
         }
     }
 
-  for (int i = 0; i < nitems(testcase); i++)
+  for (int i = 0; i < sizeof(testcase) / sizeof(struct tb); i++)
     {
       ret = syshmac(CRYPTO_SHA1_HMAC, testcase[i].key,
                     testcase[i].keylen,
@@ -239,7 +238,7 @@ int main(void)
         }
     }
 
-  for (int i = 0; i < nitems(testcase); i++)
+  for (int i = 0; i < sizeof(testcase) / sizeof(struct tb); i++)
     {
       ret = syshmac(CRYPTO_SHA2_256_HMAC, testcase[i].key,
                     testcase[i].keylen,

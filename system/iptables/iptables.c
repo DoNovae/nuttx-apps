@@ -407,7 +407,6 @@ int main(int argc, FAR char *argv[])
 {
   struct iptables_args_s args;
   int nerrors;
-  int ret = 0;
 
   args.table        = arg_str1("t", "table", "table", "table to manipulate");
 
@@ -441,20 +440,20 @@ int main(int argc, FAR char *argv[])
     {
       arg_print_errors(stderr, args.end, argv[0]);
       iptables_showusage(argv[0], (FAR void**)&args);
+      return 0;
     }
-  else if (strcmp(args.table->sval[0], TABLE_NAME_NAT) == 0)
+
+  if (strcmp(args.table->sval[0], TABLE_NAME_NAT) == 0)
     {
-      ret = iptables_nat(&args);
+      int ret = iptables_nat(&args);
       if (ret < 0)
         {
           printf("iptables got error on NAT: %d!\n", ret);
         }
-    }
-  else
-    {
-      printf("Unknown table: %s\n", args.table->sval[0]);
+
+      return ret;
     }
 
-  arg_freetable((FAR void **)&args, 1);
-  return ret;
+  printf("Unknown table: %s\n", args.table->sval[0]);
+  return 0;
 }

@@ -47,6 +47,10 @@
 #  include <sys/boardctl.h>
 #endif
 
+#ifdef CONFIG_THTTPD_BINFS
+#  include <nuttx/fs/unionfs.h>
+#endif
+
 #ifdef CONFIG_NET_SLIP
 #  include <nuttx/net/net.h>
 #endif
@@ -134,7 +138,7 @@
 
 #ifdef CONFIG_THTTPD_BINFS
 #  define ROMFS_MOUNTPT      "/mnt/tmp1"
-#  define ROMFS_PREFIX       ""
+#  define ROMFS_PREFIX       NULL
 #  define BINFS_MOUNTPT      "/mnt/tmp2"
 #  define BINFS_PREFIX       "cgi-bin"
 #  define UNIONFS_MOUNTPT    CONFIG_THTTPD_PATH
@@ -161,7 +165,7 @@
  */
 
 FAR const struct symtab_s *g_thttpdsymtab;
-int                        g_thttpdnsymbols;
+int                         g_thttpdnsymbols;
 #endif
 
 /****************************************************************************
@@ -290,9 +294,8 @@ int main(int argc, FAR char *argv[])
 
   printf("Creating UNIONFS filesystem at %s\n", UNIONFS_MOUNTPT);
 
-  ret = mount(NULL, UNIONFS_MOUNTPT, "unionfs", 0,
-              "fspath1=" ROMFS_MOUNTPT ",prefix1=" ROMFS_PREFIX
-              ",fspath2=" BINFS_MOUNTPT ",prefix2=" BINFS_PREFIX);
+  ret = unionfs_mount(ROMFS_MOUNTPT, ROMFS_PREFIX, BINFS_MOUNTPT,
+                      BINFS_PREFIX, UNIONFS_MOUNTPT);
   if (ret < 0)
     {
       printf("ERROR: Failed to create the union file system at %s: %d\n",

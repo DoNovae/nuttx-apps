@@ -25,9 +25,6 @@
 #include <nuttx/config.h>
 
 #include <nuttx/lib/builtin.h>
-#include <sys/param.h>
-
-#include <sys/stat.h>
 
 /****************************************************************************
  * Private Types
@@ -45,15 +42,11 @@
 
 const struct builtin_s g_builtins[] =
 {
-#  include "builtin_list.h"
-#ifdef CONFIG_SCHED_USER_IDENTITY
-  { NULL, 0, 0, 0, 0, 0, 0 }
-#else
+# include "builtin_list.h"
   { NULL, 0, 0, 0 }
-#endif
 };
 
-const int g_builtin_count = nitems(g_builtins);
+const int g_builtin_count = sizeof(g_builtins) / sizeof(g_builtins[0]);
 
 /****************************************************************************
  * Private Data

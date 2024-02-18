@@ -320,8 +320,7 @@ int main(int argc, FAR char *argv[])
                   goto out;
                 }
 #else
-              ret = readline_stream(&buff[1], sizeof(buff) - 1,
-                                    stdin, stdout);
+              ret = readline(&buff[1], sizeof(buff) - 1, stdin, stdout);
 
               /* Readline normally returns the number of characters read,
                * but will return EOF on end of file or if an error occurs.

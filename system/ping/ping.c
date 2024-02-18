@@ -33,8 +33,6 @@
 #include <limits.h>
 #include <fixedmath.h>
 
-#include <nuttx/net/ip.h>
-
 #include "netutils/icmp_ping.h"
 
 /****************************************************************************
@@ -132,10 +130,10 @@ static void ping_result(FAR const struct ping_result_s *result)
 
       case ICMP_I_BEGIN:
         printf("PING %u.%u.%u.%u %u bytes of data\n",
-               ip4_addr1(result->dest.s_addr),
-               ip4_addr2(result->dest.s_addr),
-               ip4_addr3(result->dest.s_addr),
-               ip4_addr4(result->dest.s_addr),
+               (unsigned int)(result->dest.s_addr) & 0xff,
+               (unsigned int)(result->dest.s_addr >> 8) & 0xff,
+               (unsigned int)(result->dest.s_addr >> 16) & 0xff,
+               (unsigned int)(result->dest.s_addr >> 24) & 0xff,
                result->info->datalen);
         break;
 
@@ -155,10 +153,10 @@ static void ping_result(FAR const struct ping_result_s *result)
 
       case ICMP_W_TIMEOUT:
         printf("No response from %u.%u.%u.%u: icmp_seq=%u time=%ld ms\n",
-               ip4_addr1(result->dest.s_addr),
-               ip4_addr2(result->dest.s_addr),
-               ip4_addr3(result->dest.s_addr),
-               ip4_addr4(result->dest.s_addr),
+               (unsigned int)(result->dest.s_addr) & 0xff,
+               (unsigned int)(result->dest.s_addr >> 8) & 0xff,
+               (unsigned int)(result->dest.s_addr >> 16) & 0xff,
+               (unsigned int)(result->dest.s_addr >> 24) & 0xff,
                result->seqno, result->extra);
         break;
 
@@ -203,10 +201,10 @@ static void ping_result(FAR const struct ping_result_s *result)
 
         printf("%u bytes from %u.%u.%u.%u: icmp_seq=%u time=%ld.%ld ms\n",
                result->info->datalen,
-               ip4_addr1(result->dest.s_addr),
-               ip4_addr2(result->dest.s_addr),
-               ip4_addr3(result->dest.s_addr),
-               ip4_addr4(result->dest.s_addr),
+               (unsigned int)(result->dest.s_addr) & 0xff,
+               (unsigned int)(result->dest.s_addr >> 8) & 0xff,
+               (unsigned int)(result->dest.s_addr >> 16) & 0xff,
+               (unsigned int)(result->dest.s_addr >> 24) & 0xff,
                result->seqno, result->extra / USEC_PER_MSEC,
                result->extra % USEC_PER_MSEC / MSEC_PER_DSEC);
         break;

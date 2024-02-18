@@ -262,8 +262,7 @@ WINDOW *Xinitscr(int argc, char *argv[])
 
   def_shell_mode();
 
-  snprintf(ttytype, sizeof(ttytype),
-           "pdcurses|PDCurses for %s", PDC_sysname());
+  sprintf(ttytype, "pdcurses|PDCurses for %s", PDC_sysname());
 
   return stdscr;
 }

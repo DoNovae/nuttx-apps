@@ -37,12 +37,6 @@
 
 #include "ostest.h"
 
-/* REVISIT: This could be implemented for CONFIG_BUILD_KERNEL as well, by
- * starting a new process instead of using task_create()
- */
-
-#ifndef CONFIG_BUILD_KERNEL
-
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -142,4 +136,3 @@ void suspend_test(void)
   printf("suspend_test: done\n");
   FFLUSH();
 }
-#endif /* !CONFIG_BUILD_KERNEL */

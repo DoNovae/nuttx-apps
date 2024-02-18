@@ -108,24 +108,6 @@ int fmsynth_initialize(int fs)
 }
 
 /****************************************************************************
- * name: create_fmsynthsnd
- ****************************************************************************/
-
-FAR fmsynth_sound_t *create_fmsynthsnd(FAR fmsynth_sound_t *snd)
-{
-  if (snd)
-    {
-      snd->own_allocate = 0;
-      snd->phase_time = 0;
-      snd->volume = FMSYNTH_MAX_VOLUME;
-      snd->operators = NULL;
-      snd->next_sound = NULL;
-    }
-
-  return snd;
-}
-
-/****************************************************************************
  * name: fmsynthsnd_create
  ****************************************************************************/
 
@@ -133,11 +115,12 @@ FAR fmsynth_sound_t *fmsynthsnd_create(void)
 {
   FAR fmsynth_sound_t *ret;
   ret = (FAR fmsynth_sound_t *)malloc(sizeof(fmsynth_sound_t));
-
   if (ret)
     {
-      create_fmsynthsnd(ret);
-      ret->own_allocate = 1;
+      ret->phase_time = 0;
+      ret->volume = FMSYNTH_MAX_VOLUME;
+      ret->operators = NULL;
+      ret->next_sound = NULL;
     }
 
   return ret;
@@ -149,7 +132,7 @@ FAR fmsynth_sound_t *fmsynthsnd_create(void)
 
 void fmsynthsnd_delete(FAR fmsynth_sound_t *snd)
 {
-  if (snd != NULL && snd->own_allocate == 1)
+  if (snd != NULL)
     {
       free(snd);
     }
@@ -178,20 +161,6 @@ void fmsynthsnd_set_soundfreq(FAR fmsynth_sound_t *snd, float freq)
     {
       fmsynthop_set_soundfreq(op, freq);
       fmsynthop_start(op);
-    }
-}
-
-/****************************************************************************
- * name: fmsynthsnd_stop
- ****************************************************************************/
-
-void fmsynthsnd_stop(FAR fmsynth_sound_t *snd)
-{
-  FAR fmsynth_op_t *op;
-
-  for (op = snd->operators; op != NULL; op = op->parallelop)
-    {
-      fmsynthop_stop(op);
     }
 }
 

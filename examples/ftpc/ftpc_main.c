@@ -560,8 +560,7 @@ do_connect:
           return 1;
         }
 #else
-      ret = readline_stream(g_line, CONFIG_FTPC_LINELEN,
-                            stdin, stdout);
+      ret = readline(g_line, CONFIG_FTPC_LINELEN, stdin, stdout);
 
       /* Readline normally returns the number of characters read,
        * but will return EOF on end of file or if an error occurs.

@@ -249,34 +249,6 @@ int fmsynthop_set_samplerate(int fs)
 }
 
 /****************************************************************************
- * name: create_fmsynthop
- ****************************************************************************/
-
-FAR fmsynth_op_t *create_fmsynthop(FAR fmsynth_op_t *op,
-                                   FAR fmsynth_eg_t *eg)
-{
-  if (op)
-    {
-      op->eg = eg;
-
-      op->own_allocate  = 0;
-      op->wavegen       = NULL;
-      op->cascadeop     = NULL;
-      op->parallelop    = NULL;
-      op->feedback_ref  = NULL;
-      op->feedback_val  = 0;
-      op->feedbackrate  = 0;
-      op->last_sigval   = 0;
-      op->freq_rate     = 1.f;
-      op->sound_freq    = 0.f;
-      op->delta_phase   = 0.f;
-      op->current_phase = 0.f;
-    }
-
-  return op;
-}
-
-/****************************************************************************
  * name: fmsynthop_create
  ****************************************************************************/
 
@@ -295,8 +267,17 @@ FAR fmsynth_op_t *fmsynthop_create(void)
           return NULL;
         }
 
-      create_fmsynthop(ret, ret->eg);
-      ret->own_allocate = 1;
+      ret->wavegen       = NULL;
+      ret->cascadeop     = NULL;
+      ret->parallelop    = NULL;
+      ret->feedback_ref  = NULL;
+      ret->feedback_val  = 0;
+      ret->feedbackrate  = 0;
+      ret->last_sigval   = 0;
+      ret->freq_rate     = 1.f;
+      ret->sound_freq    = 0.f;
+      ret->delta_phase   = 0.f;
+      ret->current_phase = 0.f;
     }
 
   return ret;
@@ -308,11 +289,11 @@ FAR fmsynth_op_t *fmsynthop_create(void)
 
 void fmsynthop_delete(FAR fmsynth_op_t *op)
 {
-  if (op != NULL && op->own_allocate == 1)
+  if (op != NULL)
     {
       if (op->eg)
         {
-          fmsyntheg_delete(op->eg);
+          free(op->eg);
         }
 
       free(op);
@@ -518,18 +499,12 @@ void fmsynthop_stop(FAR fmsynth_op_t *op)
 
 int fmsynthop_operate(FAR fmsynth_op_t *op, int phase_time)
 {
-  int val;
-  int val2;
   int phase;
   FAR fmsynth_op_t *subop;
 
   op->current_phase = phase_time ? op->current_phase + op->delta_phase : 0.f;
 
-  val = (int)op->current_phase;
-  val2 = (val / (2 * FMSYNTH_PI));
-
-  phase = (int)val + op->feedback_val;
-  op->current_phase = op->current_phase - (float)(val2 * (2 * FMSYNTH_PI));
+  phase = (int)op->current_phase + op->feedback_val;
 
   subop = op->cascadeop;
 

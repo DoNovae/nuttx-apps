@@ -95,7 +95,7 @@ int wpa_driver_wext_get_key_ext(int sockfd, FAR const char *ifname,
   ext = malloc(sizeof(*ext) + *req_len);
   if (ext == NULL)
     {
-      return -ENOMEM;
+      return -1;
     }
 
   memset(&iwr, 0, sizeof(iwr));
@@ -127,7 +127,7 @@ int wpa_driver_wext_get_key_ext(int sockfd, FAR const char *ifname,
 
           default:
             free(ext);
-            return -EINVAL;
+            return -1;
         }
 
      if (key && ext->key_len < *req_len)
@@ -167,7 +167,7 @@ int wpa_driver_wext_set_key_ext(int sockfd, FAR const char *ifname,
   ext = malloc(sizeof(*ext) + key_len);
   if (ext == NULL)
     {
-      return -ENOMEM;
+      return -1;
     }
 
   memset(&iwr, 0, sizeof(iwr));
@@ -203,12 +203,12 @@ int wpa_driver_wext_set_key_ext(int sockfd, FAR const char *ifname,
       default:
         nerr("ERROR: Unknown algorithm %d", alg);
         free(ext);
-        return -EINVAL;
+        return -1;
     }
 
   if (ioctl(sockfd, SIOCSIWENCODEEXT, (unsigned long)&iwr) < 0)
     {
-      ret = -errno;
+      ret = errno == EOPNOTSUPP ? -2 : -1;
       nerr("ERROR: ioctl[SIOCSIWENCODEEXT]: %d", errno);
     }
 
@@ -369,7 +369,7 @@ static int wpa_driver_wext_process_auth_param(int sockfd,
                idx, *value, errcode);
         }
 
-      ret = -errcode;
+      ret = errcode == EOPNOTSUPP ? -2 : -1;
     }
 
   if (ret == 0 && !set)
@@ -429,7 +429,7 @@ int wpa_driver_wext_get_auth_param(int sockfd, FAR const char *ifname,
 
 void wpa_driver_wext_disconnect(int sockfd, FAR const char *ifname)
 {
-  uint8_t ssid[WAPI_ESSID_MAX_SIZE + 1];
+  uint8_t ssid[WAPI_ESSID_MAX_SIZE];
   const struct ether_addr bssid =
   {
   };
@@ -470,8 +470,6 @@ void wpa_driver_wext_disconnect(int sockfd, FAR const char *ifname)
         {
           ssid[i] = rand() & 0xff;
         }
-
-      ssid[WAPI_ESSID_MAX_SIZE] = '\0';
 
       if (wapi_set_essid(sockfd, ifname,
                          (FAR const char *)ssid, WAPI_ESSID_OFF) < 0)

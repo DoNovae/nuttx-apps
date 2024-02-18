@@ -156,14 +156,13 @@ int main(int argc, FAR char *argv[])
 
       /* Save the sector in our array */
 
-      sectors[x] = (uint16_t)logsector;
+      sectors[x] = (uint16_t) logsector;
       seqs[x] = seq++;
 
       /* Now write some data to the sector */
 
-      snprintf(buffer, fmt.availbytes,
-               "Logical sector %d sequence %d\n",
-               sectors[x], seqs[x]);
+      sprintf(buffer, "Logical sector %d sequence %d\n",
+              sectors[x], seqs[x]);
 
       readwrite.logsector = sectors[x];
       readwrite.offset = 0;
@@ -203,9 +202,8 @@ int main(int argc, FAR char *argv[])
 
       printf("\r%d     ", sectors[x]);
 
-      snprintf(&buffer[100], fmt.availbytes - 100,
-               "Logical sector %d sequence %d\n",
-               sectors[x], seqs[x]);
+      sprintf(&buffer[100], "Logical sector %d sequence %d\n",
+              sectors[x], seqs[x]);
 
       if (strcmp(buffer, &buffer[100]) != 0)
         {
@@ -226,9 +224,8 @@ int main(int argc, FAR char *argv[])
       /* Now write over the sector data with new data, causing a relocation.
        */
 
-      snprintf(buffer, fmt.availbytes,
-               "Logical sector %d sequence %d\n",
-               sectors[x], seqs[x]);
+      sprintf(buffer, "Logical sector %d sequence %d\n",
+              sectors[x], seqs[x]);
       readwrite.logsector = sectors[x];
       readwrite.offset = 0;
       readwrite.count = strlen(buffer) + 1;
@@ -255,8 +252,7 @@ int main(int argc, FAR char *argv[])
        * causing a relocation.
        */
 
-      snprintf(buffer, fmt.availbytes,
-               "Appended data in sector %d\n", sectors[x]);
+      sprintf(buffer, "Appended data in sector %d\n", sectors[x]);
       readwrite.logsector = sectors[x];
       readwrite.offset = 64;
       readwrite.count = strlen(buffer) + 1;

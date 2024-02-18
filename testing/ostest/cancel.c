@@ -33,9 +33,14 @@
 #include <stdio.h>
 #include <time.h>
 #include <unistd.h>
-#include <semaphore.h>
 
 #include "ostest.h"
+
+/****************************************************************************
+ * Preprocessor definitions
+ ****************************************************************************/
+
+#define SIG_WAITCANCEL 27
 
 /****************************************************************************
  * Private Data
@@ -43,13 +48,12 @@
 
 static pthread_mutex_t mutex;
 static pthread_cond_t  cond;
-static sem_t sem_thread_started;
 
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
 
-#if CONFIG_PTHREAD_CLEANUP_STACKSIZE > 0
+#ifdef CONFIG_PTHREAD_CLEANUP
 static void sem_cleaner(FAR void *arg)
 {
   printf("sem_cleaner #%u\n", (unsigned int)((uintptr_t)arg));
@@ -60,7 +64,7 @@ static FAR void *sem_waiter(FAR void *parameter)
 {
   int status;
 
-#if CONFIG_PTHREAD_CLEANUP_STACKSIZE > 0
+#ifdef CONFIG_PTHREAD_CLEANUP
   int i;
 
   /* Register some clean-up handlers */
@@ -82,7 +86,6 @@ static FAR void *sem_waiter(FAR void *parameter)
        ASSERT(false);
     }
 
-  sem_post(&sem_thread_started);
   printf("sem_waiter: Starting wait for condition\n");
 
   /* Are we a non-cancelable thread?   Yes, set the non-cancelable state */
@@ -161,7 +164,7 @@ static FAR void *sem_waiter(FAR void *parameter)
 }
 
 #if !defined(CONFIG_DISABLE_MQUEUE) && defined(CONFIG_CANCELLATION_POINTS)
-#if CONFIG_PTHREAD_CLEANUP_STACKSIZE > 0
+#ifdef CONFIG_PTHREAD_CLEANUP
 static void mqueue_cleaner(FAR void *arg)
 {
   FAR mqd_t *mqcancel = (FAR mqd_t *)arg;
@@ -182,7 +185,7 @@ static FAR void *mqueue_waiter(FAR void *parameter)
   char msgbuffer[CONFIG_MQ_MAXMSGSIZE];
   size_t nbytes;
 
-#if CONFIG_PTHREAD_CLEANUP_STACKSIZE > 0
+#ifdef CONFIG_PTHREAD_CLEANUP
   /* Register clean-up handler */
 
   pthread_cleanup_push(mqueue_cleaner, (FAR void *)&mqcancel);
@@ -231,9 +234,8 @@ static FAR void *sig_waiter(FAR void *parameter)
 
   /* Wait for a signal that will never be delivered */
 
-  printf("sig_waiter: Waiting to receive signal...\n");
+  printf("sig_waiter: Waiting to receive signal %d ...\n", SIG_WAITCANCEL);
 
-  sigemptyset(&set);
   ret = sigwaitinfo(&set, &info);
 
   pthread_testcancel();
@@ -249,7 +251,7 @@ static FAR void *asynch_waiter(FAR void *parameter)
 {
   int status;
 
-#if CONFIG_PTHREAD_CLEANUP_STACKSIZE > 0
+#ifdef CONFIG_PTHREAD_CLEANUP
   int i;
 
   /* Register some clean-up handlers */
@@ -431,8 +433,6 @@ void cancel_test(void)
   void *result;
   int status;
 
-  sem_init(&sem_thread_started, 0, 0);
-
   /* Test 1: Normal Cancel **************************************************/
 
   /* Start the waiter thread  */
@@ -445,13 +445,7 @@ void cancel_test(void)
    * make sure.
    */
 
-  sem_wait(&sem_thread_started);
-
-  /* Make sure sem_waiter run into pthread_cond_wait */
-
-  pthread_mutex_lock(&mutex);
-
-  pthread_mutex_unlock(&mutex);
+  usleep(75 * 1000);
 
   printf("cancel_test: Canceling thread\n");
   status = pthread_cancel(waiter);
@@ -572,13 +566,7 @@ void cancel_test(void)
    * bit to be certain.
    */
 
-  sem_wait(&sem_thread_started);
-
-  /* Make sure sem_waiter run into pthread_cond_wait */
-
-  pthread_mutex_lock(&mutex);
-
-  pthread_mutex_unlock(&mutex);
+  usleep(100 * 1000);
 
   printf("cancel_test: Canceling thread\n");
   status = pthread_cancel(waiter);
@@ -642,13 +630,7 @@ void cancel_test(void)
    * The cancellation should succeed, because the cancellation is pending.
    */
 
-  sem_wait(&sem_thread_started);
-
-  /* Make sure sem_waiter run into pthread_cond_wait */
-
-  pthread_mutex_lock(&mutex);
-
-  pthread_mutex_unlock(&mutex);
+  usleep(100 * 1000);
 
   printf("cancel_test: Canceling thread\n");
   status = pthread_cancel(waiter);
@@ -716,7 +698,6 @@ void cancel_test(void)
 
   printf("cancel_test: Test 6: Cancel message queue wait\n");
   printf("cancel_test: Starting thread (cancelable)\n");
-  sem_destroy(&sem_thread_started);
 
 #if !defined(CONFIG_DISABLE_MQUEUE) && defined(CONFIG_CANCELLATION_POINTS)
   /* Create the message queue */

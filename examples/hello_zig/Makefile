@@ -22,7 +22,7 @@ include $(APPDIR)/Make.defs
 
 # Hello, Zig! Example
 
-MAINSRC = hello_zig.zig
+MAINSRC = hello_zig_main.zig
 
 # Hello, Zig! built-in application info
 

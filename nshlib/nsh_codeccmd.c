@@ -96,7 +96,8 @@
 #endif
 
 #if defined(HAVE_CODECS_URLENCODE) || defined(HAVE_CODECS_URLDECODE) || \
-    defined(HAVE_CODECS_BASE64ENC) || defined(HAVE_CODECS_BASE64DEC)
+    defined(HAVE_CODECS_BASE64ENC) || defined(HAVE_CODECS_BASE64DEC) || \
+    defined(HAVE_CODECS_HASH_MD5)
 #  define NEED_CMD_CODECS_PROC 1
 #endif
 
@@ -184,6 +185,18 @@ static void b64dec_cb(FAR char *src, int srclen, FAR char *dest,
 #endif
 
 /****************************************************************************
+ * Name: md5_cb
+ ****************************************************************************/
+
+#ifdef HAVE_CODECS_HASH_MD5
+static void md5_cb(FAR char *src, int srclen, FAR char *dest,
+                   FAR int *destlen, int mode)
+{
+  md5_update((MD5_CTX *)dest, (unsigned char *)src, srclen);
+}
+#endif
+
+/****************************************************************************
  * Name: calc_codec_buffsize
  ****************************************************************************/
 
@@ -222,6 +235,14 @@ static int cmd_codecs_proc(FAR struct nsh_vtbl_s *vtbl, int argc,
                            FAR char **argv, uint8_t mode,
                            codec_callback_t func)
 {
+#ifdef HAVE_CODECS_HASH_MD5
+  static const unsigned char hexchars[] = "0123456789abcdef";
+  MD5_CTX ctx;
+  unsigned char mac[16];
+  FAR unsigned char *src;
+  FAR char *dest;
+#endif
+
   FAR char *localfile = NULL;
   FAR char *srcbuf = NULL;
   FAR char *destbuf = NULL;
@@ -296,6 +317,13 @@ static int cmd_codecs_proc(FAR struct nsh_vtbl_s *vtbl, int argc,
       fmt = g_fmtargrequired;
       goto errout;
     }
+
+#ifdef HAVE_CODECS_HASH_MD5
+  if (mode == CODEC_MODE_HASH_MD5)
+    {
+      md5_init(&ctx);
+    }
+#endif
 
   if (isfile)
     {
@@ -375,13 +403,41 @@ static int cmd_codecs_proc(FAR struct nsh_vtbl_s *vtbl, int argc,
           memset(destbuf, 0, buflen);
           if (func)
             {
-              func(srcbuf, ret, destbuf, &buflen, iswebsafe ? 1 : 0);
-              nsh_output(vtbl, "%s", destbuf);
+#ifdef HAVE_CODECS_HASH_MD5
+              if (mode == CODEC_MODE_HASH_MD5)
+                {
+                  func(srcbuf, ret, (char *)&ctx, &buflen, 0);
+                }
+              else
+#endif
+                {
+                  func(srcbuf, ret, destbuf, &buflen, iswebsafe ? 1 : 0);
+                  nsh_output(vtbl, "%s", destbuf);
+                }
             }
 
           buflen = calc_codec_buffsize(srclen + 2, mode);
         }
 
+#ifdef HAVE_CODECS_HASH_MD5
+      if (mode == CODEC_MODE_HASH_MD5)
+        {
+          int i;
+
+          md5_final(mac, &ctx);
+          src  = mac;
+          dest = destbuf;
+          for (i = 0; i < 16; i++, src++)
+            {
+              *dest++ = hexchars[(*src) >> 4];
+              *dest++ = hexchars[(*src) & 0x0f];
+            }
+
+          *dest = '\0';
+          nsh_output(vtbl, "%s\n", destbuf);
+        }
+
+#endif
       ret = OK;
       goto exit;
     }
@@ -400,7 +456,28 @@ static int cmd_codecs_proc(FAR struct nsh_vtbl_s *vtbl, int argc,
       memset(destbuf, 0, buflen);
       if (func)
         {
-          func(srcbuf, srclen, destbuf, &buflen, iswebsafe ? 1 : 0);
+#ifdef HAVE_CODECS_HASH_MD5
+          if (mode == CODEC_MODE_HASH_MD5)
+            {
+              int i;
+
+              func(srcbuf, srclen, (char *)&ctx, &buflen, 0);
+              md5_final(mac, &ctx);
+              src  = mac;
+              dest = destbuf;
+              for (i = 0; i < 16; i++, src++)
+                {
+                  *dest++ = hexchars[(*src) >> 4];
+                  *dest++ = hexchars[(*src) & 0x0f];
+                }
+
+              *dest = '\0';
+            }
+          else
+#endif
+            {
+              func(srcbuf, srclen, destbuf, &buflen, iswebsafe ? 1 : 0);
+            }
         }
 
       nsh_output(vtbl, "%s\n", destbuf);
@@ -495,29 +572,7 @@ int cmd_base64decode(FAR struct nsh_vtbl_s *vtbl, int argc, FAR char **argv)
 #ifdef HAVE_CODECS_HASH_MD5
 int cmd_md5(FAR struct nsh_vtbl_s *vtbl, int argc, FAR char **argv)
 {
-  int i;
-  int ret = OK;
-  unsigned char digest[16];
-
-  if (argc == 3 && !strncmp(argv[1], "-f", 2))
-    {
-      ret = md5_file(argv[2], digest);
-      if (ret < 0)
-        {
-          return ret;
-        }
-    }
-  else
-    {
-      md5_sum((FAR unsigned char *)argv[1], strlen(argv[1]), digest);
-    }
-
-  for (i = 0; i < 16; i++)
-    {
-      nsh_output(vtbl, "%02x", digest[i]);
-    }
-
-  return ret;
+  return cmd_codecs_proc(vtbl, argc, argv, CODEC_MODE_HASH_MD5, md5_cb);
 }
 #endif
 

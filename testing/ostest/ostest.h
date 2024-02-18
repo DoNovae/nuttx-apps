@@ -99,9 +99,7 @@ int setvbuf_test(void);
 
 /* dev_null.c ***************************************************************/
 
-#ifdef CONFIG_DEV_NULL
-int dev_null_test(void);
-#endif
+int dev_null(void);
 
 /* fpu.c ********************************************************************/
 
@@ -115,9 +113,7 @@ void aio_test(void);
 
 /* restart.c ****************************************************************/
 
-#ifndef CONFIG_BUILD_KERNEL
 void restart_test(void);
-#endif
 
 /* waitpid.c ****************************************************************/
 
@@ -234,12 +230,6 @@ void pthread_rwlock_test(void);
 
 void pthread_rwlock_cancel_test(void);
 
-/* pthread_exit.c ***********************************************************/
-
-#ifdef CONFIG_SCHED_WAITPID
-void pthread_exit_test(void);
-#endif
-
 /* pthread_cleanup.c ********************************************************/
 
 void pthread_cleanup_test(void);
@@ -252,25 +242,15 @@ void barrier_test(void);
 
 void priority_inheritance(void);
 
-/* schedlock.c **************************************************************/
-
-void sched_lock_test(void);
-
 /* vfork.c ******************************************************************/
 
-#if defined(CONFIG_ARCH_HAVE_FORK) && defined(CONFIG_SCHED_WAITPID)
+#if defined(CONFIG_ARCH_HAVE_VFORK) && defined(CONFIG_SCHED_WAITPID)
 int vfork_test(void);
 #endif
 
 /* setjmp.c *****************************************************************/
 
 void setjmp_test(void);
-
-/* smp_call.c ***************************************************************/
-
-#ifdef CONFIG_SMP_CALL
-void smp_call_test(void);
-#endif
 
 /* APIs exported (conditionally) by the OS specifically for testing of
  * priority inheritance

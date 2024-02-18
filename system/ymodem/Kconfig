@@ -12,23 +12,25 @@ if SYSTEM_YMODEM
 
 config SYSTEM_YMODEM_STACKSIZE
 	int "ymodem stack size"
-	default DEFAULT_TASK_STACKSIZE
+	default 4096
 	---help---
 		The size of stack allocated for the ymodem task.
 
 config SYSTEM_YMODEM_PRIORITY
 	int "ymodem priority"
-	default 100
+	default 255
 	---help---
 		The priority of the ymodem task.
 
 config SYSTEM_YMODEM_DEBUG
 	bool "ymodem debug"
-	default n
+	default false
 
-config SYSTEM_YMODEM_DEBUG_FILEPATH
+if SYSTEM_YMODEM_DEBUG
+config SYSTEM_YMODEM_DEBUGFILE_PATH
 	string "save ymodem debug log path"
-	depends on SYSTEM_YMODEM_DEBUG
 	default "/tmp/ymodem"
+
+endif
 
 endif

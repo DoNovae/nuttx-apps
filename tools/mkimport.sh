@@ -162,7 +162,7 @@ cp -rf ${REGISTERSDIR} ${BUILTINDIR}/. || \
 
 # Move the .config file in place in the import directory
 
-SFILES=".config System.map"
+SFILES=".config"
 for file in ${SFILES}; do
 	if [ -f "${EXPORTDIR}/${file}" ]; then
 		cp -a ${EXPORTDIR}/${file} ${IMPORTDIR}/${file} || \

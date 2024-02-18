@@ -38,20 +38,12 @@ builtin_list.c: builtin_list.h builtin_proto.h
 registry$(DELIM).updated:
 	$(Q) touch registry$(DELIM).updated
 
-define CONFILE
-    if [ -n "$(strip $(2))" ]; then cat $(2) >> $1; fi
-endef
-
 builtin_list.h: registry$(DELIM).updated
 ifeq ($(BDATLIST),)
 	$(call DELFILE, builtin_list.h)
 	$(Q) touch builtin_list.h
 else
-	$(shell echo '' > builtin_list.h)
-	$(call SPLITVARIABLE,BDA,$(BDATLIST),50) \
-	$(foreach BATCH, $(BDA_TOTAL), \
-	  	$(shell $(call CONFILE, builtin_list.h, $(BDA_$(BATCH)))) \
-	)
+	$(call CATFILE, builtin_list.h, $(BDATLIST))
 endif
 
 builtin_proto.h: registry$(DELIM).updated
@@ -59,11 +51,7 @@ ifeq ($(PDATLIST),)
 	$(call DELFILE, builtin_proto.h)
 	$(Q) touch builtin_proto.h
 else
-	$(shell echo '' > builtin_proto.h)
-	$(call SPLITVARIABLE,PDA,$(PDATLIST),50) \
-	$(foreach BATCH, $(PDA_TOTAL), \
-	  	$(shell $(call CONFILE, builtin_proto.h, $(PDA_$(BATCH)))) \
-	)
+	$(call CATFILE, builtin_proto.h, $(PDATLIST))
 endif
 
 depend:: builtin_list.h builtin_proto.h

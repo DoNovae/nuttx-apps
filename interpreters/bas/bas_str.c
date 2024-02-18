@@ -57,41 +57,41 @@ int cistrcmp(const char *s, const char *r)
   return ((tolower(*s) - tolower(*r)));
 }
 
-struct String *String_new(struct String *self)
+struct String *String_new(struct String *this)
 {
-  assert(self != (struct String *)0);
-  self->length = 0;
-  self->character = (char *)0;
-  self->field = (struct StringField *)0;
-  return self;
+  assert(this != (struct String *)0);
+  this->length = 0;
+  this->character = (char *)0;
+  this->field = (struct StringField *)0;
+  return this;
 }
 
-void String_destroy(struct String *self)
+void String_destroy(struct String *this)
 {
-  assert(self != (struct String *)0);
-  if (self->field)
+  assert(this != (struct String *)0);
+  if (this->field)
     {
-      String_leaveField(self);
+      String_leaveField(this);
     }
 
-  if (self->length)
+  if (this->length)
     {
-      free(self->character);
+      free(this->character);
     }
 }
 
-int String_joinField(struct String *self, struct StringField *field,
+int String_joinField(struct String *this, struct StringField *field,
                      char *character, size_t length)
 {
   struct String **n;
 
-  assert(self != (struct String *)0);
-  if (self->field)
+  assert(this != (struct String *)0);
+  if (this->field)
     {
-      String_leaveField(self);
+      String_leaveField(this);
     }
 
-  self->field = field;
+  this->field = field;
   if ((n =
        (struct String **)realloc(field->refStrings,
                                  sizeof(struct String *) * (field->refCount +
@@ -102,30 +102,30 @@ int String_joinField(struct String *self, struct StringField *field,
     }
 
   field->refStrings = n;
-  field->refStrings[field->refCount] = self;
+  field->refStrings[field->refCount] = this;
   ++field->refCount;
-  if (self->length)
+  if (this->length)
     {
-      free(self->character);
+      free(this->character);
     }
 
-  self->character = character;
-  self->length = length;
+  this->character = character;
+  this->length = length;
   return 0;
 }
 
-void String_leaveField(struct String *self)
+void String_leaveField(struct String *this)
 {
   struct StringField *field;
   int i;
   struct String **ref;
 
-  assert(self != (struct String *)0);
-  field = self->field;
+  assert(this != (struct String *)0);
+  field = this->field;
   assert(field != (struct StringField *)0);
   for (i = 0, ref = field->refStrings; i < field->refCount; ++i, ++ref)
     {
-      if (*ref == self)
+      if (*ref == this)
         {
           int further = --field->refCount - i;
 
@@ -134,9 +134,9 @@ void String_leaveField(struct String *self)
               memmove(ref, ref + 1, further * sizeof(struct String **));
             }
 
-          self->character = (char *)0;
-          self->length = 0;
-          self->field = (struct StringField *)0;
+          this->character = (char *)0;
+          this->length = 0;
+          this->field = (struct StringField *)0;
           return;
         }
     }
@@ -144,59 +144,59 @@ void String_leaveField(struct String *self)
   assert(0);
 }
 
-struct String *String_clone(struct String *self, const struct String *original)
+struct String *String_clone(struct String *this, const struct String *original)
 {
-  assert(self != (struct String *)0);
-  String_new(self);
-  String_appendString(self, original);
-  return self;
+  assert(this != (struct String *)0);
+  String_new(this);
+  String_appendString(this, original);
+  return this;
 }
 
-int String_size(struct String *self, size_t length)
+int String_size(struct String *this, size_t length)
 {
   char *n;
 
-  assert(self != (struct String *)0);
-  if (self->field)
+  assert(this != (struct String *)0);
+  if (this->field)
     {
-      String_leaveField(self);
+      String_leaveField(this);
     }
 
   if (length)
     {
-      if (length > self->length)
+      if (length > this->length)
         {
-          if ((n = realloc(self->character, length + 1)) == (char *)0)
+          if ((n = realloc(this->character, length + 1)) == (char *)0)
             {
               return -1;
             }
 
-          self->character = n;
+          this->character = n;
         }
 
-      self->character[length] = '\0';
+      this->character[length] = '\0';
     }
   else
     {
-      if (self->length)
+      if (this->length)
         {
-          free(self->character);
+          free(this->character);
         }
 
-      self->character = (char *)0;
+      this->character = (char *)0;
     }
 
-  self->length = length;
+  this->length = length;
   return 0;
 }
 
-int String_appendString(struct String *self, const struct String *app)
+int String_appendString(struct String *this, const struct String *app)
 {
-  size_t oldlength = self->length;
+  size_t oldlength = this->length;
 
-  if (self->field)
+  if (this->field)
     {
-      String_leaveField(self);
+      String_leaveField(this);
     }
 
   if (app->length == 0)
@@ -204,146 +204,146 @@ int String_appendString(struct String *self, const struct String *app)
       return 0;
     }
 
-  if (String_size(self, self->length + app->length) == -1)
+  if (String_size(this, this->length + app->length) == -1)
     {
       return -1;
     }
 
-  memcpy(self->character + oldlength, app->character, app->length);
+  memcpy(this->character + oldlength, app->character, app->length);
   return 0;
 }
 
-int String_appendChar(struct String *self, char ch)
+int String_appendChar(struct String *this, char ch)
 {
-  size_t oldlength = self->length;
+  size_t oldlength = this->length;
 
-  if (self->field)
+  if (this->field)
     {
-      String_leaveField(self);
+      String_leaveField(this);
     }
 
-  if (String_size(self, self->length + 1) == -1)
+  if (String_size(this, this->length + 1) == -1)
     {
       return -1;
     }
 
-  self->character[oldlength] = ch;
+  this->character[oldlength] = ch;
   return 0;
 }
 
-int String_appendChars(struct String *self, const char *ch)
+int String_appendChars(struct String *this, const char *ch)
 {
-  size_t oldlength = self->length;
+  size_t oldlength = this->length;
   size_t chlen = strlen(ch);
 
-  if (self->field)
+  if (this->field)
     {
-      String_leaveField(self);
+      String_leaveField(this);
     }
 
-  if (String_size(self, self->length + chlen) == -1)
+  if (String_size(this, this->length + chlen) == -1)
     {
       return -1;
     }
 
-  memcpy(self->character + oldlength, ch, chlen);
+  memcpy(this->character + oldlength, ch, chlen);
   return 0;
 }
 
-int String_appendPrintf(struct String *self, const char *fmt, ...)
+int String_appendPrintf(struct String *this, const char *fmt, ...)
 {
   char buf[1024];
   size_t l, j;
   va_list ap;
 
-  if (self->field)
+  if (this->field)
     {
-      String_leaveField(self);
+      String_leaveField(this);
     }
 
   va_start(ap, fmt);
   l = vsprintf(buf, fmt, ap);
   va_end(ap);
-  j = self->length;
-  if (String_size(self, j + l) == -1)
+  j = this->length;
+  if (String_size(this, j + l) == -1)
     {
       return -1;
     }
 
-  memcpy(self->character + j, buf, l);
+  memcpy(this->character + j, buf, l);
   return 0;
 }
 
-int String_insertChar(struct String *self, size_t where, char ch)
+int String_insertChar(struct String *this, size_t where, char ch)
 {
-  size_t oldlength = self->length;
+  size_t oldlength = this->length;
 
-  if (self->field)
+  if (this->field)
     {
-      String_leaveField(self);
+      String_leaveField(this);
     }
 
   assert(where < oldlength);
-  if (String_size(self, self->length + 1) == -1)
+  if (String_size(this, this->length + 1) == -1)
     {
       return -1;
     }
 
-  memmove(self->character + where + 1, self->character + where,
+  memmove(this->character + where + 1, this->character + where,
           oldlength - where);
-  self->character[where] = ch;
+  this->character[where] = ch;
   return 0;
 }
 
-int String_delete(struct String *self, size_t where, size_t len)
+int String_delete(struct String *this, size_t where, size_t len)
 {
-  size_t oldlength = self->length;
+  size_t oldlength = this->length;
 
-  if (self->field)
+  if (this->field)
     {
-      String_leaveField(self);
+      String_leaveField(this);
     }
 
   assert(where < oldlength);
   assert(len > 0);
   if ((where + len) < oldlength)
     {
-      memmove(self->character + where, self->character + where + len,
+      memmove(this->character + where, this->character + where + len,
               oldlength - where - len);
     }
 
-  self->character[self->length -= len] = '\0';
+  this->character[this->length -= len] = '\0';
   return 0;
 }
 
-void String_ucase(struct String *self)
+void String_ucase(struct String *this)
 {
   size_t i;
 
-  for (i = 0; i < self->length; ++i)
+  for (i = 0; i < this->length; ++i)
     {
-      self->character[i] = toupper(self->character[i]);
+      this->character[i] = toupper(this->character[i]);
     }
 }
 
-void String_lcase(struct String *self)
+void String_lcase(struct String *this)
 {
   size_t i;
 
-  for (i = 0; i < self->length; ++i)
+  for (i = 0; i < this->length; ++i)
     {
-      self->character[i] = tolower(self->character[i]);
+      this->character[i] = tolower(this->character[i]);
     }
 }
 
-int String_cmp(const struct String *self, const struct String *s)
+int String_cmp(const struct String *this, const struct String *s)
 {
   size_t pos;
   int res;
   const char *thisch, *sch;
 
-  for (pos = 0, thisch = self->character, sch = s->character;
-       pos < self->length && pos < s->length; ++pos, ++thisch, ++sch)
+  for (pos = 0, thisch = this->character, sch = s->character;
+       pos < this->length && pos < s->length; ++pos, ++thisch, ++sch)
     {
       if ((res = (*thisch - *sch)))
         {
@@ -351,74 +351,74 @@ int String_cmp(const struct String *self, const struct String *s)
         }
     }
 
-  return (self->length - s->length);
+  return (this->length - s->length);
 }
 
-void String_lset(struct String *self, const struct String *s)
+void String_lset(struct String *this, const struct String *s)
 {
   size_t copy;
 
-  copy = (self->length < s->length ? self->length : s->length);
+  copy = (this->length < s->length ? this->length : s->length);
   if (copy)
     {
-      memcpy(self->character, s->character, copy);
+      memcpy(this->character, s->character, copy);
     }
 
-  if (copy < self->length)
+  if (copy < this->length)
     {
-      memset(self->character + copy, ' ', self->length - copy);
+      memset(this->character + copy, ' ', this->length - copy);
     }
 }
 
-void String_rset(struct String *self, const struct String *s)
+void String_rset(struct String *this, const struct String *s)
 {
   size_t copy;
 
-  copy = (self->length < s->length ? self->length : s->length);
+  copy = (this->length < s->length ? this->length : s->length);
   if (copy)
     {
-      memcpy(self->character + self->length - copy, s->character, copy);
+      memcpy(this->character + this->length - copy, s->character, copy);
     }
 
-  if (copy < self->length)
+  if (copy < this->length)
     {
-      memset(self->character, ' ', self->length - copy);
+      memset(this->character, ' ', this->length - copy);
     }
 }
 
-void String_set(struct String *self, size_t pos, const struct String *s,
+void String_set(struct String *this, size_t pos, const struct String *s,
                 size_t length)
 {
-  if (self->length >= pos)
+  if (this->length >= pos)
     {
-      if (self->length < (pos + length))
+      if (this->length < (pos + length))
         {
-          length = self->length - pos;
+          length = this->length - pos;
         }
 
       if (length)
         {
-          memcpy(self->character + pos, s->character, length);
+          memcpy(this->character + pos, s->character, length);
         }
     }
 }
 
-struct StringField *StringField_new(struct StringField *self)
+struct StringField *StringField_new(struct StringField *this)
 {
-  self->refStrings = (struct String **)0;
-  self->refCount = 0;
-  return self;
+  this->refStrings = (struct String **)0;
+  this->refCount = 0;
+  return this;
 }
 
-void StringField_destroy(struct StringField *self)
+void StringField_destroy(struct StringField *this)
 {
   int i;
 
-  for (i = self->refCount; i > 0;)
+  for (i = this->refCount; i > 0;)
     {
-      String_leaveField(self->refStrings[--i]);
+      String_leaveField(this->refStrings[--i]);
     }
 
-  self->refCount = -1;
-  free(self->refStrings);
+  this->refCount = -1;
+  free(this->refStrings);
 }

@@ -31,14 +31,11 @@ CSRCS += repl.c
 
 # lib
 CSRCS += bitmap.c
-CSRCS += cconv.c
 CSRCS += cell.c
 CSRCS += context.c
 CSRCS += decode.c
 CSRCS += endian.c
 CSRCS += exec.c
-CSRCS += exec_debug.c
-CSRCS += exec_insn_subr.c
 CSRCS += expr.c
 CSRCS += fileio.c
 CSRCS += host_instance.c
@@ -48,13 +45,11 @@ CSRCS += insn.c
 CSRCS += instance.c
 CSRCS += leb128.c
 CSRCS += list.c
-CSRCS += load_context.c
 CSRCS += module.c
 CSRCS += module_writer.c
 CSRCS += nbio.c
 CSRCS += options.c
 CSRCS += report.c
-CSRCS += restart.c
 CSRCS += shared_memory.c
 CSRCS += timeutil.c
 CSRCS += toywasm_config.c
@@ -67,7 +62,6 @@ CSRCS += xlog.c
 # TOYWASM_ENABLE_WASM_THREADS
 CSRCS += cluster.c
 CSRCS += lock.c
-CSRCS += suspend.c
 CSRCS += waitlist.c
 #CSRCS += usched.c
 
@@ -78,19 +72,11 @@ CSRCS += wasi_fdtable.c
 # TOYWASM_ENABLE_WASI_THREADS
 CSRCS += wasi_threads.c
 
-# TOYWASM_ENABLE_DYLD
-CSRCS += dyld.c
-CSRCS += dyld_plt.c
+CFLAGS += ${shell $(INCDIR) "$(CC)" $(APPDIR)/interpreters/toywasm/include}
+CFLAGS += ${shell $(INCDIR) "$(CC)" $(APPDIR)/interpreters/toywasm/toywasm/lib}
+CFLAGS += ${shell $(INCDIR) "$(CC)" $(APPDIR)/interpreters/toywasm/toywasm/libwasi}
 
-# TOYWASM_ENABLE_DYLD_DLFCN
-CSRCS += dyld_dlfcn.c
-
-CFLAGS += ${INCDIR_PREFIX}$(APPDIR)/interpreters/toywasm/include
-CFLAGS += ${INCDIR_PREFIX}$(APPDIR)/interpreters/toywasm/toywasm/lib
-CFLAGS += ${INCDIR_PREFIX}$(APPDIR)/interpreters/toywasm/toywasm/libwasi
-CFLAGS += ${INCDIR_PREFIX}$(APPDIR)/interpreters/toywasm/toywasm/libdyld
-
-TOYWASM_VERSION  = b3e060f308db23e21aaa3004484bf9335e4d3fcc
+TOYWASM_VERSION  = 7c6ff3925d0b0f4d5122df9b1b5761bc2954e014
 TOYWASM_UNPACK   = toywasm
 TOYWASM_TARBALL  = $(TOYWASM_VERSION).zip
 TOYWASM_URL_BASE = https://github.com/yamt/toywasm/archive/
@@ -99,7 +85,6 @@ TOYWASM_URL      = $(TOYWASM_URL_BASE)/$(TOYWASM_TARBALL)
 VPATH += $(TOYWASM_UNPACK)/cli
 VPATH += $(TOYWASM_UNPACK)/lib
 VPATH += $(TOYWASM_UNPACK)/libwasi
-VPATH += $(TOYWASM_UNPACK)/libdyld
 VPATH += src
 
 $(TOYWASM_TARBALL):

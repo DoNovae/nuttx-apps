@@ -22,7 +22,6 @@
  * Included Files
  ****************************************************************************/
 
-#include <sys/poll.h>
 #include <sys/types.h>
 #include <getopt.h>
 #include <netdb.h>
@@ -83,7 +82,6 @@ static void usage(FAR const char *progname)
 static int do_rexec(FAR struct rexec_arg_s *arg)
 {
   char buffer[REXEC_BUFSIZE];
-  struct pollfd fds[2];
   int sock;
   int ret;
 
@@ -95,52 +93,16 @@ static int do_rexec(FAR struct rexec_arg_s *arg)
       return sock;
     }
 
-  memset(fds, 0, sizeof(fds));
-  fds[0].fd = sock;
-  fds[0].events = POLLIN;
-  fds[1].fd = STDIN_FILENO;
-  fds[1].events = POLLIN;
-
   while (1)
     {
-      ret = poll(fds, 2, -1);
+      ret = read(sock, buffer, REXEC_BUFSIZE);
       if (ret <= 0)
         {
-          continue;
+          break;
         }
 
-      if (fds[0].revents & POLLIN)
-        {
-          ret = read(sock, buffer, REXEC_BUFSIZE);
-          if (ret <= 0)
-            {
-              break;
-            }
-
-          ret = write(STDOUT_FILENO, buffer, ret);
-          if (ret < 0)
-            {
-              break;
-            }
-        }
-
-      if (fds[1].revents & POLLIN)
-        {
-          ret = read(STDIN_FILENO, buffer, REXEC_BUFSIZE);
-          if (ret <= 0)
-            {
-              break;
-            }
-
-          ret = write(sock, buffer, ret);
-          if (ret < 0)
-            {
-              break;
-            }
-        }
-
-      if (((fds[0].revents | fds[1].revents) & POLLHUP) &&
-          ((fds[0].revents | fds[1].revents) & POLLIN) == 0)
+      ret = write(STDOUT_FILENO, buffer, ret);
+      if (ret < 0)
         {
           break;
         }
@@ -203,8 +165,8 @@ int main(int argc, FAR char **argv)
   cmd[0] = '\0';
   for (i = optind; i < argc; i++)
     {
-      strlcat(cmd, argv[i], sizeof(cmd));
-      strlcat(cmd, " ", sizeof(cmd));
+      strcat(cmd, argv[i]);
+      strcat(cmd, " ");
     }
 
   arg.command = cmd;

@@ -265,14 +265,6 @@ enum wpa_alg_e
   WPA_ALG_BIP_CMAC_256
 };
 
-enum wpa_ver_e
-{
-  WPA_VER_NONE = 0,
-  WPA_VER_1,
-  WPA_VER_2,
-  WPA_VER_3
-};
-
 /* This structure provides the wireless configuration to
  * wpa_driver_wext_associate().
  */
@@ -312,7 +304,7 @@ enum wapi_pta_prio_e
  * Public Data
  ****************************************************************************/
 
-#ifdef __cplusplus
+ #ifdef __cplusplus
 #define EXTERN extern "C"
 extern "C"
 {
@@ -331,10 +323,6 @@ EXTERN FAR const char *g_wapi_essid_flags[];
 /* Passphrase algorithm flag names. */
 
 EXTERN FAR const char *g_wapi_alg_flags[];
-
-/* Passphrase WPA Version flag names. */
-
-EXTERN FAR const char *g_wapi_wpa_ver_flags[];
 
 /* Supported operation mode names. */
 
@@ -706,31 +694,6 @@ int wapi_scan_init(int sock, FAR const char *ifname, FAR const char *essid);
 int wapi_scan_channel_init(int sock, FAR const char *ifname,
                            FAR const char *essid,
                            uint8_t *channels, int num_channels);
-
-/****************************************************************************
- * Name: wapi_escan_init
- *
- * Description:
- *   Starts a extended scan on the given interface, you can specify the scan
- *   type. Root privileges are required to start a scan.
- *
- ****************************************************************************/
-
-int wapi_escan_init(int sock, FAR const char *ifname,
-                    uint8_t scan_type, FAR const char *essid);
-
-/****************************************************************************
- * Name: wapi_escan_channel_init
- *
- * Description:
- *   Starts a scan on the given interface. Root privileges are required to
- *   start a scan with specified channels.
- *
- ****************************************************************************/
-
-int wapi_escan_channel_init(int sock, FAR const char *ifname,
-                            uint8_t scan_type, FAR const char *essid,
-                            uint8_t *channels, int num_channels);
 
 /****************************************************************************
  * Name: wapi_scan_stat

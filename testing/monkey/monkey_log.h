@@ -31,26 +31,33 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define MONKEY_LOG_INFO(format, ...)          \
-  monkey_log_printf(MONKEY_LOG_LEVEL_INFO,    \
-  __func__,                                   \
-  format,                                     \
-  ##__VA_ARGS__)
-#define MONKEY_LOG_NOTICE(format, ...)        \
-  monkey_log_printf(MONKEY_LOG_LEVEL_NOTICE,  \
-  __func__,                                   \
-  format,                                     \
-  ##__VA_ARGS__)
-#define MONKEY_LOG_WARN(format, ...)          \
-  monkey_log_printf(MONKEY_LOG_LEVEL_WARN,    \
-  __func__,                                   \
-  format,                                     \
-  ##__VA_ARGS__)
-#define MONKEY_LOG_ERROR(format, ...)         \
-  monkey_log_printf(MONKEY_LOG_LEVEL_ERROR,   \
-  __func__,                                   \
-  format,                                     \
-  ##__VA_ARGS__)
+#ifdef CONFIG_TESTING_MONKEY_LOG_ENABLE
+#  define MONKEY_LOG_INFO(format, ...)          \
+    monkey_log_printf(MONKEY_LOG_LEVEL_INFO,    \
+    __func__,                                   \
+    format,                                     \
+    ##__VA_ARGS__)
+#  define MONKEY_LOG_NOTICE(format, ...)        \
+    monkey_log_printf(MONKEY_LOG_LEVEL_NOTICE,  \
+    __func__,                                   \
+    format,                                     \
+    ##__VA_ARGS__)
+#  define MONKEY_LOG_WARN(format, ...)          \
+    monkey_log_printf(MONKEY_LOG_LEVEL_WARN,    \
+    __func__,                                   \
+    format,                                     \
+    ##__VA_ARGS__)
+#  define MONKEY_LOG_ERROR(format, ...)         \
+    monkey_log_printf(MONKEY_LOG_LEVEL_ERROR,   \
+    __func__,                                   \
+    format,                                     \
+    ##__VA_ARGS__)
+#else
+#  define MONKEY_LOG_INFO(...)
+#  define MONKEY_LOG_NOTICE(...)
+#  define MONKEY_LOG_WARN(...)
+#  define MONKEY_LOG_ERROR(...)
+#endif /* CONFIG_TESTING_MONKEY_LOG_ENABLE */
 
 #ifdef __cplusplus
 #define EXTERN extern "C"
@@ -59,6 +66,8 @@ extern "C"
 #else
 #define EXTERN extern
 #endif
+
+#ifdef CONFIG_TESTING_MONKEY_LOG_ENABLE
 
 /****************************************************************************
  * Public Types
@@ -70,7 +79,7 @@ enum monkey_log_level_type_e
   MONKEY_LOG_LEVEL_NOTICE,
   MONKEY_LOG_LEVEL_WARN,
   MONKEY_LOG_LEVEL_ERROR,
-  MONKEY_LOG_LEVEL_LAST
+  _MONKEY_LOG_LEVEL_LAST
 };
 
 /****************************************************************************
@@ -97,6 +106,8 @@ void monkey_log_set_level(enum monkey_log_level_type_e level);
  ****************************************************************************/
 
 enum monkey_log_level_type_e monkey_log_get_level(void);
+
+#endif /* CONFIG_TESTING_MONKEY_LOG_ENABLE */
 
 #undef EXTERN
 #ifdef __cplusplus

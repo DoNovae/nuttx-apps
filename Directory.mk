@@ -24,7 +24,6 @@ include $(APPDIR)/Make.defs
 
 SUBDIRS       := $(dir $(wildcard */Makefile))
 CONFIGSUBDIRS := $(filter-out $(dir $(wildcard */Kconfig)),$(SUBDIRS))
-CLEANSUBDIRS  := $(dir $(wildcard *$(DELIM).built))
 CLEANSUBDIRS  += $(dir $(wildcard */.depend))
 CLEANSUBDIRS  += $(dir $(wildcard */.kconfig))
 CLEANSUBDIRS  := $(sort $(CLEANSUBDIRS))
@@ -52,7 +51,6 @@ endif
 	$(Q) touch .kconfig
 
 clean: $(foreach SDIR, $(CLEANSUBDIRS), $(SDIR)_clean)
-	@:
 
 distclean: $(foreach SDIR, $(CLEANSUBDIRS), $(SDIR)_distclean)
 ifneq ($(MENUDESC),)

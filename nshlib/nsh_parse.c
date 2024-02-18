@@ -59,29 +59,11 @@
 #  define HAVE_MEMLIST 1
 #endif
 
-/* If CONFIG_NSH_ALIAS is enabled, the alias strings might need dynamic
- * memory, in case the alias has arguments and is set like:
- *
- * $ alias ls='ls -l'
- *
- * In this case the command verb and the arguments need to be separated, much
- * like the argument separation is done with environment variable expansion.
- *
- * This needs a new working buffer in order to keep the original alias string
- * intact.
- */
-
-#ifdef CONFIG_NSH_ALIAS
-#  define ALIAS_ALLOCS           2
-#else
-#  define ALIAS_ALLOCS           0
-#endif
-
 #if defined(HAVE_MEMLIST) && !defined(CONFIG_NSH_MAXALLOCS)
 #  ifdef CONFIG_NSH_ARGCAT
-#    define CONFIG_NSH_MAXALLOCS ((2*CONFIG_NSH_MAXARGUMENTS) + ALIAS_ALLOCS)
+#    define CONFIG_NSH_MAXALLOCS (2*CONFIG_NSH_MAXARGUMENTS)
 #  else
-#    define CONFIG_NSH_MAXALLOCS (CONFIG_NSH_MAXARGUMENTS + ALIAS_ALLOCS)
+#    define CONFIG_NSH_MAXALLOCS CONFIG_NSH_MAXARGUMENTS
 #  endif
 #endif
 
@@ -191,7 +173,7 @@ static FAR char *nsh_cmdparm(FAR struct nsh_vtbl_s *vtbl, FAR char *cmdline,
                FAR char **allocation);
 #endif
 
-#if defined(CONFIG_NSH_ARGCAT) || defined(CONFIG_NSH_ALIAS)
+#ifdef CONFIG_NSH_ARGCAT
 static FAR char *nsh_strcat(FAR struct nsh_vtbl_s *vtbl, FAR char *s1,
                FAR const char *s2);
 #endif
@@ -204,9 +186,7 @@ static FAR char *nsh_strchr(FAR const char *str, int ch);
 
 #ifdef CONFIG_NSH_ALIAS
 static FAR char *nsh_aliasexpand(FAR struct nsh_vtbl_s *vtbl,
-               FAR char *cmdline, FAR char **saveptr,
-               FAR NSH_MEMLIST_TYPE *memlist,
-               FAR NSH_ALIASLIST_TYPE *alist);
+               FAR char *cmdline, FAR NSH_ALIASLIST_TYPE *alist);
 #endif
 
 #ifdef NSH_HAVE_VARS
@@ -1077,7 +1057,7 @@ static FAR char *nsh_cmdparm(FAR struct nsh_vtbl_s *vtbl, FAR char *cmdline,
  * Name: nsh_strcat
  ****************************************************************************/
 
-#if defined(CONFIG_NSH_ARGCAT) || defined(CONFIG_NSH_ALIAS)
+#ifdef CONFIG_NSH_ARGCAT
 static FAR char *nsh_strcat(FAR struct nsh_vtbl_s *vtbl, FAR char *s1,
                             FAR const char *s2)
 {
@@ -1106,7 +1086,7 @@ static FAR char *nsh_strcat(FAR struct nsh_vtbl_s *vtbl, FAR char *s1,
   else
     {
       argument[s1size] = '\0';  /* (In case s1 was NULL) */
-      strlcat(argument, s2, allocsize);
+      strcat(argument, s2);
     }
 
   return argument;
@@ -1151,9 +1131,7 @@ static FAR char *nsh_strchr(FAR const char *str, int ch)
 
 #ifdef CONFIG_NSH_ALIAS
 static FAR char *nsh_aliasexpand(FAR struct nsh_vtbl_s *vtbl,
-               FAR char *cmdline, FAR char **saveptr,
-               FAR NSH_MEMLIST_TYPE *memlist,
-               FAR NSH_ALIASLIST_TYPE *alist)
+               FAR char *cmdline, FAR NSH_ALIASLIST_TYPE *alist)
 {
   FAR struct nsh_alias_s *alias;
 
@@ -1162,45 +1140,10 @@ static FAR char *nsh_aliasexpand(FAR struct nsh_vtbl_s *vtbl,
   alias = nsh_aliasfind(vtbl, cmdline);
   if (alias)
     {
-      FAR char *ptr;
-      size_t len;
+      /* Yes, expand and mark it as already expanded */
 
-      /* Yes, expand the alias and mark it as already expanded */
-
-      cmdline = alias->value;
       NSH_ALIASLIST_ADD(alist, alias);
-
-      /* Check if alias expands to more words on the command line */
-
-      len = strcspn(cmdline, g_token_separator);
-      ptr = cmdline + len;
-
-      if (*ptr != '\0')
-        {
-          /* It does, make a copy so the alias string is not modified */
-
-          if ((ptr = strdup(alias->value)) != NULL)
-            {
-              /* Then concatenate the old command line with the new */
-
-              ptr = nsh_strcat(vtbl, ptr, " ");
-              ptr = nsh_strcat(vtbl, ptr, *saveptr);
-              NSH_MEMLIST_ADD(memlist, ptr);
-
-              /* Set the new command line (expanded alias) */
-
-              cmdline = ptr;
-
-              /* NULL terminate the new command */
-
-              ptr     = cmdline + len;
-              *ptr++  = '\0';
-
-              /* Mark where we left off in the new command line string */
-
-              *saveptr = ptr;
-            }
-        }
+      return alias->value;
     }
 
   return cmdline;
@@ -1796,14 +1739,12 @@ static FAR char *nsh_argument(FAR struct nsh_vtbl_s *vtbl,
                 {
                   /* No terminator found, get out */
 
-#ifndef CONFIG_NSH_DISABLE_ERROR_PRINT
                   char qterm[2];
 
                   qterm[0] = *pend;
                   qterm[1] = '\0';
 
                   nsh_error(vtbl, g_fmtnomatching, qterm, qterm);
-#endif
 
                   return NULL;
                 }
@@ -1828,13 +1769,7 @@ static FAR char *nsh_argument(FAR struct nsh_vtbl_s *vtbl,
 
               /* Is it a back-quote ? These are not removed here */
 
-              if (*pend == '`')
-                {
-                  /* Yes, keep the quotes in place */
-
-                  pend = qend;
-                }
-              else
+              if (*pend != '`')
                 {
                   /* No, get rid of the single / double quotes here */
 
@@ -1876,7 +1811,7 @@ static FAR char *nsh_argument(FAR struct nsh_vtbl_s *vtbl,
 
       if (alist && !quoted)
         {
-          pbegin = nsh_aliasexpand(vtbl, pbegin, saveptr, memlist, alist);
+          pbegin = nsh_aliasexpand(vtbl, pbegin, alist);
         }
 #endif
 
@@ -2869,14 +2804,12 @@ int nsh_parse(FAR struct nsh_vtbl_s *vtbl, FAR char *cmdline)
             {
               /* No closing quotation mark! */
 
-#ifndef CONFIG_NSH_DISABLE_ERROR_PRINT
               char qterm[2];
 
               qterm[0] = *ptr;
               qterm[1] = '\0';
 
               nsh_error(vtbl, g_fmtnomatching, qterm, qterm);
-#endif
 
               return ERROR;
             }

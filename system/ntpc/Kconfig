@@ -11,6 +11,7 @@ config SYSTEM_NTPC
 	---help---
 		Enable the NTP client 'start' and 'stop' commands
 
+
 if SYSTEM_NTPC
 
 config SYSTEM_NTPC_PRIORITY

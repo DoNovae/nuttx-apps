@@ -1,5 +1,5 @@
 /****************************************************************************
- * apps/graphics/pdcurs34/pdcurses/pdc_panel.c
+ * apps/graphics/pdcurses/pdc_panel.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -149,12 +149,9 @@
  ****************************************************************************/
 
 #ifndef CONFIG_PDCURSES_MULTITHREAD
-PANEL *_bottom_panel = (PANEL *)0;
-PANEL *_top_panel = (PANEL *)0;
-PANEL _stdscr_pseudo_panel =
-{
-  (WINDOW *)0
-};
+PANEL *_bottom_panel = (PANEL *) 0;
+PANEL *_top_panel = (PANEL *) 0;
+PANEL _stdscr_pseudo_panel = { (WINDOW *) 0 };
 #else
 typedef struct panel_ctx_s
 {
@@ -180,15 +177,14 @@ static void dpanel(char *text, PANEL *pan)
 {
   PDC_LOG(("%s id=%s b=%s a=%s y=%d x=%d", text, pan->user,
            pan->below ? pan->below->user : "--",
-           pan->above ? pan->above->user : "--",
-           pan->wstarty, pan->wstartx));
+           pan->above ? pan->above->user : "--", pan->wstarty, pan->wstartx));
 }
 
 static void dstack(char *fmt, int num, PANEL *pan)
 {
   char s80[80];
 
-  snprintf(s80, sizeof(s80), fmt, num, pan);
+  sprintf(s80, fmt, num, pan);
   PDC_LOG(("%s b=%s t=%s", s80, _bottom_panel ? _bottom_panel->user : "--",
            _top_panel ? _top_panel->user : "--"));
 
@@ -224,7 +220,7 @@ static void dtouchline(PANEL *pan, int start, int count)
 {
   char s80[80];
 
-  snprintf(s80, sizeof(s80), "dtouchline s=%d c=%d", start, count);
+  sprintf(s80, "dtouchline s=%d c=%d", start, count);
   dpanel(s80, pan);
   touchline(pan->win, start, count);
 }
@@ -690,8 +686,7 @@ WINDOW *panel_window(const PANEL *pan)
 
 int replace_panel(PANEL *pan, WINDOW *win)
 {
-  int maxy;
-  int maxx;
+  int maxy, maxx;
 
   if (!pan)
     {

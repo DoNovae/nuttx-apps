@@ -228,7 +228,6 @@ int main(int argc, FAR char *argv[])
 {
   uint8_t uniqueid[CONFIG_BOARDCTL_UNIQUEID_SIZE];
   FAR char *formatter;
-  size_t len;
   int i;
 
   struct cfg_s cfg =
@@ -259,9 +258,8 @@ int main(int argc, FAR char *argv[])
       return -1;
     }
 
-  len = strlen(cfg.format) + 2;
-  formatter = malloc(len);
-  snprintf(formatter, len, "%%%s", cfg.format);
+  formatter = malloc(strlen(cfg.format) + 2);
+  sprintf(formatter, "%%%s", cfg.format);
 
   if (cfg.prefix != NULL)
     {

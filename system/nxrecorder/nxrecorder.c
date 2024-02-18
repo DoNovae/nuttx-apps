@@ -108,28 +108,13 @@ static const struct nxrecorder_ext_fmt_s g_known_ext[] =
   { "midi",     AUDIO_FMT_MIDI, NULL },
 #endif
 #ifdef CONFIG_AUDIO_FORMAT_OGG_VORBIS
-  { "ogg",      AUDIO_FMT_OGG_VORBIS, NULL },
+  { "ogg",      AUDIO_FMT_OGG_VORBIS, NULL }
 #endif
-  { "amr",      AUDIO_FMT_AMR, NULL }
 };
 
 static const int g_known_ext_count = sizeof(g_known_ext) /
                     sizeof(struct nxrecorder_ext_fmt_s);
 #endif
-
-static const struct nxrecorder_enc_ops_s g_enc_ops[] =
-{
-  {
-    AUDIO_FMT_AMR,
-    nxrecorder_write_amr,
-    nxrecorder_write_common,
-  },
-  {
-    AUDIO_FMT_PCM,
-    NULL,
-    nxrecorder_write_common,
-  }
-};
 
 /****************************************************************************
  * Private Functions
@@ -368,7 +353,7 @@ static int nxrecorder_writebuffer(FAR struct nxrecorder_s *precorder,
 
   /* Write data to the file. */
 
-  ret = precorder->ops->write_data(precorder->fd, apb);
+  ret = write(precorder->fd, apb->samp, apb->nbytes);
   if (ret < 0)
     {
       return ret;
@@ -1030,11 +1015,8 @@ int nxrecorder_recordinternal(FAR struct nxrecorder_s *precorder,
   pthread_attr_t           tattr;
   struct audio_caps_desc_s cap_desc;
   struct ap_buffer_info_s  buf_info;
-  struct audio_caps_s      caps;
-  int                      min_channels;
   int                      ret;
   int                      subfmt = AUDIO_FMT_UNDEF;
-  int                      index;
 
   DEBUGASSERT(precorder != NULL);
   DEBUGASSERT(pfilename != NULL);
@@ -1050,8 +1032,7 @@ int nxrecorder_recordinternal(FAR struct nxrecorder_s *precorder,
 
   /* Test that the specified file exists */
 
-  if ((precorder->fd = open(pfilename, O_WRONLY | O_CREAT | O_TRUNC,
-                            0666)) == -1)
+  if ((precorder->fd = open(pfilename, O_WRONLY | O_CREAT | O_TRUNC)) == -1)
     {
       /* File not found.  Test if its in the mediadir */
 
@@ -1086,30 +1067,6 @@ int nxrecorder_recordinternal(FAR struct nxrecorder_s *precorder,
       goto err_out_nodev;
     }
 
-  for (index = 0; index < sizeof(g_enc_ops) / sizeof(g_enc_ops[0]); index++)
-    {
-      if (g_enc_ops[index].format == filefmt)
-        {
-          precorder->ops = &g_enc_ops[index];
-          break;
-        }
-    }
-
-  if (!precorder->ops)
-    {
-      goto err_out;
-    }
-
-  if (precorder->ops->pre_write)
-    {
-      ret = precorder->ops->pre_write(precorder->fd,
-                                      samprate, nchannels, bpsamp);
-      if (ret < 0)
-        {
-          goto err_out;
-        }
-    }
-
   /* Try to reserve the device */
 
 #ifdef CONFIG_AUDIO_MULTI_SESSION
@@ -1125,22 +1082,6 @@ int nxrecorder_recordinternal(FAR struct nxrecorder_s *precorder,
       auderr("ERROR: Failed to reserve device: %d\n", ret);
       ret = -errno;
       goto err_out;
-    }
-
-  caps.ac_len = sizeof(caps);
-  caps.ac_type = AUDIO_TYPE_INPUT;
-  caps.ac_subtype = AUDIO_TYPE_QUERY;
-
-  if (ioctl(precorder->dev_fd, AUDIOIOC_GETCAPS,
-      (unsigned long)&caps) == caps.ac_len)
-    {
-      min_channels = caps.ac_channels >> 4;
-
-      if (min_channels != 0 && nchannels < min_channels)
-        {
-          ret = -EINVAL;
-          goto err_out;
-        }
     }
 
 #ifdef CONFIG_AUDIO_MULTI_SESSION

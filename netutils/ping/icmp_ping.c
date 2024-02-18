@@ -53,28 +53,6 @@
 #define ICMP_IOBUFFER_SIZE(x) (sizeof(struct icmp_hdr_s) + (x))
 
 /****************************************************************************
- * Private Types
- ****************************************************************************/
-
-/* Data needed for ping, reduce stack usage. */
-
-struct ping_priv_s
-{
-  struct sockaddr_in destaddr;
-  struct sockaddr_in fromaddr;
-  struct icmp_hdr_s outhdr;
-  struct pollfd recvfd;
-  socklen_t addrlen;
-  clock_t kickoff;
-  clock_t start;
-  ssize_t nsent;
-  ssize_t nrecvd;
-  long elapsed;
-  bool retry;
-  int sockfd;
-};
-
-/****************************************************************************
  * Private Data
  ****************************************************************************/
 
@@ -129,14 +107,14 @@ static int ping_gethostip(FAR const char *hostname, FAR struct in_addr *dest)
 #ifdef CONFIG_LIBC_NETDB
   /* Netdb DNS client support is enabled */
 
+  FAR struct addrinfo hint;
   FAR struct addrinfo *info;
   FAR struct sockaddr_in *addr;
-  static const struct addrinfo s_hint =
-  {
-    .ai_family = AF_INET
-  };
 
-  if (getaddrinfo(hostname, NULL, &s_hint, &info) != OK)
+  memset(&hint, 0, sizeof(hint));
+  hint.ai_family = AF_INET;
+
+  if (getaddrinfo(hostname, NULL, &hint, &info) != OK)
     {
       return ERROR;
     }
@@ -188,10 +166,21 @@ static void icmp_callback(FAR struct ping_result_s *result,
 void icmp_ping(FAR const struct ping_info_s *info)
 {
   struct ping_result_s result;
-  FAR struct ping_priv_s *priv;
+  struct sockaddr_in destaddr;
+  struct sockaddr_in fromaddr;
+  struct icmp_hdr_s outhdr;
   FAR struct icmp_hdr_s *inhdr;
+  struct pollfd recvfd;
   FAR uint8_t *iobuffer;
   FAR uint8_t *ptr;
+  long elapsed;
+  clock_t kickoff;
+  clock_t start;
+  socklen_t addrlen;
+  ssize_t nsent;
+  ssize_t nrecvd;
+  bool retry;
+  int sockfd;
   int ret;
   int ch;
   int i;
@@ -211,36 +200,34 @@ void icmp_ping(FAR const struct ping_info_s *info)
       return;
     }
 
-  /* Allocate memory to hold private data and ping buffer */
+  /* Allocate memory to hold ping buffer */
 
-  priv = malloc(sizeof(*priv) + result.outsize);
-  if (priv == NULL)
+  iobuffer = (FAR uint8_t *)malloc(result.outsize);
+  if (iobuffer == NULL)
     {
       icmp_callback(&result, ICMP_E_MEMORY, 0);
       return;
     }
 
-  iobuffer = (FAR uint8_t *)(priv + 1);
-
-  priv->sockfd = socket(AF_INET, SOCK_DGRAM, IPPROTO_ICMP);
-  if (priv->sockfd < 0)
+  sockfd = socket(AF_INET, SOCK_DGRAM, IPPROTO_ICMP);
+  if (sockfd < 0)
     {
       icmp_callback(&result, ICMP_E_SOCKET, errno);
-      free(priv);
+      free(iobuffer);
       return;
     }
 
-  priv->kickoff = clock();
+  kickoff = clock();
 
-  memset(&priv->destaddr, 0, sizeof(struct sockaddr_in));
-  priv->destaddr.sin_family      = AF_INET;
-  priv->destaddr.sin_port        = 0;
-  priv->destaddr.sin_addr.s_addr = result.dest.s_addr;
+  memset(&destaddr, 0, sizeof(struct sockaddr_in));
+  destaddr.sin_family      = AF_INET;
+  destaddr.sin_port        = 0;
+  destaddr.sin_addr.s_addr = result.dest.s_addr;
 
-  memset(&priv->outhdr, 0, sizeof(struct icmp_hdr_s));
-  priv->outhdr.type              = ICMP_ECHO_REQUEST;
-  priv->outhdr.id                = htons(result.id);
-  priv->outhdr.seqno             = htons(result.seqno);
+  memset(&outhdr, 0, sizeof(struct icmp_hdr_s));
+  outhdr.type              = ICMP_ECHO_REQUEST;
+  outhdr.id                = htons(result.id);
+  outhdr.seqno             = htons(result.seqno);
 
   icmp_callback(&result, ICMP_I_BEGIN, 0);
 
@@ -253,7 +240,7 @@ void icmp_ping(FAR const struct ping_info_s *info)
 
       /* Copy the ICMP header into the I/O buffer */
 
-      memcpy(iobuffer, &priv->outhdr, sizeof(struct icmp_hdr_s));
+      memcpy(iobuffer, &outhdr, sizeof(struct icmp_hdr_s));
 
       /* Add some easily verifiable payload data */
 
@@ -269,33 +256,33 @@ void icmp_ping(FAR const struct ping_info_s *info)
             }
         }
 
-      priv->start = clock();
-      priv->nsent = sendto(priv->sockfd, iobuffer, result.outsize, 0,
-                           (FAR struct sockaddr *)&priv->destaddr,
-                           sizeof(struct sockaddr_in));
-      if (priv->nsent < 0)
+      start = clock();
+      nsent = sendto(sockfd, iobuffer, result.outsize, 0,
+                     (FAR struct sockaddr *)&destaddr,
+                     sizeof(struct sockaddr_in));
+      if (nsent < 0)
         {
           icmp_callback(&result, ICMP_E_SENDTO, errno);
           goto done;
         }
-      else if (priv->nsent != result.outsize)
+      else if (nsent != result.outsize)
         {
-          icmp_callback(&result, ICMP_E_SENDSMALL, priv->nsent);
+          icmp_callback(&result, ICMP_E_SENDSMALL, nsent);
           goto done;
         }
 
       result.nrequests++;
 
-      priv->elapsed = 0;
+      elapsed = 0;
       do
         {
-          priv->retry          = false;
-          priv->recvfd.fd      = priv->sockfd;
-          priv->recvfd.events  = POLLIN;
-          priv->recvfd.revents = 0;
+          retry           = false;
 
-          ret = poll(&priv->recvfd, 1,
-                     info->timeout - priv->elapsed / USEC_PER_MSEC);
+          recvfd.fd       = sockfd;
+          recvfd.events   = POLLIN;
+          recvfd.revents  = 0;
+
+          ret = poll(&recvfd, 1, info->timeout - elapsed / USEC_PER_MSEC);
           if (ret < 0)
             {
               icmp_callback(&result, ICMP_E_POLL, errno);
@@ -309,24 +296,22 @@ void icmp_ping(FAR const struct ping_info_s *info)
 
           /* Get the ICMP response (ignoring the sender) */
 
-          priv->addrlen = sizeof(struct sockaddr_in);
-          priv->nrecvd  = recvfrom(priv->sockfd, iobuffer,
-                                   result.outsize, 0,
-                                   (FAR struct sockaddr *)&priv->fromaddr,
-                                   &priv->addrlen);
-          if (priv->nrecvd < 0)
+          addrlen = sizeof(struct sockaddr_in);
+          nrecvd  = recvfrom(sockfd, iobuffer, result.outsize, 0,
+                             (FAR struct sockaddr *)&fromaddr, &addrlen);
+          if (nrecvd < 0)
             {
               icmp_callback(&result, ICMP_E_RECVFROM, errno);
               goto done;
             }
-          else if (priv->nrecvd < sizeof(struct icmp_hdr_s))
+          else if (nrecvd < sizeof(struct icmp_hdr_s))
             {
-              icmp_callback(&result, ICMP_E_RECVSMALL, priv->nrecvd);
+              icmp_callback(&result, ICMP_E_RECVSMALL, nrecvd);
               goto done;
             }
 
-          priv->elapsed = TICK2USEC(clock() - priv->start);
-          inhdr         = (FAR struct icmp_hdr_s *)iobuffer;
+          elapsed = TICK2USEC(clock() - start);
+          inhdr   = (FAR struct icmp_hdr_s *)iobuffer;
 
           if (inhdr->type == ICMP_ECHO_REPLY)
             {
@@ -334,7 +319,7 @@ void icmp_ping(FAR const struct ping_info_s *info)
               if (ntohs(inhdr->id) != result.id)
                 {
                   icmp_callback(&result, ICMP_W_IDDIFF, ntohs(inhdr->id));
-                  priv->retry = true;
+                  retry = true;
                 }
               else
 #endif
@@ -342,25 +327,26 @@ void icmp_ping(FAR const struct ping_info_s *info)
                 {
                   icmp_callback(&result, ICMP_W_SEQNOBIG,
                                 ntohs(inhdr->seqno));
-                  priv->retry = true;
+                  retry = true;
                 }
               else if (ntohs(inhdr->seqno) < result.seqno)
                 {
                   icmp_callback(&result, ICMP_W_SEQNOSMALL,
                                 ntohs(inhdr->seqno));
-                  priv->retry = true;
+                  retry = true;
                 }
               else
                 {
                   bool verified = true;
+                  long pktdelay = elapsed;
 
-                  icmp_callback(&result, ICMP_I_ROUNDTRIP, priv->elapsed);
+                  icmp_callback(&result, ICMP_I_ROUNDTRIP, pktdelay);
 
                   /* Verify the payload data */
 
-                  if (priv->nrecvd != result.outsize)
+                  if (nrecvd != result.outsize)
                     {
-                      icmp_callback(&result, ICMP_W_RECVBIG, priv->nrecvd);
+                      icmp_callback(&result, ICMP_W_RECVBIG, nrecvd);
                       verified = false;
                     }
                   else
@@ -397,20 +383,20 @@ void icmp_ping(FAR const struct ping_info_s *info)
               icmp_callback(&result, ICMP_W_TYPE, inhdr->type);
             }
         }
-      while (priv->retry && info->delay > priv->elapsed / USEC_PER_MSEC &&
-             info->timeout > priv->elapsed / USEC_PER_MSEC);
+      while (retry && info->delay > elapsed / USEC_PER_MSEC &&
+             info->timeout > elapsed / USEC_PER_MSEC);
 
       /* Wait if necessary to preserved the requested ping rate */
 
-      priv->elapsed = TICK2MSEC(clock() - priv->start);
-      if (priv->elapsed < info->delay)
+      elapsed = TICK2MSEC(clock() - start);
+      if (elapsed < info->delay)
         {
           struct timespec rqt;
           unsigned int remaining;
           unsigned int sec;
           unsigned int frac;  /* In deciseconds */
 
-          remaining   = info->delay - priv->elapsed;
+          remaining   = info->delay - elapsed;
           sec         = remaining / MSEC_PER_SEC;
           frac        = remaining - MSEC_PER_SEC * sec;
 
@@ -420,11 +406,11 @@ void icmp_ping(FAR const struct ping_info_s *info)
           nanosleep(&rqt, NULL);
         }
 
-      priv->outhdr.seqno = htons(++result.seqno);
+      outhdr.seqno = htons(++result.seqno);
     }
 
 done:
-  icmp_callback(&result, ICMP_I_FINISH, TICK2USEC(clock() - priv->kickoff));
-  close(priv->sockfd);
-  free(priv);
+  icmp_callback(&result, ICMP_I_FINISH, TICK2USEC(clock() - kickoff));
+  close(sockfd);
+  free(iobuffer);
 }

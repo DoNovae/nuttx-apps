@@ -75,9 +75,7 @@ enum foc_align_run_stage_e
   FOC_ALIGN_RUN_INDEX,
 #endif
   FOC_ALIGN_RUN_OFFSET,
-#ifdef CONFIG_INDUSTRY_FOC_ALIGN_DIR
   FOC_ALIGN_RUN_DIR,
-#endif
   FOC_ALIGN_RUN_IDLE,
   FOC_ALIGN_RUN_DONE
 };
@@ -349,7 +347,6 @@ errout:
   return ret;
 }
 
-#ifdef CONFIG_INDUSTRY_FOC_ALIGN_DIR
 /****************************************************************************
  * Name: foc_align_dir_move_b16
  ****************************************************************************/
@@ -402,8 +399,6 @@ static void foc_align_dir_move_b16(FAR struct foc_align_b16_s *align,
 static void foc_align_dir_hold_b16(FAR struct foc_align_b16_s *align,
                                    b16_t dir, bool last, bool diff)
 {
-  b16_t tmp = 0;
-
   DEBUGASSERT(align);
 
   /* Lock angle */
@@ -424,16 +419,13 @@ static void foc_align_dir_hold_b16(FAR struct foc_align_b16_s *align,
 
       if (diff == true)
         {
-          tmp = align->angle_now - align->angle_last;
-          angle_norm_2pi_b16(&tmp, -b16PI, b16PI);
-
           if (dir == DIR_CW_B16)
             {
-              align->diff_cw += tmp;
+              align->diff_cw += (align->angle_now - align->angle_last);
             }
           else if (dir == DIR_CCW_B16)
             {
-              align->diff_ccw += tmp;
+              align->diff_ccw += (align->angle_now - align->angle_last);
             }
           else
             {
@@ -671,7 +663,6 @@ errout:
 
   return ret;
 }
-#endif
 
 /****************************************************************************
  * Name: foc_align_idle_run_b16
@@ -919,7 +910,6 @@ int foc_routine_align_run_b16(FAR foc_routine_b16_t *r,
         break;
       }
 
-#ifdef CONFIG_INDUSTRY_FOC_ALIGN_DIR
       case FOC_ALIGN_RUN_DIR:
         {
           /* Align direction procedure */
@@ -940,7 +930,6 @@ int foc_routine_align_run_b16(FAR foc_routine_b16_t *r,
 
           break;
         }
-#endif
 
       case FOC_ALIGN_RUN_IDLE:
         {
@@ -1009,13 +998,6 @@ int foc_routine_align_final_b16(FAR foc_routine_b16_t *r, FAR void *data)
   /* Get final data */
 
   memcpy(data, &a->final, sizeof(struct foc_routine_aling_final_b16_s));
-
-  /* Reset data but leave configuration */
-
-  memset(&a->final,
-         0,
-         (sizeof(struct foc_align_b16_s) -
-          sizeof(struct foc_routine_align_cfg_b16_s)));
 
   return OK;
 }

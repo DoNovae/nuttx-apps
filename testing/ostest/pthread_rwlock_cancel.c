@@ -204,7 +204,8 @@ static void test_timeout(void)
    * usable state after deferred cancellation.
    */
 
-#if CONFIG_PTHREAD_CLEANUP_STACKSIZE > 0 && defined(CONFIG_CANCELLATION_POINTS)
+#ifdef CONFIG_PTHREAD_CLEANUP
+#ifdef CONFIG_CANCELLATION_POINTS
   status = pthread_rwlock_trywrlock(&write_lock);
   if (status != EBUSY)
     {
@@ -254,10 +255,8 @@ static void test_timeout(void)
              "ERROR pthread_rwlock_wrlock, status=%d\n", status);
       ASSERT(false);
     }
-#endif /* CONFIG_PTHREAD_CLEANUP_STACKSIZE > 0 && CONFIG_CANCELLATION_POINTS */
-
-    pthread_rwlock_destroy(&write_lock);
-    pthread_rwlock_destroy(&read_lock);
+#endif /* CONFIG_CANCELLATION_POINTS */
+#endif /* CONFIG_PTHREAD_CLEANUP */
 }
 
 /****************************************************************************

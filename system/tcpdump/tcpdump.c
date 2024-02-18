@@ -273,28 +273,28 @@ int main(int argc, FAR char *argv[])
       arg_print_errors(stdout, args.end, argv[0]);
       printf("Usage:\n");
       arg_print_glossary(stdout, (FAR void**)&args, "  %-30s %s\n");
-      goto out;
+      return 0;
     }
 
   ifindex = if_nametoindex(args.interface->sval[0]);
   if (ifindex == 0)
     {
       printf("Failed to get index of device %s\n", args.interface->sval[0]);
-      goto out;
+      return 0;
     }
 
   cfgs.fd = open(args.file->sval[0], O_WRONLY | O_CREAT | O_TRUNC, 0644);
   if (cfgs.fd < 0)
     {
       perror("ERROR: open() failed");
-      goto out;
+      return 0;
     }
 
   cfgs.sd = socket_open(ifindex);
   if (cfgs.sd < 0)
     {
       close(cfgs.fd);
-      goto out;
+      return 0;
     }
 
   if (args.snaplen->count > 0)
@@ -310,8 +310,5 @@ int main(int argc, FAR char *argv[])
 
   close(cfgs.sd);
   close(cfgs.fd);
-
-out:
-  arg_freetable((FAR void **)&args, 1);
   return 0;
 }

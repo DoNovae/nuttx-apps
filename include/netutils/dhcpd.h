@@ -42,8 +42,6 @@
  * Included Files
  ****************************************************************************/
 
-#include <netinet/in.h>
-
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
@@ -67,10 +65,6 @@ extern "C"
 int dhcpd_run(FAR const char *interface);
 int dhcpd_start(FAR const char *interface);
 int dhcpd_stop(void);
-int dhcpd_set_startip(in_addr_t startip);
-int dhcpd_set_routerip(in_addr_t routerip);
-int dhcpd_set_netmask(in_addr_t netmask);
-int dhcpd_set_dnsip(in_addr_t dnsip);
 
 #undef EXTERN
 #ifdef __cplusplus

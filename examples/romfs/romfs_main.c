@@ -389,8 +389,7 @@ static void readdirectories(const char *path, struct node_s *entry)
 
       /* Get the full path to the entry */
 
-      snprintf(g_scratchbuffer, sizeof(g_scratchbuffer),
-               "%s/%s", path, direntry->d_name);
+      sprintf(g_scratchbuffer, "%s/%s", path, direntry->d_name);
       fullpath = strdup(g_scratchbuffer);
 
       if (DIRENT_ISDIRECTORY(direntry->d_type))

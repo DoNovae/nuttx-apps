@@ -207,16 +207,15 @@ int nxscope_ser_init(FAR struct nxscope_intf_s *intf,
   tcgetattr(priv->fd, &tio);
 
 #ifdef CONFIG_SERIAL_TERMIOS
-  if (priv->cfg->baud > 0)
-    {
-      /* Configure a baud rate */
+  /* Configure a baud rate */
 
-      ret = cfsetspeed(&tio, priv->cfg->baud);
-      if (ret < 0)
-        {
-          _err("ERROR: failed to set baud rate %d\n", errno);
-          goto errout;
-        }
+  DEBUGASSERT(priv->cfg->baud > 0);
+
+  ret = cfsetspeed(&tio, priv->cfg->baud);
+  if (ret < 0)
+    {
+      _err("ERROR: failed to set baud rate %d\n", errno);
+      goto errout;
     }
 #endif
 

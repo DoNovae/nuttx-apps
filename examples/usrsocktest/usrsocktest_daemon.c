@@ -36,7 +36,6 @@
 #include <pthread.h>
 #include <unistd.h>
 
-#include <sys/param.h>
 #include <sys/socket.h>
 #include <sys/ioctl.h>
 #include <netinet/in.h>
@@ -51,13 +50,17 @@
  ****************************************************************************/
 
 #ifndef dbg
-#  define dbg _warn
+  #define dbg _warn
 #endif
 
 #define usrsocktest_dbg(...) ((void)0)
 
 #define TEST_SOCKET_SOCKID_BASE 10000U
 #define TEST_SOCKET_COUNT 8
+
+#ifndef ARRAY_SIZE
+#  define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
+#endif
 
 #define noinline
 
@@ -137,7 +140,7 @@ static int test_socket_alloc(FAR struct daemon_priv_s *priv)
 {
   int i;
 
-  for (i = 0; i < nitems(priv->test_sockets); i++)
+  for (i = 0; i < ARRAY_SIZE(priv->test_sockets); i++)
     {
       FAR struct test_socket_s *tsock = &priv->test_sockets[i];
 
@@ -169,7 +172,7 @@ static FAR struct test_socket_s *test_socket_get(
     }
 
   sockid -= TEST_SOCKET_SOCKID_BASE;
-  if (sockid >= nitems(priv->test_sockets))
+  if (sockid >= ARRAY_SIZE(priv->test_sockets))
     {
       return NULL;
     }
@@ -242,13 +245,13 @@ static int tsock_send_event(int fd, FAR struct daemon_priv_s *priv,
   event.head.flags = USRSOCK_MESSAGE_FLAG_EVENT;
   event.head.msgid = USRSOCK_MESSAGE_SOCKET_EVENT;
 
-  for (i = 0; i < nitems(priv->test_sockets); i++)
+  for (i = 0; i < ARRAY_SIZE(priv->test_sockets); i++)
     {
       if (tsock == &priv->test_sockets[i])
         break;
     }
 
-  if (i == nitems(priv->test_sockets))
+  if (i == ARRAY_SIZE(priv->test_sockets))
     {
       return -EINVAL;
     }
@@ -1774,7 +1777,7 @@ static int for_each_connection(int fd, FAR struct daemon_priv_s *priv,
 {
   int i;
 
-  for (i = 0; i < nitems(priv->test_sockets); i++)
+  for (i = 0; i < ARRAY_SIZE(priv->test_sockets); i++)
     {
       FAR struct test_socket_s *tsock = &priv->test_sockets[i];
 
@@ -2111,7 +2114,7 @@ int usrsocktest_daemon_stop(void)
       goto out;
     }
 
-  for (i = 0; i < nitems(priv->test_sockets); i++)
+  for (i = 0; i < ARRAY_SIZE(priv->test_sockets); i++)
     {
       if (priv->test_sockets[i].opened && priv->test_sockets[i].endp != NULL)
         {

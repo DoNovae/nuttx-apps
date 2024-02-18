@@ -2746,7 +2746,7 @@ static FAR char *strstring(void)
   x = expr();
   match(CPAREN);
 
-  snprintf(g_iobuffer, sizeof(g_iobuffer), "%g", x);
+  sprintf(g_iobuffer, "%g", x);
   answer = mystrdup(g_iobuffer);
   if (!answer)
     {
@@ -2913,7 +2913,8 @@ static FAR char *midstring(void)
       return str;
     }
 
-  strlcpy(answer, temp, len + 1);
+  strncpy(answer, temp, len);
+  answer[len] = 0;
   free(str);
   return answer;
 }
@@ -4035,7 +4036,7 @@ static FAR char *mystrconcat(FAR const char *str, FAR const char *cat)
   if (answer)
     {
       strlcpy(answer, str, len);
-      strlcat(answer, cat, len);
+      strcat(answer, cat);
     }
 
   return answer;

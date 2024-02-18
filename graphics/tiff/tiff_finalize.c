@@ -122,7 +122,7 @@ static int tiff_writeifdentry(int fd, off_t offset,
 
   /* Then write the IFD entry */
 
-  return tiff_write(fd, ifdentry, SIZEOF_IFD_ENTRY);
+   return tiff_write(fd, ifdentry, SIZEOF_IFD_ENTRY);
 }
 
 /****************************************************************************
@@ -148,21 +148,18 @@ static void tiff_cleanup(FAR struct tiff_info_s *info)
     {
       close(info->outfd);
     }
-
   info->outfd = -1;
 
   if (info->tmp1fd >= 0)
     {
       close(info->tmp1fd);
     }
-
   info->tmp1fd = -1;
 
   if (info->tmp2fd >= 0)
     {
       close(info->tmp2fd);
     }
-
   info->tmp2fd = -1;
 
   /* And remove the temporary files */
@@ -203,21 +200,20 @@ int tiff_finalize(FAR struct tiff_info_s *info)
   int i;
   int j;
 
-  /* Put all of the pieces together to create the final output file.
-   * There are three pieces:
+  /* Put all of the pieces together to create the final output file.  There
+   * are three pieces:
    *
    * 1) outfile: The partial output file containing the header, IFD and strip
    *    counts. This includes the StripOffsets and StripByteCounts that need
    *    to be updated.  Size=outsize;
-   * 2) tmpfile1: This contains the offsets into tmpfile3 for each strip.
-   *    The size of this file is tmp1size.  These offsets are relative to the
+   * 2) tmpfile1: This contains the offsets into tmpfile3 for each strip.  The
+   *    size of this file is tmp1size.  These offsets are relative to the
    *    beginning of tmpfile3 and need to be offset by outsize+tmp1size.
    * 3) tmpfile3: The strip data.  Size is tmp2size.  This is raw image data;
    *    no fixups are required.
    */
 
-  DEBUGASSERT(info && info->outfd >= 0 &&
-              info->tmp1fd >= 0 && info->tmp2fd >= 0);
+  DEBUGASSERT(info && info->outfd >= 0 && info->tmp1fd >= 0 && info->tmp2fd >= 0);
   DEBUGASSERT((info->outsize & 3) == 0 && (info->tmp1size & 3) == 0);
 
   /* Fix-up the count value in the StripByteCounts IFD entry in the outfile.
@@ -225,8 +221,7 @@ int tiff_finalize(FAR struct tiff_info_s *info)
    * was written.
    */
 
-  ret = tiff_readifdentry(info->outfd, info->filefmt->sbcifdoffset,
-                          &ifdentry);
+  ret = tiff_readifdentry(info->outfd, info->filefmt->sbcifdoffset, &ifdentry);
   if (ret < 0)
     {
       goto errout;
@@ -234,8 +229,7 @@ int tiff_finalize(FAR struct tiff_info_s *info)
 
   tiff_put32(ifdentry.count, info->nstrips);
 
-  ret = tiff_writeifdentry(info->outfd, info->filefmt->sbcifdoffset,
-                           &ifdentry);
+  ret = tiff_writeifdentry(info->outfd, info->filefmt->sbcifdoffset, &ifdentry);
   if (ret < 0)
     {
       goto errout;
@@ -246,8 +240,7 @@ int tiff_finalize(FAR struct tiff_info_s *info)
    * outfile, hence, the correct offset is outsize.
    */
 
-  ret = tiff_readifdentry(info->outfd, info->filefmt->soifdoffset,
-                          &ifdentry);
+  ret = tiff_readifdentry(info->outfd, info->filefmt->soifdoffset, &ifdentry);
   if (ret < 0)
     {
       goto errout;
@@ -256,8 +249,7 @@ int tiff_finalize(FAR struct tiff_info_s *info)
   tiff_put32(ifdentry.count, info->nstrips);
   tiff_put32(ifdentry.offset, info->outsize);
 
-  ret = tiff_writeifdentry(info->outfd, info->filefmt->soifdoffset,
-                           &ifdentry);
+  ret = tiff_writeifdentry(info->outfd, info->filefmt->soifdoffset, &ifdentry);
   if (ret < 0)
     {
       goto errout;
@@ -341,7 +333,6 @@ int tiff_finalize(FAR struct tiff_info_s *info)
       total += nbytes;
 #endif
     }
-
 #ifdef CONFIG_DEBUG_GRAPHICS
   DEBUGASSERT(total == info->tmp1size);
 #endif
@@ -360,7 +351,7 @@ int tiff_finalize(FAR struct tiff_info_s *info)
 #ifdef CONFIG_DEBUG_GRAPHICS
   total = 0;
 #endif
-  for (; ; )
+  for (;;)
     {
       ssize_t nbytes;
 
@@ -392,7 +383,6 @@ int tiff_finalize(FAR struct tiff_info_s *info)
       total += nbytes;
 #endif
     }
-
 #ifdef CONFIG_DEBUG_GRAPHICS
   DEBUGASSERT(total == info->tmp2size);
 #endif
@@ -407,20 +397,19 @@ errout:
   return ret;
 }
 
-/****************************************************************************
+/************************************************************************************
  * Name: tiff_abort
  *
  * Description:
  *   Abort the TIFF file creation and create-up resources.
  *
  * Input Parameters:
- *   info - A pointer to the caller allocated parameter passing/TIFF state
- *          instance.
+ *   info - A pointer to the caller allocated parameter passing/TIFF state instance.
  *
  * Returned Value:
  *   None
  *
- ****************************************************************************/
+ ************************************************************************************/
 
 void tiff_abort(FAR struct tiff_info_s *info)
 {

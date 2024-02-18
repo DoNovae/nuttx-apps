@@ -121,6 +121,7 @@ static int stkmon_process_directory(FAR struct dirent *entryp)
   FILE *stream;
   unsigned long stack_size;
   unsigned long stack_used;
+  int errcode;
   int len;
   int ret;
 
@@ -133,11 +134,13 @@ static int stkmon_process_directory(FAR struct dirent *entryp)
   ret = asprintf(&filepath,
                  CONFIG_SYSTEM_STACKMONITOR_MOUNTPOINT "/%s/status",
                  entryp->d_name);
-  if (ret < 0)
+  if (ret < 0 || filepath == NULL)
     {
+      errcode = errno;
       fprintf(stderr,
-              "Stack Monitor: Failed to create path to status file\n");
-      return -ENOMEM;
+              "Stack Monitor: Failed to create path to status file: %d\n",
+              errcode);
+      return -errcode;
     }
 
   /* Open the status file */
@@ -186,10 +189,12 @@ static int stkmon_process_directory(FAR struct dirent *entryp)
   ret = asprintf(&filepath,
                  CONFIG_SYSTEM_STACKMONITOR_MOUNTPOINT "/%s/stack",
                  entryp->d_name);
-  if (ret < 0)
+  if (ret < 0 || filepath == NULL)
     {
+      errcode = errno;
       fprintf(stderr,
-              "Stack Monitor: Failed to create path to stack file\n");
+              "Stack Monitor: Failed to create path to stack file: %d\n",
+              errcode);
       ret = -EINVAL;
       goto errout_with_name;
     }

@@ -30,7 +30,6 @@
 #include <pthread.h>
 #include <stdio.h>
 #include <unistd.h>
-#include <math.h>
 
 #ifdef CONFIG_EXAMPLES_NXSCOPE_TIMER
 #  include <sys/ioctl.h>
@@ -41,16 +40,6 @@
 #endif
 
 #include "logging/nxscope/nxscope.h"
-
-/****************************************************************************
- * Pre-processor Definitions
- ****************************************************************************/
-
-#ifdef CONFIG_LIBM_NONE
-#  error "math library must be selected for this example"
-#endif
-
-#define SIN_DT (0.01f)
 
 /****************************************************************************
  * Private Type Definition
@@ -208,14 +197,14 @@ static FAR void *nxscope_samples_thr(FAR void *arg)
   sigaddset(&set, CONFIG_EXAMPLES_NXSCOPE_TIMER_SIGNO);
 #endif
 
+  /* Initialize float vector */
+
+  v[0] = -1.0f;
+  v[1] = 0.0f;
+  v[2] = 1.0f;
+
   while (1)
     {
-      /* Float vector - tree-phase sine waveform */
-
-      v[0] = sinf(i * SIN_DT);
-      v[1] = sinf(i * SIN_DT + (2.0f / 3.0f) * M_PI);
-      v[2] = sinf(i * SIN_DT + (4.0f / 3.0f) * M_PI);
-
       /* Channel 0 */
 
       nxscope_put_uint8(envp->nxs, 0, i);
@@ -320,7 +309,6 @@ errout:
   return NULL;
 }
 
-#ifdef CONFIG_EXAMPLES_NXSCOPE_CHARLOG
 /****************************************************************************
  * Name: nxscope_charlog_thr
  ****************************************************************************/
@@ -348,7 +336,6 @@ static FAR void *nxscope_charlog_thr(FAR void *arg)
 
   return NULL;
 }
-#endif
 
 #ifdef CONFIG_LOGGING_NXSCOPE_CRICHANNELS
 /****************************************************************************
@@ -634,14 +621,12 @@ int main(int argc, FAR char *argv[])
   u.s.cri   = 0;
   nxscope_chan_init(&nxs, 18, "chan18", u.u8, 0, 4);
 
-#ifdef CONFIG_EXAMPLES_NXSCOPE_CHARLOG
   /* Char channel with metadata */
 
   u.s.dtype = NXSCOPE_TYPE_CHAR;
   u.s._res  = 0;
   u.s.cri   = 0;
   nxscope_chan_init(&nxs, 19, "chan19", u.u8, 64, 4);
-#endif
 
 #ifdef CONFIG_LOGGING_NXSCOPE_CRICHANNELS
   /* Critical channel */
@@ -664,7 +649,6 @@ int main(int argc, FAR char *argv[])
       goto errout;
     }
 
-#ifdef CONFIG_EXAMPLES_NXSCOPE_CHARLOG
   /* Create char log thread */
 
   env.nxs = &nxs;
@@ -674,7 +658,6 @@ int main(int argc, FAR char *argv[])
       printf("ERROR: pthread_create failed %d\n", ret);
       goto errout;
     }
-#endif
 
 #ifdef CONFIG_LOGGING_NXSCOPE_CRICHANNELS
   /* Create critical channel thread */
@@ -715,7 +698,7 @@ int main(int argc, FAR char *argv[])
           printf("ERROR: nxscope_recv failed %d\n", ret);
         }
 
-      usleep(CONFIG_EXAMPLES_NXSCOPE_MAIN_INTERVAL);
+      usleep(100000);
     }
 
 errout:

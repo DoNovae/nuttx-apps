@@ -338,7 +338,6 @@ done:
       free(data[i]);
     }
 
-  free(p);
   return (fail);
 }
 
@@ -351,7 +350,7 @@ int main(int argc, FAR char **argv)
   int fail = 0;
   int i;
 
-  for (i = 0; i < nitems(tests); i++)
+  for (i = 0; i < (sizeof(tests) / sizeof(tests[0])); i++)
     {
       fail += run(i);
     }

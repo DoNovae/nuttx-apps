@@ -22,9 +22,8 @@ include $(APPDIR)/Make.defs
 
 # NxRecorder Library
 
-CSRCS     = nxrecorder.c
-CSRCS    += nxrecorder_amr.c
-CSRCS    += nxrecorder_common.c
+CSRCS = nxrecorder.c
+
 
 ifneq ($(CONFIG_NXRECORDER_COMMAND_LINE),)
 PROGNAME = nxrecorder

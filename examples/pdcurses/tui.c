@@ -92,9 +92,8 @@ static char *padstr(char *s, int length)
   static char buf[MAXSTRLEN];
   char fmt[10];
 
-  snprintf(fmt, sizeof(fmt),
-           (int)strlen(s) > length ? "%%.%ds" : "%%-%ds", length);
-  snprintf(buf, sizeof(buf), fmt, s);
+  sprintf(fmt, (int)strlen(s) > length ? "%%.%ds" : "%%-%ds", length);
+  sprintf(buf, fmt, s);
 
   return buf;
 }
@@ -207,7 +206,7 @@ static void idle(void)
     }
 
   tp = localtime(&t);
-  snprintf(buf, sizeof(buf), " %.2d-%.2d-%.4d  %.2d:%.2d:%.2d",
+  sprintf(buf, " %.2d-%.2d-%.4d  %.2d:%.2d:%.2d",
           tp->tm_mday, tp->tm_mon + 1, tp->tm_year + 1900,
           tp->tm_hour, tp->tm_min, tp->tm_sec);
 

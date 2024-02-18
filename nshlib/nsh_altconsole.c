@@ -29,7 +29,6 @@
 #include <fcntl.h>
 #include <assert.h>
 #include <debug.h>
-#include <string.h>
 
 #include "nsh.h"
 #include "nsh_console.h"

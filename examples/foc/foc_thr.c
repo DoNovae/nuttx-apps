@@ -36,29 +36,14 @@
 #include "industry/foc/foc_common.h"
 
 /****************************************************************************
- * Pre-processor Definitions
- ****************************************************************************/
-
-#ifndef CONFIG_EXAMPLES_FOC_FLOAT_INST
-#  define CONFIG_EXAMPLES_FOC_FLOAT_INST   (0)
-#endif
-#ifndef CONFIG_EXAMPLES_FOC_FIXED16_INST
-#  define CONFIG_EXAMPLES_FOC_FIXED16_INST (0)
-#endif
-
-#if CONFIG_EXAMPLES_FOC_FLOAT_INST + CONFIG_EXAMPLES_FOC_FIXED16_INST == 0
-#  warning no control thread enabled !
-#endif
-
-/****************************************************************************
  * Extern Functions Prototypes
  ****************************************************************************/
 
-#if CONFIG_EXAMPLES_FOC_FLOAT_INST > 0
+#ifdef CONFIG_INDUSTRY_FOC_FLOAT
 extern int foc_float_thr(FAR struct foc_ctrl_env_s *envp);
 #endif
 
-#if CONFIG_EXAMPLES_FOC_FIXED16_INST > 0
+#ifdef CONFIG_INDUSTRY_FOC_FIXED16
 extern int foc_fixed16_thr(FAR struct foc_ctrl_env_s *envp);
 #endif
 
@@ -68,11 +53,10 @@ extern int foc_fixed16_thr(FAR struct foc_ctrl_env_s *envp);
 
 pthread_mutex_t g_cntr_lock;
 
-static uint32_t g_foc_thr = 0;
-#if CONFIG_EXAMPLES_FOC_FLOAT_INST > 0
+#ifdef CONFIG_INDUSTRY_FOC_FLOAT
 static int g_float_thr_cntr = 0;
 #endif
-#if CONFIG_EXAMPLES_FOC_FIXED16_INST > 0
+#ifdef CONFIG_INDUSTRY_FOC_FIXED16
 static int g_fixed16_thr_cntr = 0;
 #endif
 
@@ -95,19 +79,35 @@ static FAR void *foc_control_thr(FAR void *arg)
 
   /* Get controller type */
 
-  envp->type = foc_thread_type(envp->id);
-  if (envp->type == -1)
+  pthread_mutex_lock(&g_cntr_lock);
+
+#ifdef CONFIG_INDUSTRY_FOC_FLOAT
+  if (g_float_thr_cntr < CONFIG_EXAMPLES_FOC_FLOAT_INST)
+    {
+      envp->type = FOC_NUMBER_TYPE_FLOAT;
+    }
+  else
+#endif
+#ifdef CONFIG_INDUSTRY_FOC_FIXED16
+  if (g_fixed16_thr_cntr < CONFIG_EXAMPLES_FOC_FIXED16_INST)
+    {
+      envp->type = FOC_NUMBER_TYPE_FIXED16;
+    }
+  else
+#endif
     {
       /* Invalid configuration */
 
       ASSERT(0);
     }
 
+  pthread_mutex_unlock(&g_cntr_lock);
+
   PRINTF("FOC device %d type = %d!\n", envp->id, envp->type);
 
   /* Get queue name */
 
-  snprintf(mqname, sizeof(mqname), "%s%d", CONTROL_MQ_MQNAME, envp->id);
+  sprintf(mqname, "%s%d", CONTROL_MQ_MQNAME, envp->id);
 
   /* Open queue */
 
@@ -142,13 +142,12 @@ static FAR void *foc_control_thr(FAR void *arg)
 
   switch (envp->type)
     {
-#if CONFIG_EXAMPLES_FOC_FLOAT_INST > 0
+#ifdef CONFIG_INDUSTRY_FOC_FLOAT
       case FOC_NUMBER_TYPE_FLOAT:
         {
           pthread_mutex_lock(&g_cntr_lock);
           envp->inst = g_float_thr_cntr;
           g_float_thr_cntr += 1;
-          g_foc_thr |= (1 << envp->id);
           pthread_mutex_unlock(&g_cntr_lock);
 
           /* Start thread */
@@ -157,20 +156,18 @@ static FAR void *foc_control_thr(FAR void *arg)
 
           pthread_mutex_lock(&g_cntr_lock);
           g_float_thr_cntr -= 1;
-          g_foc_thr &= ~(1 << envp->id);
           pthread_mutex_unlock(&g_cntr_lock);
 
           break;
         }
 #endif
 
-#if CONFIG_EXAMPLES_FOC_FIXED16_INST > 0
+#ifdef CONFIG_INDUSTRY_FOC_FIXED16
       case FOC_NUMBER_TYPE_FIXED16:
         {
           pthread_mutex_lock(&g_cntr_lock);
           envp->inst = g_fixed16_thr_cntr;
           g_fixed16_thr_cntr += 1;
-          g_foc_thr |= (1 << envp->id);
           pthread_mutex_unlock(&g_cntr_lock);
 
           /* Start thread */
@@ -179,7 +176,6 @@ static FAR void *foc_control_thr(FAR void *arg)
 
           pthread_mutex_lock(&g_cntr_lock);
           g_fixed16_thr_cntr -= 1;
-          g_foc_thr &= ~(1 << envp->id);
           pthread_mutex_unlock(&g_cntr_lock);
 
           break;
@@ -255,54 +251,21 @@ bool foc_threads_terminated(void)
 {
   bool ret = false;
 
-  pthread_mutex_lock(&g_cntr_lock);
+  pthread_mutex_unlock(&g_cntr_lock);
 
-  if (g_foc_thr == 0)
+  if (1
+#ifdef CONFIG_INDUSTRY_FOC_FLOAT
+      && g_float_thr_cntr <= 0
+#endif
+#ifdef CONFIG_INDUSTRY_FOC_FIXED16
+      && g_fixed16_thr_cntr <= 0
+#endif
+    )
     {
       ret = true;
     }
 
-  pthread_mutex_unlock(&g_cntr_lock);
-
-  return ret;
-}
-
-/****************************************************************************
- * Name: foc_threads_get
- ****************************************************************************/
-
-uint32_t foc_threads_get(void)
-{
-  uint32_t ret = 0;
-
   pthread_mutex_lock(&g_cntr_lock);
-  ret = g_foc_thr;
-  pthread_mutex_unlock(&g_cntr_lock);
-
-  return ret;
-}
-
-/****************************************************************************
- * Name: foc_thread_type
- ****************************************************************************/
-
-int foc_thread_type(int id)
-{
-  int ret = -1;
-
-#if CONFIG_EXAMPLES_FOC_FLOAT_INST > 0
-  if (id < CONFIG_EXAMPLES_FOC_FLOAT_INST)
-    {
-      ret = FOC_NUMBER_TYPE_FLOAT;
-    }
-#endif
-
-#if CONFIG_EXAMPLES_FOC_FIXED16_INST > 0
-  if (id < CONFIG_EXAMPLES_FOC_FLOAT_INST + CONFIG_EXAMPLES_FOC_FIXED16_INST)
-    {
-      ret = FOC_NUMBER_TYPE_FIXED16;
-    }
-#endif
 
   return ret;
 }
@@ -336,7 +299,7 @@ int foc_ctrlthr_init(FAR struct foc_ctrl_env_s *foc, int i, FAR mqd_t *mqd,
 
   /* Get queue name */
 
-  snprintf(mqname, sizeof(mqname), "%s%d", CONTROL_MQ_MQNAME, foc->id);
+  sprintf(mqname, "%s%d", CONTROL_MQ_MQNAME, foc->id);
 
   /* Initialize thread recv queue */
 

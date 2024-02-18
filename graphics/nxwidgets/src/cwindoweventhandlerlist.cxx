@@ -143,8 +143,8 @@ void CWindowEventHandlerList::raiseKeyboardEvent(void)
     {
       m_eventHandlers.at(i)->handleKeyboardEvent();
     }
-}
 #endif
+}
 
 /**
  * Raise an NX window blocked event.

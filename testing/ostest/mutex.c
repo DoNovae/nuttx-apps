@@ -156,8 +156,6 @@ void mutex_test(void)
   pthread_join(thread2, NULL);
 #endif
 
-  pthread_mutex_destroy(&mut);
-
   printf("\t\tThread1\tThread2\n");
   printf("\tLoops\t%lu\t%lu\n", nloops[0], nloops[1]);
   printf("\tErrors\t%lu\t%lu\n", nerrors[0], nerrors[1]);

@@ -26,7 +26,8 @@
 #include <math.h>
 #include <string.h>
 #include <arch/board/board.h>
-#include <arch/chip/audio.h>
+//#include <arch/chip/audio.h>
+#include <nuttx/audio/audio.h>
 
 #include "audio_rttl.h"
 

@@ -118,7 +118,6 @@ int main(int argc, FAR char *argv[])
       /* Flush any output before the loop entered or from the previous pass
        * through the loop.
        */
-
       fflush(stdout);
 
 #ifdef CONFIG_EXAMPLES_TOUCHSCREEN_MOUSE
@@ -126,7 +125,7 @@ int main(int argc, FAR char *argv[])
 
       iinfo("Reading...\n");
       nbytes = read(fd, &sample, sizeof(struct mouse_report_s));
-      iinfo("Bytes read: %zd\n", nbytes);
+      iinfo("Bytes read: %d\n", nbytes);
 
       /* Handle unexpected return values */
 
@@ -145,7 +144,7 @@ int main(int argc, FAR char *argv[])
         }
       else if (nbytes != sizeof(struct mouse_report_s))
         {
-          printf("tc_main: Unexpected read size=%zd,expected=%zd,Ignoring\n",
+          printf("tc_main: Unexpected read size=%d, expected=%d, Ignoring\n",
                  nbytes, sizeof(struct mouse_report_s));
         }
 
@@ -163,36 +162,24 @@ int main(int argc, FAR char *argv[])
         }
 #else
       /* Read one sample */
-
       iinfo("Reading...\n");
-      nbytes = read(fd, &sample, sizeof(struct touch_sample_s));
-      iinfo("Bytes read: %zd\n", nbytes);
+      nbytes=read(fd,&sample,sizeof(struct touch_sample_s));
+      iinfo("Bytes read: %zd\n",nbytes);
 
       /* Handle unexpected return values */
-
-      if (nbytes < 0)
+      if (nbytes<0||(nbytes!=sizeof (struct touch_sample_s)))
         {
           errval = errno;
           if (errval != EINTR)
             {
-              printf("tc_main: read %s failed: %d\n",
-                     CONFIG_EXAMPLES_TOUCHSCREEN_DEVPATH, errval);
+              printf("tc_main: read %s failed: %d\n",CONFIG_EXAMPLES_TOUCHSCREEN_DEVPATH,errval);
               errval = 3;
               goto errout_with_dev;
             }
-
           printf("tc_main: Interrupted read...\n");
-        }
-      else if (nbytes != sizeof(struct touch_sample_s))
-        {
-          printf("tc_main: Unexpected read size=%zd, expected=%zd, "
-                 "Ignoring\n",
-                 nbytes, sizeof(struct touch_sample_s));
-        }
-
-      /* Print the sample data on successful return */
-
-      else
+        } else if (nbytes != sizeof(struct touch_sample_s)) {
+          printf("tc_main: Unexpected read size=%zd, expected=%zd, Ignoring\n",nbytes,sizeof(struct touch_sample_s));
+        } else /* Print the sample data on successful return */
         {
           printf("Sample     :\n");
           printf("   npoints : %d\n",   sample.npoints);
@@ -207,9 +194,7 @@ int main(int argc, FAR char *argv[])
           printf(" timestamp : %" PRIu64"\n", sample.point[0].timestamp);
         }
 #endif
-
-      if (nsamples && --nsamples <= 0)
-        {
+      if (nsamples&&(--nsamples<=0)){
           break;
         }
     }

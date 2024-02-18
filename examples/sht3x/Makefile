@@ -20,7 +20,7 @@
 
 include $(APPDIR)/Make.defs
 
-# SHT3X built-in application info
+# Hello, World! built-in application info
 
 PROGNAME  = $(CONFIG_EXAMPLES_SHT3X_PROGNAME)
 PRIORITY  = $(CONFIG_EXAMPLES_SHT3X_PRIORITY)
