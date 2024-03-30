@@ -32,6 +32,14 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+#include <errno.h>
+#include <sched.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <sys/boardctl.h>
+#include <sys/stat.h>
+
+#include "nshlib/nshlib.h"
 
 #include "ui_clock.h"
 
@@ -191,6 +199,10 @@ static int display_task(void)
 
 int main(int argc, FAR char *argv[]) {
 	char *child_argv[2];
+
+  /* Perform architecture-specific initialization */
+  boardctl(BOARDIOC_INIT, 0);
+
 	printf("Starting DoAis\n");
 
 	serial_pid = task_create(
