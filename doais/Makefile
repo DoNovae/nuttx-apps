@@ -26,7 +26,7 @@ PRIORITY  = $(CONFIG_DOAIS_PRIORITY)
 STACKSIZE = $(CONFIG_DOAIS_STACKSIZE)
 MODULE    = $(CONFIG_DOAIS)
 
-
+CSRCS = ui_clock.c img_hand.c
 MAINSRC = doais_main.c
 
 

@@ -32,6 +32,9 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+
+#include "ui_clock.h"
+
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -85,7 +88,7 @@ int doais_main(int argc, char *argv[])
 
     return 0;
 }
-*/
+ */
 
 /*
  * Serial test
@@ -123,7 +126,7 @@ int doais_main(int argc, char *argv[])
   }
   return 0;
 }
-*/
+ */
 
 
 
@@ -131,90 +134,89 @@ int doais_main(int argc, char *argv[])
  * Two tasks test
  */
 
-#define ACCEL_TASK_INTERVAL_MS 10
+#define ACCEL_TASK_INTERVAL_MS 1000
 static pid_t serial_pid;
 static pid_t display_pid;
 
+
+
 static int serial_task(int argc, FAR char *argv[])
 {
-  int fd;
-  char buffer;
-  char buffer_aux[256] = {};
-  int ret;
-  int i = 0;
+	int fd;
+	char buffer;
+	char buffer_aux[256] = {};
+	int ret;
+	int i = 0;
 
-  fd = open("/dev/ttyS0", O_RDWR); //Opening the uart with read and write permission
-  if (fd < 0) {
-    printf("Error UART");
-  }
-  //This loop will check if there are any data available
-  //That data it will be save in a buffer and when we detect a return
-  //The data it will be send again
-  while (1) {
-    ret = read(fd, &buffer, sizeof(buffer));//It return only a char
-    if (ret > 0) {
-      buffer_aux[i] = buffer;//Saving in the auxiliary buffer
-      i++;
+	fd = open("/dev/ttyS0", O_RDWR);
+	if (fd < 0) {
+		printf("Error UART");
+	}
 
-      if (buffer == '\r') {//If the character if a return the data will be send
-        ret = write(fd, buffer_aux, sizeof(char) * i);//You can send in this case up to 256 character
-        if (ret > 0) {
-          i = 0;
-        }
-      }
-    }
-  }
-  return 0;
+	while (1) {
+		ret = read(fd, &buffer, sizeof(buffer));
+		if (ret > 0) {
+			buffer_aux[i] = buffer;
+			i++;
+
+			if (buffer == '\r') {
+				ret = write(fd, buffer_aux, sizeof(char) * i);
+				if (ret > 0) {
+					i = 0;
+				}
+			}
+		}
+	}
+	return 0;
 }
 
-static int display_task(int argc, FAR char *argv[])
+static int display_task(void)
 {
-  int fd;
-  char buffer;
-  char buffer_aux[256] = {};
-  int ret;
-  int i = 0;
+	/* LVGL initialization */
+	lv_init();
 
-  fd = open("/dev/ttyS0", O_RDWR); //Opening the uart with read and write permission
-  if (fd < 0) {
-    printf("Error UART");
-  }
-  while (1) {
-	  printf("Display_task\n");
-	  usleep(ACCEL_TASK_INTERVAL_MS * 1000L);
-  }
-  return 0;
+	/* LVGL port initialization */
+	lv_port_init();
+
+	clock_display = lv_obj_create(NULL);  // Creates a Screen object
+
+	lv_clock_display(clock_display);
+	clock_update_cb();
+
+	return 0;
 }
 
 
 
 
 int main(int argc, FAR char *argv[]) {
-  printf("Starting Accelerometer Task Example\n");
-  char *child_argv[2];
-  struct mq_attr attr;
+	char *child_argv[2];
+	printf("Starting DoAis\n");
 
-  serial_pid = task_create(
-    "Serial Task",
-    120,
-    700,
-	serial_task,
-    (char* const*) child_argv);
-  if (serial_pid < 0) {
-    printf("Failed to create accelerometer task\n");
-  }
+	serial_pid = task_create(
+			"Serial Task",
+			120,
+			7000,
+			serial_task,
+			(char* const*) child_argv);
+	if (serial_pid < 0) {
+		printf("Failed to create Serial task\n");
+	}
 
-  display_pid = task_create(
-    "Display Task",
-    110,
-    700,
-   display_task,
-    (char* const*) child_argv);
-  if (display_pid < 0) {
-    printf("Failed to create offload task\n");
-  }
 
-  return 0;
+	display_task();
+
+	while (1)
+	{
+		lv_timer_handler();
+		usleep(5*1000);
+		lv_tick_inc(5);
+		clock_update_cb();
+	}
+
+	while (1){}
+
+	return 0;
 }
 
 

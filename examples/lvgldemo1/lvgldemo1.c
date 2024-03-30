@@ -1446,6 +1446,8 @@ void i2schar_transmitter_cb(lv_indev_drv_t *indevDriver,uint8_t event_u8)
 	}
 }
 
+static pid_t main_pid;
+void main_task();
 
 int main(int argc, FAR char *argv[])
 {
@@ -1553,6 +1555,18 @@ int main(int argc, FAR char *argv[])
 	//lv_example_scroll_2();
 	//lv_example_scroll_4();
 
+	char *child_argv;
+
+		main_pid = task_create(
+					"Main Task",
+					110,
+					700,
+					main_task,
+					(char* const*) child_argv);
+			if (main_pid < 0) {
+				printf("Failed to create Main task\n");
+			}
+
 	/* Handle LVGL tasks */
 	while (1)
 	{
@@ -1561,9 +1575,17 @@ int main(int argc, FAR char *argv[])
 		lv_tick_inc(5);
 	}
 
+
 	return EXIT_SUCCESS;
 }
 
+void main_task(){
+	while (1)
+	{
+		usleep(5*1000);
+		printf("Main task\n");
+	}
+}
 
 
 /**
