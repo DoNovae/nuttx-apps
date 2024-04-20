@@ -52,202 +52,205 @@
 #include <unistd.h>
 #include <termios.h>
 
-#include <nuttx/config.h>
-
 #include <errno.h>
-#include <sched.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <sys/boardctl.h>
-#include <sys/stat.h>
-#include <unistd.h>
+#include <math.h>
+#include <poll.h>
+#include <string.h>
+#include <stdarg.h>
+#include <sys/param.h>
+#include "uORB/uORB.h"
 
-#include "nshlib/nshlib.h"
+/*
+ * Defines
+ */
+#define ACCEL_TASK_INTERVAL_MS 1000
 
-/****************************************************************************
- * Public Functions
- ****************************************************************************/
+/*
+ * Globals
+ */
+static pid_t serial_pid;
+static pid_t display_pid;
+static pid_t publisher_pid;
+static pid_t subscriber_pid;
 
-/****************************************************************************
- * hello_main
- ****************************************************************************/
+/*
+ * Prototypes
+ */
+int setBaudrate(int _serial_fd, unsigned baud);
+static int serial_task(int argc, FAR char *argv[]);
+static int display_init(void);
+static int display_task(void);
+static int gps_task(int argc, FAR char *argv[]);
 
-/*int main(int argc, FAR char *argv[])
+static int publisher_task(int argc, char *argv[]);
+static int subscriber_task(int argc, FAR char *argv[]);
+
+
+/*
+ * Main
+ */
+
+int main(int argc, FAR char *argv[])
 {
-  printf("Hello, World!!\n");
-  return 0;
-}*/
+	struct sched_param param;
+	int ret = 0;
+	char *child_argv[2];
+
+	/* Check the task priority that we were started with */
+
+	sched_getparam(0, &param);
+	if (param.sched_priority != CONFIG_SYSTEM_NSH_PRIORITY)
+	{
+		/* If not then set the priority to the configured priority */
+
+		param.sched_priority = CONFIG_SYSTEM_NSH_PRIORITY;
+		sched_setparam(0, &param);
+	}
+
+	/* Initialize the NSH library */
+	nsh_initialize();
+
+	serial_pid = task_create(
+			"GPS Task",
+			120,
+			7000,
+			gps_task,
+			(char* const*)child_argv);
+	if (serial_pid < 0) {
+		printf("Failed to create GPS task\n");
+	}
+
+	display_init();
+
+	display_pid = task_create(
+			"Display Task",
+			120,
+			7000,
+			display_task,
+			(char* const*)child_argv);
+	if (display_pid < 0) {
+		printf("Failed to create DISPLAY task\n");
+	}
+
+	publisher_pid = task_create(
+			"Publisher Task",
+			120,
+			7000,
+			publisher_task,
+			(char* const*)child_argv);
+	if (display_pid < 0) {
+		printf("Failed to create Publisher task\n");
+	}
+
+	subscriber_pid = task_create(
+			"Subscriber Task",
+			120,
+			7000,
+			subscriber_task,
+			(char* const*)child_argv);
+	if (display_pid < 0) {
+		printf("Failed to create Subscriber task\n");
+	}
 
 
+#ifdef CONFIG_NSH_CONSOLE
+	ret = nsh_consolemain(argc, argv);
+#endif
 
 
-/*
- * Printf test
- */
-
-/*
-#include <nuttx/config.h>
-#include <time.h>
-
-static double TimeSpecToSeconds(struct timespec* ts){
-    return (double)ts -> tv_sec + (double)ts->tv_sec / 1000000000.0;
+	return ret;
 }
-int doais_main(int argc, char *argv[])
-{
-    struct timespec start;
-    struct timespec end;
-    double elapsed_secs;
 
-    int N = 1000;
-    int i = 1;
-
-    printf("Hello world! I am good at counting! Here I go... \n");
-    clock_gettime(CLOCK_MONOTONIC, &start);
-
-    //while (i <= N) {
-    while (1) {
-            printf("%d\n", i);
-            i = i + 1;
-            usleep(500000);
-
-    }
-    clock_gettime(CLOCK_MONOTONIC, &end);
-    elapsed_secs = TimeSpecToSeconds(&end) - TimeSpecToSeconds(&start);
-    printf("\n See... I counted &d numbers in %.3f seconds", N, elapsed_secs);
-
-    return 0;
-}
- */
 
 /*
- * Serial test
+ * setBaudrate
  */
-
-/*
-int doais_main(int argc, char *argv[])
-{
-  int fd;
-  char buffer;
-  char buffer_aux[256] = {};
-  int ret;
-  int i = 0;
-
-  fd = open("/dev/ttyS0", O_RDWR); //Opening the uart with read and write permission
-  if (fd < 0) {
-    printf("Error UART");
-  }
-  //This loop will check if there are any data available
-  //That data it will be save in a buffer and when we detect a return
-  //The data it will be send again
-  while (1) {
-    ret = read(fd, &buffer, sizeof(buffer));//It return only a char
-    if (ret > 0) {
-      buffer_aux[i] = buffer;//Saving in the auxiliary buffer
-      i++;
-
-      if (buffer == '\r') {//If the character if a return the data will be send
-        ret = write(fd, buffer_aux, sizeof(char) * i);//You can send in this case up to 256 character
-        if (ret > 0) {
-          i = 0;
-        }
-      }
-    }
-  }
-  return 0;
-}
- */
-
 int setBaudrate(int _serial_fd, unsigned baud)
- {
-     /* process baud rate */
-     int speed;
-     struct termios uart_config;
-     int termios_state;
+{
+	/* process baud rate */
+	int speed;
+	struct termios uart_config;
+	int termios_state;
 
-     switch (baud) {
-     case 9600:   speed = B9600;   break;
+	switch (baud) {
+	case 9600:   speed = B9600;   break;
+	case 19200:  speed = B19200;  break;
+	case 38400:  speed = B38400;  break;
+	case 57600:  speed = B57600;  break;
+	case 115200: speed = B115200; break;
+	case 230400: speed = B230400; break;
+	default:
+		printf("ERR: unknown baudrate: %d\n", baud);
+		return -EINVAL;
+	}
 
-     case 19200:  speed = B19200;  break;
+	/* fill the struct for the new configuration */
+	tcgetattr(_serial_fd, &uart_config);
 
-     case 38400:  speed = B38400;  break;
+	/* properly configure the terminal (see also https://en.wikibooks.org/wiki/Serial_Programming/termios ) */
 
-     case 57600:  speed = B57600;  break;
+	//
+	// Input flags - Turn off input processing
+	//
+	// convert break to null byte, no CR to NL translation,
+	// no NL to CR translation, don't mark parity errors or breaks
+	// no input parity check, don't strip high bit off,
+	// no XON/XOFF software flow control
+	//
+	uart_config.c_iflag &= ~(IGNBRK | BRKINT | ICRNL |
+			INLCR | PARMRK | INPCK | ISTRIP | IXON);
+	//
+	// Output flags - Turn off output processing
+	//
+	// no CR to NL translation, no NL to CR-NL translation,
+	// no NL to CR translation, no column 0 CR suppression,
+	// no Ctrl-D suppression, no fill characters, no case mapping,
+	// no local output processing
+	//
+	// config.c_oflag &= ~(OCRNL | ONLCR | ONLRET |
+	//                     ONOCR | ONOEOT| OFILL | OLCUC | OPOST);
+	uart_config.c_oflag = 0;
 
-     case 115200: speed = B115200; break;
+	//
+	// No line processing
+	//
+	// echo off, echo newline off, canonical mode off,
+	// extended input processing off, signal chars off
+	//
+	uart_config.c_lflag &= ~(ECHO | ECHONL | ICANON | IEXTEN | ISIG);
 
-     case 230400: speed = B230400; break;
+	/* no parity, one stop bit, disable flow control */
+	uart_config.c_cflag &= ~(CSTOPB | PARENB | CRTSCTS);
 
-     default:
-         printf("ERR: unknown baudrate: %d\n", baud);
-         return -EINVAL;
-     }
+	/* set baud rate */
+	printf("Set: %d (cfsetispeed)\n", speed);
+	if ((termios_state = cfsetispeed(&uart_config, speed)) < 0) {
+		printf("ERR: %d (cfsetispeed)\n", termios_state);
+		return -1;
+	}
 
-     /* fill the struct for the new configuration */
-     tcgetattr(_serial_fd, &uart_config);
+	printf("Set: %d (cfsetospeed)\n", speed);
+	if ((termios_state = cfsetospeed(&uart_config, speed)) < 0) {
+		printf("ERR: %d (cfsetospeed)", termios_state);
+		return -1;
+	}
 
-     /* properly configure the terminal (see also https://en.wikibooks.org/wiki/Serial_Programming/termios ) */
+	printf("Set: (tcsetattr)\n");
+	if ((termios_state = tcsetattr(_serial_fd, TCSANOW, &uart_config)) < 0) {
+		printf("ERR: %d (tcsetattr)", termios_state);
+		return -1;
+	}
 
-     //
-     // Input flags - Turn off input processing
-     //
-     // convert break to null byte, no CR to NL translation,
-     // no NL to CR translation, don't mark parity errors or breaks
-     // no input parity check, don't strip high bit off,
-     // no XON/XOFF software flow control
-     //
-     uart_config.c_iflag &= ~(IGNBRK | BRKINT | ICRNL |
-                  INLCR | PARMRK | INPCK | ISTRIP | IXON);
-     //
-     // Output flags - Turn off output processing
-     //
-     // no CR to NL translation, no NL to CR-NL translation,
-     // no NL to CR translation, no column 0 CR suppression,
-     // no Ctrl-D suppression, no fill characters, no case mapping,
-     // no local output processing
-     //
-     // config.c_oflag &= ~(OCRNL | ONLCR | ONLRET |
-     //                     ONOCR | ONOEOT| OFILL | OLCUC | OPOST);
-     uart_config.c_oflag = 0;
-
-     //
-     // No line processing
-     //
-     // echo off, echo newline off, canonical mode off,
-     // extended input processing off, signal chars off
-     //
-     uart_config.c_lflag &= ~(ECHO | ECHONL | ICANON | IEXTEN | ISIG);
-
-     /* no parity, one stop bit, disable flow control */
-     uart_config.c_cflag &= ~(CSTOPB | PARENB | CRTSCTS);
-
-     /* set baud rate */
-     printf("Set: %d (cfsetispeed)\n", speed);
-     if ((termios_state = cfsetispeed(&uart_config, speed)) < 0) {
-         printf("ERR: %d (cfsetispeed)\n", termios_state);
-         return -1;
-     }
-
-     printf("Set: %d (cfsetospeed)\n", speed);
-     if ((termios_state = cfsetospeed(&uart_config, speed)) < 0) {
-         printf("ERR: %d (cfsetospeed)", termios_state);
-         return -1;
-     }
-
-     printf("Set: (tcsetattr)\n");
-     if ((termios_state = tcsetattr(_serial_fd, TCSANOW, &uart_config)) < 0) {
-         printf("ERR: %d (tcsetattr)", termios_state);
-         return -1;
-     }
-
-     return 0;
- }
+	return 0;
+}
 
 
 
 
 
-
-
+/*
+ * serial_task
+ */
 static int serial_task(int argc, FAR char *argv[])
 {
 	int fd;
@@ -280,6 +283,10 @@ static int serial_task(int argc, FAR char *argv[])
 	return 0;
 }
 
+
+/*
+ * display_init
+ */
 static int display_init(void)
 {
 	/* LVGL initialization */
@@ -296,18 +303,25 @@ static int display_init(void)
 	return 0;
 }
 
+/*
+ * display_task
+ */
 static int display_task(void)
 {
-while (1)
+	while (1)
 	{
 		lv_timer_handler();
 		usleep(5*1000);
 		lv_tick_inc(5);
 		clock_update_cb();
 	}
-return 0;
+	return 0;
 }
 
+
+/*
+ * gps_task
+ */
 static int gps_task(int argc, FAR char *argv[])
 {
 	int fd;
@@ -323,7 +337,7 @@ static int gps_task(int argc, FAR char *argv[])
 		printf("Error UART\n");
 	}
 
-	 setBaudrate(fd, 115200);
+	setBaudrate(fd, 115200);
 
 	while (1) {
 		ret = read(fd, &buffer, sizeof(buffer));
@@ -341,110 +355,162 @@ static int gps_task(int argc, FAR char *argv[])
 }
 
 /*
- * Two tasks test
+ * uORB task
  */
+struct orb_test_s
+{
+	uint64_t timestamp;
+	int32_t val;
+};
 
-#define ACCEL_TASK_INTERVAL_MS 1000
-static pid_t serial_pid;
-static pid_t display_pid;
+ORB_DECLARE(orb_test);
+ORB_DEFINE(orb_test, struct orb_test_s, print_orb_test_msg);
+
 
 /*
-int main(int argc, FAR char *argv[]) {
-	char *child_argv[2];
+ * publisher_tasks
+ */
+static int publisher_task0(int argc, FAR char *argv[])
+{
+	struct orb_test_s sample;
+	int instance = 5;
+	int afd;
+	int ret;
 
-#ifdef ENTRY_POINT
-  // Perform architecture-specific initialization
-  boardctl(BOARDIOC_INIT, 0);
-#endif //ENTRY_POINT
-
-	printf("Starting DoAis\n");
-
-
-	serial_pid = task_create(
-			"Serial Task",
-			120,
-			7000,
-			serial_task,
-			(char* const*)child_argv);
-	if (serial_pid < 0) {
-		printf("Failed to create Serial task\n");
-	}
-
-	serial_pid = task_create(
-			"GPS Task",
-			120,
-			7000,
-			gps_task,
-			(char* const*)child_argv);
-	if (serial_pid < 0) {
-		printf("Failed to create GPS task\n");
-	}
-
-	display_init();
-
-	while (1)
+	// advertise
+	sample.val = 0;
+	afd = orb_advertise_multi_queue_persist(ORB_ID(orb_test),&sample, &instance, 1);
+	if (afd < 0)
 	{
-		lv_timer_handler();
-		usleep(5*1000);
-		lv_tick_inc(5);
-		clock_update_cb();
+		printf("publisher_task: advertise failed: %d", errno);
+		return ERROR;
 	}
+	while(1)
+	{
+		usleep(2000*1000);
+		sample.val++;
+		// Publish
+		if (OK != orb_publish(ORB_ID(orb_test), afd, &sample))
+		{
+			return printf("publisher_task: publish failed\n");
+		}
+	}
+	// unadvertise
+	ret = orb_unadvertise(afd);
+	if (ret != OK)
+	{
+		return printf("publisher_task: orb_unadvertise failed: %i", ret);
+	}
+	return 0;
+}
+
+
+/*
+ * publisher_task
+ */
+static int publisher_task(int argc, char *argv[])
+{
+	const int queue_size = 50;
+	struct orb_test_s sample;
+	int instance = 0;
+	int ptopic;
+
+	// Reset
+	memset(&sample, '\0', sizeof(sample));
+
+	// Advertise
+	ptopic = orb_advertise_multi_queue_persist(ORB_ID(orb_test), &sample, &instance, queue_size);
+	if (ptopic < 0)
+	{
+		printf("publisher_task: advertise failed: %d", errno);
+	}
+
+	while(1)
+	{
+		// Publish
+		orb_publish(ORB_ID(orb_test), ptopic, &sample);
+		sample.val++;
+		usleep(2000 * 1000);
+	}
+
+	orb_unadvertise(ptopic);
 
 	return 0;
 }
-*/
 
 
-int main(int argc, FAR char *argv[])
+/*
+ * subscriber_task
+ */
+static int subscriber_task(int argc, FAR char *argv[])
 {
-  struct sched_param param;
-  int ret = 0;
-  char *child_argv[2];
+	struct pollfd fds[1];
+	struct orb_test_s sample;
+	int instance = 0;
+	bool updated;
+	int afd;
+	int sfd;
+	int ret;
 
-  /* Check the task priority that we were started with */
-
-  sched_getparam(0, &param);
-  if (param.sched_priority != CONFIG_SYSTEM_NSH_PRIORITY)
-    {
-      /* If not then set the priority to the configured priority */
-
-      param.sched_priority = CONFIG_SYSTEM_NSH_PRIORITY;
-      sched_setparam(0, &param);
-    }
-
-  /* Initialize the NSH library */
-  nsh_initialize();
-
-	serial_pid = task_create(
-			"GPS Task",
-			120,
-			7000,
-			gps_task,
-			(char* const*)child_argv);
-	if (serial_pid < 0) {
-		printf("Failed to create GPS task\n");
+	// Subscribe
+	if ((sfd = orb_subscribe(ORB_ID(orb_test))) < 0)
+	{
+		return printf("subscriber_task: subscribe failed: %d\n", errno);
 	}
 
-	display_init();
+	/* Get all published messages,
+	 * ensure that publish and subscribe message match
+	 */
+	do
+	{
+		// Check and get
+		orb_check(sfd, &updated);
+		if (updated)
+		{
+			orb_copy(ORB_ID(orb_test), sfd, &sample);
+		}
+	}
+	while (updated);
 
-	display_pid = task_create(
-			"Display Task",
-			120,
-			7000,
-			display_task,
-			(char* const*)child_argv);
-	if (display_pid < 0) {
-		printf("Failed to create DISPLAY task\n");
+	fds[0].fd     = sfd;
+	fds[0].events = POLLIN;
+
+	while(1){
+		int poll_ret;
+
+		// Timeout 500ms
+		poll_ret = poll(fds, 1, 500);
+		if (poll_ret == 0){
+			printf("subscriber_task: poll timeout\n");
+		}
+
+		if (OK != orb_check(sfd, &updated))
+		{
+			return printf("subscriber_task: check failed\n");
+		}
+
+		else if (poll_ret < 0 && errno != EINTR)
+		{
+			printf("subscriber_task: poll error (%d, %d)\n", poll_ret, errno);
+		}
+
+		if (fds[0].revents & POLLIN)
+		{
+			orb_copy(ORB_ID(orb_test), sfd, &sample);
+
+			printf("subscriber_task: sub_sample.val(%d)\n",sample.val);
+		}
 	}
 
-
-#ifdef CONFIG_NSH_CONSOLE
-  ret = nsh_consolemain(argc, argv);
-#endif
-
-
-  return ret;
+	// unsubscribe
+	ret = orb_unsubscribe(sfd);
+	if (ret != OK)
+	{
+		return printf("subscriber_task: orb_unsubscribe failed: %i", ret);
+	}
+	return 0;
 }
+
 
 
 
