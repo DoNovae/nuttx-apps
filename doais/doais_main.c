@@ -79,17 +79,22 @@ static pid_t subscriber_pid;
 int setBaudrate(int _serial_fd, unsigned baud);
 static int serial_task(int argc, FAR char *argv[]);
 static int display_init(void);
-static int display_task(void);
+static int display_task(int argc, FAR char *argv[]);
 static int gps_task(int argc, FAR char *argv[]);
 
 static int publisher_task(int argc, char *argv[]);
 static int subscriber_task(int argc, FAR char *argv[]);
 
+static int mng_publisher_task(int argc, char *argv[]);
+static int mng_subscriber_task(int argc, FAR char *argv[]);
+
+static int mng_dev_publisher_task(int argc, char *argv[]);
+static int mng_dev_subscriber_task(int argc, FAR char *argv[]);
+
 
 /*
  * Main
  */
-
 int main(int argc, FAR char *argv[])
 {
 	struct sched_param param;
@@ -136,7 +141,7 @@ int main(int argc, FAR char *argv[])
 			"Publisher Task",
 			120,
 			7000,
-			publisher_task,
+			mng_dev_publisher_task,
 			(char* const*)child_argv);
 	if (display_pid < 0) {
 		printf("Failed to create Publisher task\n");
@@ -146,17 +151,15 @@ int main(int argc, FAR char *argv[])
 			"Subscriber Task",
 			120,
 			7000,
-			subscriber_task,
+			mng_dev_subscriber_task,
 			(char* const*)child_argv);
 	if (display_pid < 0) {
 		printf("Failed to create Subscriber task\n");
 	}
 
-
 #ifdef CONFIG_NSH_CONSOLE
 	ret = nsh_consolemain(argc, argv);
 #endif
-
 
 	return ret;
 }
@@ -306,7 +309,7 @@ static int display_init(void)
 /*
  * display_task
  */
-static int display_task(void)
+static int display_task(int argc, FAR char *argv[])
 {
 	while (1)
 	{
@@ -357,14 +360,40 @@ static int gps_task(int argc, FAR char *argv[])
 /*
  * uORB task
  */
+
+#define MNG_CMD_SIZE 256
+
 struct orb_test_s
 {
 	uint64_t timestamp;
 	int32_t val;
 };
 
+struct mng_msg_s
+{
+	uint64_t timestamp;
+	char cmd_cha[MNG_CMD_SIZE];
+};
+
+//static void print_orb_test_msg(FAR const struct orb_metadata *meta,FAR const void *buffer);
+static void print_mng_msg(FAR const struct orb_metadata *meta,FAR const void *buffer);
+
+static void print_mng_msg(FAR const struct orb_metadata *meta,FAR const void *buffer)
+{
+	FAR const struct mng_msg_s *message = buffer;
+	const orb_abstime now = orb_absolute_time();
+
+	uorbinfo_raw("%s:\ttimestamp: %"PRIu64" (%"PRIu64" us ago) val: %s",
+			meta->o_name, message->timestamp, now - message->timestamp,
+			message->cmd_cha);
+}
+
+
+
 ORB_DECLARE(orb_test);
+ORB_DECLARE(mng_msg);
 ORB_DEFINE(orb_test, struct orb_test_s, print_orb_test_msg);
+ORB_DEFINE(mng_msg,struct mng_msg_s,print_mng_msg);
 
 
 /*
@@ -373,7 +402,7 @@ ORB_DEFINE(orb_test, struct orb_test_s, print_orb_test_msg);
 static int publisher_task0(int argc, FAR char *argv[])
 {
 	struct orb_test_s sample;
-	int instance = 5;
+	int instance = 0;
 	int afd;
 	int ret;
 
@@ -385,6 +414,7 @@ static int publisher_task0(int argc, FAR char *argv[])
 		printf("publisher_task: advertise failed: %d", errno);
 		return ERROR;
 	}
+
 	while(1)
 	{
 		usleep(2000*1000);
@@ -446,9 +476,7 @@ static int subscriber_task(int argc, FAR char *argv[])
 {
 	struct pollfd fds[1];
 	struct orb_test_s sample;
-	int instance = 0;
 	bool updated;
-	int afd;
 	int sfd;
 	int ret;
 
@@ -511,6 +539,229 @@ static int subscriber_task(int argc, FAR char *argv[])
 	return 0;
 }
 
+
+/*
+ * mng_publisher_task
+ */
+static int mng_publisher_task(int argc, char *argv[])
+{
+	const int queue_size = 50;
+	struct mng_msg_s sample;
+	int instance = 0;
+	int ptopic;
+	uint16_t cpt_u16=0;
+
+	// Reset
+	memset(&sample, '\0', sizeof(sample));
+
+	// Advertise
+	ptopic = orb_advertise_multi_queue_persist(ORB_ID(mng_msg), &sample, &instance, queue_size);
+	if (ptopic < 0)
+	{
+		printf("mng_publisher_task: advertise failed: %d", errno);
+		return 0;
+	}
+
+	while(1)
+	{
+		cpt_u16++;
+		memset(sample.cmd_cha,0,MNG_CMD_SIZE);
+		snprintf(sample.cmd_cha,MNG_CMD_SIZE,"msg(%d)",cpt_u16);
+		// Publish
+		orb_publish(ORB_ID(mng_msg), ptopic, &sample);
+		usleep(2000 * 1000);
+	}
+
+	orb_unadvertise(ptopic);
+
+	return 0;
+}
+
+
+/*
+ * mng_subscriber_task
+ */
+static int mng_subscriber_task(int argc, FAR char *argv[])
+{
+	struct pollfd fds[1];
+	struct mng_msg_s sample;
+	bool updated;
+	int sfd;
+	int ret;
+
+	// Subscribe
+	if ((sfd = orb_subscribe(ORB_ID(mng_msg))) < 0)
+	{
+		printf("mng_subscriber_task: subscribe failed: %d\n", errno);
+		return 0;
+	}
+
+	/* Get all published messages,
+	 * ensure that publish and subscribe message match
+	 */
+	do
+	{
+		// Check and get
+		orb_check(sfd, &updated);
+		if (updated)
+		{
+			orb_copy(ORB_ID(mng_msg),sfd,&sample);
+		}
+	}
+	while (updated);
+
+	fds[0].fd     = sfd;
+	fds[0].events = POLLIN;
+
+	while(1){
+		int poll_ret;
+
+		// Timeout 500ms
+		poll_ret = poll(fds, 1,1000);
+		if (poll_ret == 0){
+			printf("mng_subscriber_task: poll timeout\n");
+		}
+
+		if (OK != orb_check(sfd, &updated))
+		{
+			return printf("mng_subscriber_task: check failed\n");
+		}
+
+		else if (poll_ret < 0 && errno != EINTR)
+		{
+			printf("mng_subscriber_task: poll error (%d, %d)\n", poll_ret, errno);
+		}
+
+		if (fds[0].revents & POLLIN)
+		{
+			orb_copy(ORB_ID(mng_msg),sfd,&sample);
+
+			printf("mng_subscriber_task: %s\n",sample.cmd_cha);
+		}
+	}
+
+	// unsubscribe
+	ret = orb_unsubscribe(sfd);
+	if (ret != OK)
+	{
+		return printf("mng_subscriber_task: orb_unsubscribe failed: %i", ret);
+	}
+	return 0;
+}
+
+
+
+
+/*
+ * /dev/uorb/mng_msg0
+ */
+#define MNG_UORB_DEV_PATH "/dev/uorb/mng_msg0"
+
+static int mng_dev_publisher_task(int argc, char *argv[])
+{
+	struct mng_msg_s sample;
+	const int queue_size = 50;
+	int instance = 0;
+	int ptopic;
+	uint16_t cpt_u16=0;
+	int sfd;
+
+	// Subscribe
+	sfd=-1;
+	while (sfd < 0)
+	{
+		sfd = orb_open("mng_msg",0,O_WRONLY);
+		printf("mng_dev_publisher_task: subscribe failed: %d\n",errno);
+		usleep(1000 * 1000);
+	}
+
+	// Reset
+	memset(&sample, '\0', sizeof(sample));
+
+	while(1)
+	{
+		cpt_u16++;
+		memset(sample.cmd_cha,0,MNG_CMD_SIZE);
+		snprintf(sample.cmd_cha,MNG_CMD_SIZE,"msg(%d)\0",cpt_u16);
+		// Publish
+		orb_publish(ORB_ID(mng_msg),sfd,&sample);
+		printf("mng_dev_publisher_task: %s\n",sample.cmd_cha);
+		usleep(2000 * 1000);
+	}
+	close(sfd);
+	orb_unadvertise(ptopic);
+
+	return 0;
+}
+
+
+
+/*
+ * mng_subscriber_task
+ */
+static int mng_dev_subscriber_task(int argc, FAR char *argv[])
+{
+	struct pollfd fds[1];
+	struct mng_msg_s sample;
+	const int queue_size = 20;
+	int instance = 0;
+	bool updated;
+	int sfd;
+	int ret;
+
+	// Advertise
+	sfd = orb_advertise_multi_queue_persist(ORB_ID(mng_msg), &sample, &instance, queue_size);
+	if (sfd < 0)
+	{
+		printf("mng_dev_publisher_task: advertise failed: %d", errno);
+		return -1;
+	}
+
+	// Subscribe
+	if ((sfd = orb_subscribe(ORB_ID(mng_msg))) < 0)
+	{
+		 printf("mng_dev_subscriber_task: subscribe failed: %d\n", errno);
+		 return 0;
+	}
+
+	fds[0].fd     = sfd;
+	fds[0].events = POLLIN;
+
+	while(1){
+		int poll_ret;
+
+		// Timeout 500ms
+		poll_ret = poll(fds, 1,1000);
+		if (poll_ret == 0){
+			printf("mng_dev_subscriber_task: poll timeout\n");
+		}
+
+		if (OK != orb_check(sfd, &updated))
+		{
+			return printf("mng_dev_subscriber_task: check failed\n");
+		}
+
+		else if (poll_ret < 0 && errno != EINTR)
+		{
+			printf("mng_dev_subscriber_task: poll error (%d, %d)\n", poll_ret, errno);
+		}
+
+		if (fds[0].revents & POLLIN)
+		{
+			orb_copy(ORB_ID(mng_msg),sfd,&sample);
+
+			printf("mng_dev_subscriber_task: %s\n",sample.cmd_cha);
+		}
+	}
+
+	// unsubscribe
+	ret = orb_unsubscribe(sfd);
+	if (ret != OK)
+	{
+		return printf("mng_dev_subscriber_task: orb_unsubscribe failed: %i", ret);
+	}
+	return 0;
+}
 
 
 
