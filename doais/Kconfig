@@ -9,21 +9,4 @@ config DOAIS
 	---help---
 		Enable the DoAIs
 
-if DOAIS
 
-config DOAIS_PROGNAME
-	string "Program name"
-	default "doais"
-	---help---
-		This is the name of the program that will be used when the NSH ELF
-		program is installed.
-
-config DOAIS_PRIORITY
-	int "DoAIs task priority"
-	default 100
-
-config DOAIS_STACKSIZE
-	int "DoAis stack size"
-	default DEFAULT_TASK_STACKSIZE
-
-endif

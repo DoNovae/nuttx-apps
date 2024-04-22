@@ -21,13 +21,21 @@
 include $(APPDIR)/Make.defs
 
 
-PROGNAME  = $(CONFIG_DOAIS_PROGNAME)
-PRIORITY  = $(CONFIG_DOAIS_PRIORITY)
-STACKSIZE = $(CONFIG_DOAIS_STACKSIZE)
+CSRCS    += $(wildcard src/*.c)
+CFLAGS += -I./inc -I./incm
+
+MAINSRC += src/doais_main.c
+PROGNAME  += "doais"
+
+MAINSRC  += src/doais_mng.c
+PROGNAME += doais_mng
+
+#PRIORITY  = $(CONFIG_DOAIS_PRIORITY)
+#STACKSIZE = $(CONFIG_DOAIS_STACKSIZE)
+#MODULE    = $(CONFIG_DOAIS)
+
+PRIORITY  = 100
+STACKSIZE = 20480
 MODULE    = $(CONFIG_DOAIS)
-
-CSRCS = ui_clock.c img_hand.c
-MAINSRC = doais_main.c
-
 
 include $(APPDIR)/Application.mk
