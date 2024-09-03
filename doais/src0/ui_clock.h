@@ -4,6 +4,7 @@
 #include <lvgl/src/hal/lv_hal_tick.h>
 #include <lvgl/src/misc/lv_color.h>
 
+
 #ifndef UI_CLOCK_H
 #define UI_CLOCK_H
 
@@ -39,6 +40,7 @@
   /**
    * A clock display 
    */
+
   void lv_clock_display(lv_obj_t *parent);
    void clock_update_cb(void);
 

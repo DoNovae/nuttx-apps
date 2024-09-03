@@ -41,7 +41,9 @@
 
 #include "nshlib/nshlib.h"
 
+extern "C" {
 #include "ui_clock.h"
+}
 
 #include <sys/ioctl.h>
 #include <stdint.h>
@@ -52,7 +54,7 @@
 #include <unistd.h>
 #include <termios.h>
 
-#include "doais_mng.h"
+#include "../inc0/doais_mng.h"
 
 /*
  * Defines
@@ -63,10 +65,10 @@
  * Globals
  */
 static pid_t serial_pid;
+static pid_t gps_pid;
 static pid_t display_pid;
 static pid_t publisher_pid;
 static pid_t subscriber_pid;
-
 
 
 /*
@@ -77,7 +79,7 @@ static pid_t subscriber_pid;
     sizeof(structure), \
   };
 #endif
-*/
+ */
 ORB_DEFINE(orb_test1,struct orb_test1_s,0);
 
 /*
@@ -102,6 +104,8 @@ static int mng_dev_subscriber_task(int argc, FAR char *argv[]);
 /*
  * Main
  */
+extern "C"
+{
 int main(int argc, FAR char *argv[])
 {
 	struct sched_param param;
@@ -109,12 +113,10 @@ int main(int argc, FAR char *argv[])
 	char *child_argv[2];
 
 	/* Check the task priority that we were started with */
-
 	sched_getparam(0, &param);
 	if (param.sched_priority != CONFIG_SYSTEM_NSH_PRIORITY)
 	{
 		/* If not then set the priority to the configured priority */
-
 		param.sched_priority = CONFIG_SYSTEM_NSH_PRIORITY;
 		sched_setparam(0, &param);
 	}
@@ -122,8 +124,8 @@ int main(int argc, FAR char *argv[])
 	/* Initialize the NSH library */
 	nsh_initialize();
 
-	serial_pid = task_create(
-			"GPS Task",
+	gps_pid = task_create(
+			"GPS",
 			120,
 			7000,
 			gps_task,
@@ -132,10 +134,12 @@ int main(int argc, FAR char *argv[])
 		printf("Failed to create GPS task\n");
 	}
 
+	/*
+	 * Display Task
+	 */
 	display_init();
-
 	display_pid = task_create(
-			"Display Task",
+			"Display",
 			120,
 			7000,
 			display_task,
@@ -144,23 +148,23 @@ int main(int argc, FAR char *argv[])
 		printf("Failed to create DISPLAY task\n");
 	}
 
-//	publisher_pid = task_create(
-//			"Publisher Task",
-//			120,
-//			7000,
-//			mng_dev_publisher_task,
-//			(char* const*)child_argv);
-//	if (display_pid < 0) {
-//		printf("Failed to create Publisher task\n");
-//	}
-
-	subscriber_pid = task_create(
-			"Subscriber Task",
+	publisher_pid = task_create(
+			"Publisher",
 			120,
 			7000,
-			mng_dev_subscriber_task,
+			publisher_task,
 			(char* const*)child_argv);
-	if (display_pid < 0) {
+	if (publisher_pid < 0) {
+		printf("Failed to create Publisher task\n");
+	}
+
+	subscriber_pid = task_create(
+			"Subscriber",
+			120,
+			7000,
+			subscriber_task,
+			(char* const*)child_argv);
+	if (subscriber_pid < 0) {
 		printf("Failed to create Subscriber task\n");
 	}
 
@@ -169,6 +173,7 @@ int main(int argc, FAR char *argv[])
 #endif
 
 	return ret;
+}
 }
 
 
@@ -367,23 +372,15 @@ static int gps_task(int argc, FAR char *argv[])
 /*
  * uORB task
  */
-
-
-//static void print_orb_test1_msg(FAR const struct orb_metadata *meta,FAR const void *buffer);
-static void print_mng_msg(FAR const struct orb_metadata *meta,FAR const void *buffer);
-
 static void print_mng_msg(FAR const struct orb_metadata *meta,FAR const void *buffer)
 {
-	FAR const struct mng_msg_s *message = buffer;
+	FAR const struct mng_msg_s *message = (const struct mng_msg_s*)buffer;
 	const orb_abstime now = orb_absolute_time();
 
 	uorbinfo_raw("%s:\ttimestamp: %"PRIu64" (%"PRIu64" us ago) val: %s",
 			meta->o_name, message->timestamp, now - message->timestamp,
 			message->cmd_cha);
 }
-
-
-
 
 
 
@@ -431,7 +428,7 @@ static int publisher_task0(int argc, FAR char *argv[])
  */
 static int publisher_task(int argc, char *argv[])
 {
-	const int queue_size = 50;
+	const int queue_size = 10;
 	struct orb_test1_s sample;
 	int instance = 0;
 	int ptopic;
@@ -439,8 +436,31 @@ static int publisher_task(int argc, char *argv[])
 	// Reset
 	memset(&sample, '\0', sizeof(sample));
 
-	// Advertise
-	ptopic = orb_advertise_multi_queue_persist(ORB_ID(orb_test1), &sample, &instance, queue_size);
+
+	/****************************************************************************
+	 * Name: orb_advertise_multi_queue
+	 *
+	 * Description:
+	 *   This performs the initial advertisement of a topic; it creates the topic
+	 *   node in /dev/uorb and publishes the initial data.
+	 *
+	 * Input Parameters:
+	 *   meta         The uORB metadata (usually from the ORB_ID() macro)
+	 *   data         A pointer to the initial data to be published.
+	 *   instance     Pointer to an integer which yield the instance ID,
+	 *                (has default 0 if pointer is NULL).
+	 *   queue_size   Maximum number of buffered elements.
+	 *
+	 * Returned Value:
+	 *   -1 on error, otherwise returns an file descriptor
+	 *   that can be used to publish to the topic.
+	 *   If the topic in question is not known (due to an
+	 *   ORB_DEFINE with no corresponding ORB_DECLARE)
+	 *   this function will return -1 and set errno to ENOENT.
+	 ****************************************************************************/
+	//#define ORB_ID(name)  &g_orb_##name
+
+	ptopic = orb_advertise_multi_queue(ORB_ID(orb_test1), &sample, &instance, queue_size);
 	if (ptopic < 0)
 	{
 		printf("publisher_task: advertise failed: %d", errno);
@@ -451,7 +471,7 @@ static int publisher_task(int argc, char *argv[])
 		// Publish
 		orb_publish(ORB_ID(orb_test1), ptopic, &sample);
 		sample.val++;
-		usleep(2000 * 1000);
+		usleep(200 * 1000);
 	}
 
 	orb_unadvertise(ptopic);
@@ -496,9 +516,10 @@ static int subscriber_task(int argc, FAR char *argv[])
 
 	while(1){
 		int poll_ret;
+		int nb_objects=1;
 
-		// Timeout 500ms
-		poll_ret = poll(fds, 1, 500);
+		// Timeout 2s
+		poll_ret = poll(fds, nb_objects,2000*1000);
 		if (poll_ret == 0){
 			printf("subscriber_task: poll timeout\n");
 		}
@@ -519,6 +540,7 @@ static int subscriber_task(int argc, FAR char *argv[])
 
 			printf("subscriber_task: sub_sample.val(%d)\n",sample.val);
 		}
+		usleep(250 * 1000);
 	}
 
 	// unsubscribe
@@ -607,8 +629,8 @@ static int mng_subscriber_task(int argc, FAR char *argv[])
 	while(1){
 		int poll_ret;
 
-		// Timeout 500ms
-		poll_ret = poll(fds, 1,1000);
+		// Timeout 1000ms
+		poll_ret = poll(fds, 1,1000*1000);
 		if (poll_ret == 0){
 			printf("mng_subscriber_task: poll timeout\n");
 		}
@@ -617,7 +639,6 @@ static int mng_subscriber_task(int argc, FAR char *argv[])
 		{
 			return printf("mng_subscriber_task: check failed\n");
 		}
-
 		else if (poll_ret < 0 && errno != EINTR)
 		{
 			printf("mng_subscriber_task: poll error (%d, %d)\n", poll_ret, errno);
@@ -687,7 +708,7 @@ static int mng_dev_publisher_task(int argc, char *argv[])
 
 
 /*
- * mng_subscriber_task
+ * mng_dev_subscriber_task
  */
 static int mng_dev_subscriber_task(int argc, FAR char *argv[])
 {
@@ -710,8 +731,8 @@ static int mng_dev_subscriber_task(int argc, FAR char *argv[])
 	// Subscribe
 	if ((sfd = orb_subscribe(ORB_ID(mng_msg))) < 0)
 	{
-		 printf("mng_dev_subscriber_task: subscribe failed: %d\n", errno);
-		 return 0;
+		printf("mng_dev_subscriber_task: subscribe failed: %d\n", errno);
+		return 0;
 	}
 
 	fds[0].fd     = sfd;
@@ -740,6 +761,11 @@ static int mng_dev_subscriber_task(int argc, FAR char *argv[])
 		{
 			orb_copy(ORB_ID(mng_msg),sfd,&sample);
 			printf("mng_dev_subscriber_task: %s\n",sample.cmd_cha);
+			/*
+			 * TODO
+			 * Parse cmd_cha :
+			 * 	cf get_serial_commands in doais_serial.cpp
+			 */
 		}
 	}
 
