@@ -40,6 +40,21 @@
 #define LOG_W(format, ...) syslog(LOG_WARNING,format, ##__VA_ARGS__)
 #define LOG_V(format, ...) syslog(LOG_WARNING,format, ##__VA_ARGS__)
 
+#define _min(a,b) ((a)<(b)?(a):(b))
+#define _max(a,b) ((a)>(b)?(a):(b))
+#define _abs(x) ((x)>0?(x):-(x))  // abs() comes from STL
+#define constrain(amt,low,high) ((amt)<(low)?(low):((amt)>(high)?(high):(amt)))
+#define _round(x)     ((x)>=0?(long)((x)+0.5):(long)((x)-0.5))  // round() comes from STL
+#define radians(deg) ((deg)*DEG_TO_RAD)
+#define degrees(rad) ((rad)*RAD_TO_DEG)
+#define sq(x) ((x)*(x))
+#define WITHIN(V,L,H) ((V) >= (L) && (V) <= (H))
+#define NUMERIC(a) WITHIN(a, '0', '9')
+#define NUMERIC_SIGNED(a) (NUMERIC(a) || (a) == '-')
+#define COUNT(a) (sizeof(a)/sizeof(*a))
+//#define ZERO(a) memset(a,0,sizeof(a))
+#define COPY(a,b) memcpy(a,b,min(sizeof(a),sizeof(b)))
+
 //#define USE_WATCHDOG
 #define EEPROM_SIZE 4096
 #define LOGGER_BAUDRATE 115200

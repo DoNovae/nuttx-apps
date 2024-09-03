@@ -54,7 +54,9 @@ extern "C" {
 #include <unistd.h>
 #include <termios.h>
 
-#include "../inc0/doais_mng.h"
+#include "doais_mng.h"
+
+#include "doais_serial.h"
 
 /*
  * Defines
@@ -106,6 +108,7 @@ static int mng_dev_subscriber_task(int argc, FAR char *argv[]);
  * Main
  * --------------------------
  *  Must be compiled in C for autostart
+ * ==========================
  */
 extern "C"
 {
@@ -127,12 +130,12 @@ int main(int argc, FAR char *argv[])
 	/* Initialize the NSH library */
 	nsh_initialize();
 
-	gps_pid = task_create(
-			"GPS",
-			120,
-			7000,
-			gps_task,
-			(char* const*)child_argv);
+	/*
+	 * =================
+	 * Creation of tasks
+	 * =================
+	 */
+	gps_pid = task_create("GPS",120,7000,gps_task,(char* const*)child_argv);
 	if (serial_pid < 0) {
 		printf("Failed to create GPS task\n");
 	}
@@ -141,32 +144,23 @@ int main(int argc, FAR char *argv[])
 	 * Display Task
 	 */
 	display_init();
-	display_pid = task_create(
-			"Display",
-			120,
-			7000,
-			display_task,
-			(char* const*)child_argv);
+	display_pid = task_create("Display",120,7000,display_task,(char* const*)child_argv);
 	if (display_pid < 0) {
 		printf("Failed to create DISPLAY task\n");
 	}
 
-	publisher_pid = task_create(
-			"Publisher",
-			120,
-			7000,
-			publisher_task,
-			(char* const*)child_argv);
+	/*
+	 * Publisher Task
+	 */
+	publisher_pid = task_create("Publisher",120,7000,publisher_task,(char* const*)child_argv);
 	if (publisher_pid < 0) {
 		printf("Failed to create Publisher task\n");
 	}
 
-	subscriber_pid = task_create(
-			"Subscriber",
-			120,
-			7000,
-			subscriber_task,
-			(char* const*)child_argv);
+	/*
+	 * Subscriber Task
+	 */
+	subscriber_pid = task_create("Subscriber",120,7000,subscriber_task,(char* const*)child_argv);
 	if (subscriber_pid < 0) {
 		printf("Failed to create Subscriber task\n");
 	}
@@ -266,40 +260,6 @@ int setBaudrate(int _serial_fd, unsigned baud)
 
 
 
-/*
- * serial_task
- */
-static int serial_task(int argc, FAR char *argv[])
-{
-	int fd;
-	char buffer;
-	char buffer_aux[256] = {};
-	int ret;
-	int i = 0;
-
-	printf("Starting serial_task\n");
-
-	fd = open("/dev/ttyS0", O_RDWR);
-	if (fd < 0) {
-		printf("Error UART");
-	}
-
-	while (1) {
-		ret = read(fd, &buffer, sizeof(buffer));
-		if (ret > 0) {
-			buffer_aux[i] = buffer;
-			i++;
-
-			if (buffer == '\r') {
-				ret = write(fd, buffer_aux, sizeof(char) * i);
-				if (ret > 0) {
-					i = 0;
-				}
-			}
-		}
-	}
-	return 0;
-}
 
 
 /*

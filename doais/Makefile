@@ -22,20 +22,20 @@ include $(APPDIR)/Make.defs
 
 MODULE_DIR = $(APPDIR)/doais
 
-CFLAGS += -Iinc0 -Iincm -Iinc -Iinc/gps
-CXXFLAGS += -Iinc0 -Iincm -Iinc -Iinc/gps
+CFLAGS += -Iinc -Iincm -Iinc -Iinc/gps
+CXXFLAGS += -Iinc -Iincm -Iinc -Iinc/gps
 
 #CSRCS    += $(wildcard src/*.c)
-CSRCS    += src0/ui_clock.c src0/img_hand.c
+CSRCS    += src/ui_clock.c src/img_hand.c
+
 CXXSRCS  += srcm/configuration_store.cxx
+CXXSRCS  += src/serial/doais_serial.cxx
 
-#CXXSRCS    += src/ais_monitoring.cxx src/ais_messages.cxx
-
-MAINSRC += src0/doais_main.cxx
+MAINSRC += src/doais_main.cxx
 PROGNAME  += "doais"
 
-MAINSRC  += src0/doais_mng.c
-PROGNAME += doais_mng
+MAINSRC  += src/doais_mng.cxx
+PROGNAME += "doais_mng"
 
 #PRIORITY  = $(CONFIG_DOAIS_PRIORITY)
 #STACKSIZE = $(CONFIG_DOAIS_STACKSIZE)
