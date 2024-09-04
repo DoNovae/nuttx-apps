@@ -11,11 +11,12 @@
 #include "configuration_store.h"
 #include "ais.h"
 #include "ais_monitoring.h"
+#include "ais_channels.h"
 
 /*
- * =====================
- * MACROS
- * ====================
+ * --------------------------
+ * Defines
+ * --------------------------
  */
 #define EEPROM_VERSION "V01"
 #define SETTINGS_FILE_NAME "Doais_settings.dat"
@@ -27,6 +28,14 @@
 #define EEPROM_SKIP(VAR) fseek(File_p,sizeof(VAR),SEEK_CUR)
 #define EEPROM_WRITE(VAR) write_data((uint8_t*)&(VAR), sizeof(VAR))
 #define EEPROM_READ(VAR) read_data((uint8_t*)&(VAR), sizeof(VAR))
+
+/*
+ * --------------------------
+ * Externs
+ * --------------------------
+ */
+//extern StationData Station_data_s;
+//extern Ais_monitoring Monitoring(AIS_CHAINED_LIST_MAX_SZ,AIS_CHAINED_LABEL_MAX_SZ);
 
 /*
 void eeprom_read_block(uint8_t * data, uint32_t address, size_t len)
@@ -48,6 +57,11 @@ void eeprom_write_block(uint8_t * data, uint32_t address, size_t len)
 */
 
 
+/*
+ * --------------------------
+ * Ais_settings
+ * --------------------------
+ */
 Ais_settings::Ais_settings(){
 	File_p = fopen(SETTINGS_FILE_NAME,"w+b");
 	if (!File_p) {
@@ -74,15 +88,17 @@ void Ais_settings::postprocess()
 	/*
 	 * Station_data_s
 	 */
+	/*
 	Station_data_s.to_bow=(Station_data_s.len+1)>>1;
 	Station_data_s.to_stern=(Station_data_s.len+1)>>1;
 	Station_data_s.to_port=(Station_data_s.beam+1)>>1;
 	Station_data_s.to_starboard=(Station_data_s.beam+1)>>1;
+	*/
 
 	/*
 	 * Monitoring
 	 */
-	Monitoring.settings_s.lost_target_ticks_u32=Monitoring.settings_s.lost_target_mn_u32*MONOTORING_TICKS_1MN;
+	//Monitoring.settings_s.lost_target_ticks_u32=Monitoring.settings_s.lost_target_mn_u32*MONOTORING_TICKS_1MN;
 }
 
 const char version[4]=EEPROM_VERSION;
@@ -147,6 +163,7 @@ bool Ais_settings::save()
 	/*
 	 * AIS
 	 */
+	/*
 	EEPROM_WRITE(Station_data_s.mmsi);
 	EEPROM_WRITE(Station_data_s.beam);
 	EEPROM_WRITE(Station_data_s.len);
@@ -154,6 +171,7 @@ bool Ais_settings::save()
 	EEPROM_WRITE(Station_data_s.callsign);
 	EEPROM_WRITE(Station_data_s.shipname);
 	EEPROM_WRITE(Station_data_s.shiptype);
+	*/
 
 	/*
 	 * Wifi
@@ -179,12 +197,14 @@ bool Ais_settings::save()
 	/*
 	 * Monitoring
 	 */
+	/*
 	EEPROM_WRITE(Monitoring.settings_s.cpa_warn_10thnm_u32);
 	EEPROM_WRITE(Monitoring.settings_s.lost_target_mn_u32);
 	EEPROM_WRITE(Monitoring.settings_s.tcpa_max_mn_u32);
 	EEPROM_WRITE(Monitoring.settings_s.display_target_step_nm_u32);
 	EEPROM_WRITE(Monitoring.settings_s.speed_min_kt_u32);
 	EEPROM_WRITE(Monitoring.settings_s.gps_bauds_u32);
+	*/
 
 	if (!eeprom_write_error) {
 		const uint16_t final_checksum = eeprom_checksum;
@@ -235,6 +255,7 @@ bool Ais_settings::load()
 		/*
 		 * AIS
 		 */
+		/*
 		EEPROM_READ(Station_data_s.mmsi);
 		EEPROM_READ(Station_data_s.beam);
 		EEPROM_READ(Station_data_s.len);
@@ -242,6 +263,7 @@ bool Ais_settings::load()
 		EEPROM_READ(Station_data_s.callsign);
 		EEPROM_READ(Station_data_s.shipname);
 		EEPROM_READ(Station_data_s.shiptype);
+		*/
 
 		/*
 		 * Wifi
@@ -267,12 +289,14 @@ bool Ais_settings::load()
 		/*
 		 * Monitoring
 		 */
+		/*
 		EEPROM_READ(Monitoring.settings_s.cpa_warn_10thnm_u32);
 		EEPROM_READ(Monitoring.settings_s.lost_target_mn_u32);
 		EEPROM_READ(Monitoring.settings_s.tcpa_max_mn_u32);
 		EEPROM_READ(Monitoring.settings_s.display_target_step_nm_u32);
 		EEPROM_READ(Monitoring.settings_s.speed_min_kt_u32);
 		EEPROM_READ(Monitoring.settings_s.gps_bauds_u32);
+		*/
 
 		if (eeprom_checksum == stored_checksum) {
 			if (eeprom_read_error)
@@ -302,7 +326,7 @@ void Ais_settings::reset()
 	/*
 	 * AIS
 	 */
-	Station_data_s.reset();
+	//Station_data_s.reset();
 
 	/*
 	 * Wifi
@@ -328,12 +352,14 @@ void Ais_settings::reset()
 	/*
 	 * Monitoring
 	 */
+	/*
 	Monitoring.settings_s.cpa_warn_10thnm_u32=MONOTORING_CPA_WARN_10THNM;
 	Monitoring.settings_s.lost_target_mn_u32=MONOTORING_LOST_TARGET_MN;
 	Monitoring.settings_s.tcpa_max_mn_u32=MONOTORING_MAX_TCPA_MN;
 	Monitoring.settings_s.display_target_step_nm_u32=MONOTORING_DISPLAY_TARGET_STEP_NM;
 	Monitoring.settings_s.speed_min_kt_u32=MONITORING_DISPLAY_SPEED_MIN_KT;
 	Monitoring.settings_s.gps_bauds_u32=GPS_DEFAULT_BAUDRATE;
+	*/
 
 	/*
 	 * Post process
@@ -359,6 +385,7 @@ void Ais_settings::report(bool onwifi)
 	ais_wifi::wifi_printf("  vendorid: %s\n",Station_data_s.vendorid);
 	ais_wifi::wifi_printf("  shiptype: %d\n",Station_data_s.shiptype);
 	*/
+	/*
 	printf("%s\n","AIS");
 	printf("  mmsi: %d\n",Station_data_s.mmsi);
 	printf("  beam: %d\n",Station_data_s.beam);
@@ -368,6 +395,7 @@ void Ais_settings::report(bool onwifi)
 	printf("  shipname: %s\n",Station_data_s.shipname);
 	printf("  vendorid: %s\n",Station_data_s.vendorid);
 	printf("  shiptype: %d\n",Station_data_s.shiptype);
+	*/
 
 	/*
 	 * Wifi
@@ -408,6 +436,7 @@ void Ais_settings::report(bool onwifi)
 	ais_wifi::wifi_printf("  speed_min_kt_u32: %d\n",Monitoring.settings_s.speed_min_kt_u32);
 	ais_wifi::wifi_printf("  gps_bauds_u32: %d\n",Monitoring.settings_s.gps_bauds_u32);
 	*/
+	/*
 	printf("%s\n","Monitoring");
 	printf("  cpa_warn_10thnm: %d\n",Monitoring.settings_s.cpa_warn_10thnm_u32);
 	printf("  lost_target_mn: %d\n",Monitoring.settings_s.lost_target_mn_u32);
@@ -415,6 +444,7 @@ void Ais_settings::report(bool onwifi)
 	printf("  display_target_step_nm_u32: %d\n",Monitoring.settings_s.display_target_step_nm_u32);
 	printf("  speed_min_kt_u32: %d\n",Monitoring.settings_s.speed_min_kt_u32);
 	printf("  gps_bauds_u32: %d\n",Monitoring.settings_s.gps_bauds_u32);
+	*/
 }
 
 

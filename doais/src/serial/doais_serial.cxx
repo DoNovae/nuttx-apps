@@ -34,41 +34,21 @@
 #include "ais_monitoring.h"
 #include "types.h"
 
+/*
+ * --------------------------
+ * Defines
+ * --------------------------
+ */
+#define USLEPP_50MS (50*1000)
 
 
 /*
  * --------------------------
- * Globals data
+ * Globals
  * --------------------------
  */
-
-
-/*
- * --------------------------
- * Circular buffers
- * --------------------------
- */
-typedef uint8_t ais_buf_t[MAX_AIS_RX_PACKET_SIZE>>3];
-Circular_queue<ais_buf_t> ais_rx_buf(AIS_RX_BUF_SZ);
-Circular_queue_simple<uint8_t> ais_channel_buf(AIS_RX_BUF_SZ,0);
-Ais_monitoring Monitoring(AIS_CHAINED_LIST_MAX_SZ,AIS_CHAINED_LABEL_MAX_SZ);
-
-
-/*
- * --------------------------
- * Prototypes
- * --------------------------
- */
-
-
-/*
- * ------------------
- * Command Queue
- * ------------------
- */
+int Serial_fd;
 bool Running = true;
-//static long gcode_N;
-static long gcode_LastN, Stopped_gcode_LastN = 0;
 uint8_t commands_in_queue = 0; // Count of commands in the queue
 static uint8_t cmd_queue_index_r = 0; // Ring buffer read position
 static uint8_t cmd_queue_index_w = 0; // Ring buffer write position
@@ -79,9 +59,22 @@ static const char *injected_commands_P = NULL;
 static int serial_count = 0;
 static bool send_ok[LOGGER_BUFSIZE];
 
+
+
+/*
+ * --------------------------
+ * Prototypes
+ * --------------------------
+ */
 void get_available_commands();
 void process_next_command();
 
+
+/*
+ * --------------------------
+ * Functions
+ * --------------------------
+ */
 static bool drain_injected_commands_P() {
 	if (injected_commands_P != NULL) {
 		uint8_t i = 0;
@@ -136,23 +129,15 @@ void gcode_line_error(const char* err, bool doFlush = true) {
 
 void get_serial_commands()
 {
-	int fd;
 	char buf_c;
 	int ret_u16;
 	char serial_line_buffer[MAX_CMD_SIZE];
 	bool serial_comment_mode = false;
 
-	printf("Starting serial_task\n");
-
-	fd = open("/dev/ttyS0", O_RDWR);
-	if (fd < 0) {
-		printf("Error UART");
-	}
-
 	/**
 	 * Loop while serial characters are incoming and the queue is not full
 	 */
-	ret_u16 = read(fd, &buf_c, sizeof(buf_c));
+	ret_u16 = read(Serial_fd, &buf_c, sizeof(buf_c));
 	while ((commands_in_queue < LOGGER_BUFSIZE) && (ret_u16 > 0)) {
 
 		char serial_char = buf_c;
@@ -201,7 +186,7 @@ void get_serial_commands()
 			// The command will be injected when EOL is reached
 		}
 		else if (serial_char == '\\') {  // Handle escapes
-			ret_u16 = read(fd, &buf_c, sizeof(buf_c));
+			ret_u16 = read(Serial_fd, &buf_c, sizeof(buf_c));
 			if (ret_u16 > 0) {
 				// if we have one more character, copy it over
 				serial_char = buf_c;
@@ -423,20 +408,6 @@ inline void gcode_M603() {
 	Ais_settings::report(onwifi);
 }
 
-/*
- * ------------------------
- * M700 f<1> b<1> - Serial GPS : flush or begin\n\
- * ------------------------
- */
-inline void gcode_M700()
-{
-	uint32_t bauds_u32=code_seen('B')?code_value_ulong():9600;
-	printf("GPS serial bauds(%d)\n",bauds_u32);
-	Monitoring.settings_s.gps_bauds_u32=bauds_u32;
-	//Ais_nmea_gps_s.set_baudrate();
-}
-
-
 
 
 
@@ -556,6 +527,11 @@ void process_next_command() {
 	}
 }
 
+void ok_to_send(){
+	if (!send_ok[cmd_queue_index_r]) return;
+	printf("-> ok\n");
+}
+
 /*
  * ====================
  * serial_task
@@ -563,8 +539,12 @@ void process_next_command() {
  */
 int serial_task(int argc, FAR char *argv[])
 {
-	uint32_t local_beep_u32;
+	printf("Starting serial_task\n");
 
+	Serial_fd = open("/dev/ttyS0", O_RDWR);
+	if (Serial_fd < 0) {
+		printf("Error UART");
+	}
 	while(1){
 		if (commands_in_queue < LOGGER_BUFSIZE) get_available_commands();
 
@@ -576,7 +556,7 @@ int serial_task(int argc, FAR char *argv[])
 				if (++cmd_queue_index_r >= LOGGER_BUFSIZE) cmd_queue_index_r = 0;
 			}
 		}
-		usleep(50*1000);
+		usleep(USLEPP_50MS);
 	}
 	return 0;
 }

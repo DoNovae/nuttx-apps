@@ -40,11 +40,6 @@
 #include <sys/stat.h>
 
 #include "nshlib/nshlib.h"
-
-extern "C" {
-#include "ui_clock.h"
-}
-
 #include <sys/ioctl.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -55,13 +50,23 @@ extern "C" {
 #include <termios.h>
 
 #include "doais_mng.h"
-
 #include "doais_serial.h"
+#include "ais_channels.h"
+#include "ais_monitoring.h"
+extern "C" {
+#include "ui_clock.h"
+}
 
 /*
+ * ===================
  * Defines
+ * -------------------
  */
 #define ACCEL_TASK_INTERVAL_MS 1000
+#define TASK_PRIORITY 120
+#define TASK_STACK_SIZE 7000
+#define TASK_SERIAL_STACK_SIZE 20000
+#define USLEPP_50MS (50*1000)
 
 /*
  * Globals
@@ -71,6 +76,9 @@ static pid_t gps_pid;
 static pid_t display_pid;
 static pid_t publisher_pid;
 static pid_t subscriber_pid;
+
+//StationData Station_data_s;
+//Ais_monitoring Monitoring(AIS_CHAINED_LIST_MAX_SZ,AIS_CHAINED_LABEL_MAX_SZ);
 
 
 /*
@@ -85,10 +93,12 @@ static pid_t subscriber_pid;
 ORB_DEFINE(orb_test1,struct orb_test1_s,0);
 
 /*
+ * =================
  * Prototypes
+ * ----------------
  */
-int setBaudrate(int _serial_fd, unsigned baud);
-static int serial_task(int argc, FAR char *argv[]);
+int serial_task(int argc, FAR char *argv[]);
+
 static int display_init(void);
 static int display_task(int argc, FAR char *argv[]);
 static int gps_task(int argc, FAR char *argv[]);
@@ -101,6 +111,8 @@ static int mng_subscriber_task(int argc, FAR char *argv[]);
 
 static int mng_dev_publisher_task(int argc, char *argv[]);
 static int mng_dev_subscriber_task(int argc, FAR char *argv[]);
+
+int setBaudrate(int _serial_fd, unsigned baud);
 
 
 /*
@@ -135,19 +147,31 @@ int main(int argc, FAR char *argv[])
 	 * Creation of tasks
 	 * =================
 	 */
-	gps_pid = task_create("GPS",120,7000,gps_task,(char* const*)child_argv);
+	/*
+	gps_pid = task_create("GPS",TASK_PRIORITY,TASK_STACK_SIZE,gps_task,(char* const*)child_argv);
 	if (serial_pid < 0) {
 		printf("Failed to create GPS task\n");
 	}
+	*/
 
 	/*
 	 * Display Task
 	 */
 	display_init();
-	display_pid = task_create("Display",120,7000,display_task,(char* const*)child_argv);
+	display_pid = task_create("Display",TASK_PRIORITY,TASK_STACK_SIZE,display_task,(char* const*)child_argv);
 	if (display_pid < 0) {
 		printf("Failed to create DISPLAY task\n");
 	}
+
+	/*
+	 * Serial task
+	 */
+	/*
+	publisher_pid = task_create("Serial",TASK_PRIORITY,TASK_SERIAL_STACK_SIZE,serial_task,(char* const*)child_argv);
+	if (publisher_pid < 0) {
+		printf("Failed to create Publisher task\n");
+	}
+	*/
 
 	/*
 	 * Publisher Task
@@ -169,6 +193,11 @@ int main(int argc, FAR char *argv[])
 	ret = nsh_consolemain(argc, argv);
 #endif
 
+
+	while (1)
+	{
+		usleep(USLEPP_50MS);
+	}
 	return ret;
 }
 }
@@ -340,9 +369,7 @@ static void print_mng_msg(FAR const struct orb_metadata *meta,FAR const void *bu
 	FAR const struct mng_msg_s *message = (const struct mng_msg_s*)buffer;
 	const orb_abstime now = orb_absolute_time();
 
-	uorbinfo_raw("%s:\ttimestamp: %"PRIu64" (%"PRIu64" us ago) val: %s",
-			meta->o_name, message->timestamp, now - message->timestamp,
-			message->cmd_cha);
+	uorbinfo_raw("%s :\ttimestamp: %llu (%llu us ago) val: %s",meta->o_name, message->timestamp, now - message->timestamp,message->cmd_cha);
 }
 
 
@@ -635,9 +662,9 @@ static int mng_subscriber_task(int argc, FAR char *argv[])
 static int mng_dev_publisher_task(int argc, char *argv[])
 {
 	struct mng_msg_s sample;
-	const int queue_size = 50;
-	int instance = 0;
-	int ptopic;
+	//const int queue_size = 50;
+	//int instance = 0;
+	//int ptopic;
 	uint16_t cpt_u16=0;
 	int sfd;
 
@@ -657,7 +684,7 @@ static int mng_dev_publisher_task(int argc, char *argv[])
 	{
 		cpt_u16++;
 		memset(sample.cmd_cha,0,MNG_CMD_SIZE);
-		snprintf(sample.cmd_cha,MNG_CMD_SIZE,"msg(%d)\0",cpt_u16);
+		snprintf(sample.cmd_cha,MNG_CMD_SIZE,"msg(%d)",cpt_u16);
 		// Publish
 		orb_publish(ORB_ID(mng_msg),sfd,&sample);
 		printf("mng_dev_publisher_task: %s\n",sample.cmd_cha);

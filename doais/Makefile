@@ -29,7 +29,7 @@ CXXFLAGS += -Iinc -Iincm -Iinc -Iinc/gps
 CSRCS    += src/ui_clock.c src/img_hand.c
 
 CXXSRCS  += srcm/configuration_store.cxx
-CXXSRCS  += src/serial/doais_serial.cxx
+CXXSRCS  += src/serial/doais_serial.cxx #src/ais_monitoring.cxx
 
 MAINSRC += src/doais_main.cxx
 PROGNAME  += "doais"

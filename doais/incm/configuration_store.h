@@ -1,4 +1,12 @@
-
+/**
+ * =====================================
+ *  configuration_store.h
+ * -------------------------------------
+ *  AIS DoNovae
+ *  www.DoNovae.com
+ *  Herve Bailly
+ * =====================================
+ */
 
 #ifndef CONFIGURATION_STORE_H
 #define CONFIGURATION_STORE_H

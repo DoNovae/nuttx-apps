@@ -1,15 +1,24 @@
+/**
+ * =====================================
+ *  ais_channels.h
+ * -------------------------------------
+ *  AIS DoNovae
+ *  www.DoNovae.com
+ *  Herve Bailly
+ * =====================================
+ *
+ * =====================================
+ */
 
 
-#ifndef AISCHANNELS_H_
-#define AISCHANNELS_H_
 
 #include <inttypes.h>
 #include <string.h>
 #include <math.h>
+#include "types.h"
 
-
-
-
+#ifndef AISCHANNELS_H_
+#define AISCHANNELS_H_
 
 /*
  * -------------------

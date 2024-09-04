@@ -1,3 +1,13 @@
+/**
+ * =====================================
+ *  ais_utils.h
+ * -------------------------------------
+ *  AIS DoNovae
+ *  www.DoNovae.com
+ *  Herve Bailly
+ * =====================================
+ */
+
 #include <inttypes.h>
 #include "ais_channels.h"
 #include "ais_messages.h"
@@ -112,17 +122,17 @@ public:
 class endianess_check
 {
 private:
-	bool __LITTLE_ENDIAN;
+	bool Litle_endian;
 public:
 	inline endianess_check()
 	{
 		uint32_t w_u32=1;
 		uint8_t *bp=(uint8_t*)&w_u32;
-		__LITTLE_ENDIAN=((*bp)==0x01);
+		Litle_endian=((*bp)==0x01);
 	}
 
 	inline void print(){
-		LOG_I("test_endianess: __LITTLE_ENDIAN=%s\n",__LITTLE_ENDIAN?"YES":"NO");
+		LOG_I("test_endianess: Litle_endian=%s\n",Litle_endian?"YES":"NO");
 	}
 
 	inline void bytes2bits(uint32_t value_u32,int16_t numBits_i16)
