@@ -231,6 +231,9 @@ int main(int argc, FAR char *argv[])
 		printf("Failed to create Publisher task\n");
 	}
 	 */
+	/*
+	 * Serial Thread
+	 */
 	pthread_t pid;
 	pthread_attr_t tattr;
 	struct sched_param sparam;

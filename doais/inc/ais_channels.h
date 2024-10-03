@@ -240,7 +240,7 @@ class StationData
     uint8_t shiptype;
 
     inline StationData() {
-    	reset();
+    	//reset();
     }
 
     inline void reset() {
