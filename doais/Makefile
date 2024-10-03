@@ -23,8 +23,9 @@ include $(APPDIR)/Make.defs
 MODULE_DIR = $(APPDIR)/doais
 
 CFLAGS += -Iinc -Iincm -Iinc -Iinc/gps
-CXXFLAGS += -Iinc -Iincm -Iinc -Iinc/gps
+CXXFLAGS += -Iinc -Iincm -Iinc -Iinc/gps 
 
+#-I$(TOPDIR)/fs/littlefs/littlefs
 #CSRCS    += $(wildcard src/*.c)
 CSRCS    += src/ui_clock.c src/img_hand.c
 

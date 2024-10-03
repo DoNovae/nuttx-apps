@@ -20,6 +20,7 @@
  * MACROS
  * =============
  */
+#define DEV_MODE 1
 
 /*
  * Debug by levels
@@ -70,7 +71,6 @@
 #define MAX_CMD_SIZE 96
 #define LOGGER_BUFSIZE 4
 
-#define DEV_MODE 1
 
 /*
  * Globals

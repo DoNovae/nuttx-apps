@@ -32,14 +32,13 @@
 /*
  * Globals
  */
-ORB_DEFINE(mng_msg,struct mng_msg_s,print_mng_msg);
-
+//ORB_DEFINE(mng_msg,struct mng_msg_s,print_mng_msg);
+ORB_DEFINE(mng_msg,struct mng_msg_s,0);
 
 /*
  * Prototypes
  */
 static int mng_dev_publish(char *msg_pc);
-
 
 /*
  * Main
@@ -57,11 +56,6 @@ int main(int argc, FAR char *argv[])
 	return 0;
 }
 }
-
-
-
-
-
 
 /*
  * /dev/uorb/mng_msg0
@@ -82,10 +76,7 @@ static int mng_dev_publish(char *msg_pc)
 		if (sfd<0) usleep(1000 * 1000);
 	}while(sfd < 0);
 
-	// Reset
-	memset(&sample, '\0', sizeof(sample));
-
-
+	memset(&sample,0,sizeof(sample));
 	memset(sample.cmd_cha,0,MNG_CMD_SIZE);
 	snprintf(sample.cmd_cha,MNG_CMD_SIZE,"%s",msg_pc);
 	// Publish
@@ -95,8 +86,4 @@ static int mng_dev_publish(char *msg_pc)
 
 	return 0;
 }
-
-
-
-
 

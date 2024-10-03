@@ -1,5 +1,8 @@
-# Create a RAMDISK and mount it at XXXRDMOUNTPOINTXXX
+# Mount smart0
+set FLASH_MNT_DIR /mnt
 
-mkrd -m XXXMKRDMINORXXX -s XXMKRDSECTORSIZEXXX XXMKRDBLOCKSXXX
-mkfatfs /dev/ramXXXMKRDMINORXXX
-mount -t vfat /dev/ramXXXMKRDMINORXXX XXXRDMOUNTPOINTXXX
+mount -t smartfs /dev/smart0 $FLASH_MNT_DIR
+if test $? -eq 1 
+then 
+mksmartfs /dev/smart0
+fi

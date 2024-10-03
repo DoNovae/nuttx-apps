@@ -254,7 +254,7 @@ class StationData
     	to_starboard=0;
     	to_port=0;
     	beam=0;
-    	len=0;
+    	len=5;
     	flags=0;
         shiptype=SHIPTYPE_NONE;
     }

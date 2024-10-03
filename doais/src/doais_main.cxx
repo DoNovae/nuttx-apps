@@ -39,7 +39,7 @@
 #include <sys/boardctl.h>
 #include <sys/stat.h>
 
-#include "nshlib/nshlib.h"
+#include <nshlib/nshlib.h>
 #include <sys/ioctl.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -49,10 +49,35 @@
 #include <unistd.h>
 #include <termios.h>
 
+#include <nuttx/config.h>
+
+#include <sys/stat.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <sched.h>
+#include <errno.h>
+
+#include <errno.h>
+#include <nuttx/arch.h>
+#include <pthread.h>
+#include <semaphore.h>
+
+
+#if defined(CONFIG_FS_BINFS) && (CONFIG_BUILTIN)
+#  include <nuttx/binfmt/builtin.h>
+#endif
+
+#if defined(CONFIG_LIBC_EXECFUNCS) && defined(CONFIG_EXECFUNCS_SYMTAB)
+#  include <nuttx/binfmt/symtab.h>
+#endif
+
+
+
 #include "doais_mng.h"
 #include "doais_serial.h"
 #include "ais_channels.h"
 #include "ais_monitoring.h"
+
 extern "C" {
 #include "ui_clock.h"
 }
@@ -64,7 +89,7 @@ extern "C" {
  */
 #define ACCEL_TASK_INTERVAL_MS 1000
 #define TASK_PRIORITY 120
-#define TASK_STACK_SIZE 7000
+#define TASK_STACK_SIZE 8192
 #define TASK_SERIAL_STACK_SIZE 20000
 #define USLEPP_50MS (50*1000)
 
@@ -77,7 +102,11 @@ static pid_t display_pid;
 static pid_t publisher_pid;
 static pid_t subscriber_pid;
 
-//StationData Station_data_s;
+#if defined(CONFIG_LIBC_EXECFUNCS) && defined(CONFIG_EXECFUNCS_SYMTAB)
+const struct symtab_s CONFIG_EXECFUNCS_SYMTAB[1];
+#endif
+
+StationData Station_data_s;
 //Ais_monitoring Monitoring(AIS_CHAINED_LIST_MAX_SZ,AIS_CHAINED_LABEL_MAX_SZ);
 
 
@@ -93,11 +122,16 @@ static pid_t subscriber_pid;
 ORB_DEFINE(orb_test1,struct orb_test1_s,0);
 
 /*
- * =================
+ * ----------------
  * Prototypes
  * ----------------
  */
-int serial_task(int argc, FAR char *argv[]);
+
+/*
+ * Threads
+ */
+FAR void *serial_thread(pthread_addr_t arg);
+
 
 static int display_init(void);
 static int display_task(int argc, FAR char *argv[]);
@@ -112,18 +146,25 @@ static int mng_subscriber_task(int argc, FAR char *argv[]);
 static int mng_dev_publisher_task(int argc, char *argv[]);
 static int mng_dev_subscriber_task(int argc, FAR char *argv[]);
 
-int setBaudrate(int _serial_fd, unsigned baud);
-
+static int setBaudrate(int _serial_fd, unsigned baud);
 
 /*
  * ==========================
  * Main
  * --------------------------
  *  Must be compiled in C for autostart
+ *  NSH:
+ *    - Without implies Custom board late initialization enable
+ *  Ref:
+ *    - https://nuttx.apache.org/docs/latest/applications/nsh/customizing.html
+ *    - https://github.com/kaushalparikh/nuttx/blob/master/apps/examples/nsh/nsh_main.c
+ *    - https://cwiki.apache.org/confluence/display/NUTTX/NuttX+Initialization+Sequence
+ *    - https://github.com/kaushalparikh/nuttx/blob/master/apps/nshlib/nsh_consolemain.c
+ *    - https://github.com/projectara/nuttx/blob/master/apps/nshlib/nsh_console.c
+ *    - https://nuttx.apache.org/docs/10.0.0/components/nsh/installation.html
  * ==========================
  */
-extern "C"
-{
+extern "C" {
 int main(int argc, FAR char *argv[])
 {
 	struct sched_param param;
@@ -131,16 +172,34 @@ int main(int argc, FAR char *argv[])
 	char *child_argv[2];
 
 	/* Check the task priority that we were started with */
-	sched_getparam(0, &param);
-	if (param.sched_priority != CONFIG_SYSTEM_NSH_PRIORITY)
-	{
-		/* If not then set the priority to the configured priority */
-		param.sched_priority = CONFIG_SYSTEM_NSH_PRIORITY;
-		sched_setparam(0, &param);
-	}
+	//	sched_getparam(0, &param);
+	//	if (param.sched_priority != CONFIG_SYSTEM_NSH_PRIORITY)
+	//	{
+	//		/* If not then set the priority to the configured priority */
+	//		param.sched_priority = CONFIG_SYSTEM_NSH_PRIORITY;
+	//		sched_setparam(0, &param);
+	//	}
 
+
+	/* Make sure that we are using our symbol table */
+	//#if defined(CONFIG_LIBC_EXECFUNCS) && defined(CONFIG_EXECFUNCS_SYMTAB)
+	//  exec_setsymtab(CONFIG_EXECFUNCS_SYMTAB, 0);
+	//#endif
+	//
+	//	/* Register the BINFS file system */
+	//#if defined(CONFIG_FS_BINFS) && (CONFIG_BUILTIN)
+	//	ret = builtin_initialize();
+	//	if (ret < 0)
+	//	{
+	//		fprintf(stderr, "ERROR: builtin_initialize failed: %d\n", ret);
+	//		exitval = 1;
+	//	}
+	//#endif
+
+#ifdef CONFIG_NSH_CONSOLE
 	/* Initialize the NSH library */
 	nsh_initialize();
+#endif // CONFIG_NSH_CONSOLE
 
 	/*
 	 * =================
@@ -152,13 +211,13 @@ int main(int argc, FAR char *argv[])
 	if (serial_pid < 0) {
 		printf("Failed to create GPS task\n");
 	}
-	*/
+	 */
 
 	/*
 	 * Display Task
 	 */
 	display_init();
-	display_pid = task_create("Display",TASK_PRIORITY,TASK_STACK_SIZE,display_task,(char* const*)child_argv);
+	display_pid = task_create("Display",TASK_PRIORITY,TASK_STACK_SIZE,display_task,(char* const*)NULL);
 	if (display_pid < 0) {
 		printf("Failed to create DISPLAY task\n");
 	}
@@ -171,33 +230,46 @@ int main(int argc, FAR char *argv[])
 	if (publisher_pid < 0) {
 		printf("Failed to create Publisher task\n");
 	}
-	*/
+	 */
+	pthread_t pid;
+	pthread_attr_t tattr;
+	struct sched_param sparam;
+	pthread_attr_init(&tattr);
+	sparam.sched_priority = sched_get_priority_max(SCHED_FIFO) - 9;
+	pthread_attr_setschedparam(&tattr, &sparam);
+	pthread_attr_setstacksize(&tattr, 4096);
+	pthread_create(&pid, &tattr,serial_thread,(pthread_addr_t)0);
+	pthread_setname_np(pid, "serial_thread");
 
 	/*
 	 * Publisher Task
 	 */
+	/*
 	publisher_pid = task_create("Publisher",120,7000,publisher_task,(char* const*)child_argv);
 	if (publisher_pid < 0) {
 		printf("Failed to create Publisher task\n");
 	}
+	 */
 
 	/*
 	 * Subscriber Task
 	 */
+	/*
 	subscriber_pid = task_create("Subscriber",120,7000,subscriber_task,(char* const*)child_argv);
 	if (subscriber_pid < 0) {
 		printf("Failed to create Subscriber task\n");
 	}
+	 */
 
 #ifdef CONFIG_NSH_CONSOLE
 	ret = nsh_consolemain(argc, argv);
-#endif
-
-
+#else
 	while (1)
 	{
 		usleep(USLEPP_50MS);
 	}
+#endif // CONFIG_NSH_CONSOLE
+
 	return ret;
 }
 }
@@ -555,7 +627,7 @@ static int mng_publisher_task(int argc, char *argv[])
 	uint16_t cpt_u16=0;
 
 	// Reset
-	memset(&sample, '\0', sizeof(sample));
+	memset(&sample,0,sizeof(sample));
 
 	// Advertise
 	ptopic = orb_advertise_multi_queue_persist(ORB_ID(mng_msg), &sample, &instance, queue_size);

@@ -24,6 +24,7 @@
 #include <nuttx/config.h>
 #include <stdio.h>
 #include <fcntl.h>
+#include <nuttx/mqueue.h>
 
 
 #include "doais_serial.h"
@@ -33,6 +34,7 @@
 #include "circular_queue.h"
 #include "ais_monitoring.h"
 #include "types.h"
+#include "doais_mng.h"
 
 /*
  * --------------------------
@@ -40,7 +42,7 @@
  * --------------------------
  */
 #define USLEPP_50MS (50*1000)
-
+#define TIMEOUT_UORB_US (1000*1000)
 
 /*
  * --------------------------
@@ -54,65 +56,81 @@ static uint8_t cmd_queue_index_r = 0; // Ring buffer read position
 static uint8_t cmd_queue_index_w = 0; // Ring buffer write position
 static char command_queue[LOGGER_BUFSIZE][MAX_CMD_SIZE];
 static char *current_command,*current_command_args,*seen_pointer;
-static const char *injected_commands_P = NULL;
 // Number of characters read in the current line of serial input
 static int serial_count = 0;
 static bool send_ok[LOGGER_BUFSIZE];
-
-
+static const char *injected_commands_P = NULL;
 
 /*
  * --------------------------
  * Prototypes
  * --------------------------
  */
-void get_available_commands();
-void process_next_command();
-
+static void get_available_commands();
+static void process_next_command();
+static bool drain_injected_commands_P();
+static void enqueue_and_echo_commands_P(const char* pgcode);
+static bool enqueue_and_echo_command(const char* cmd, bool say_ok/*=false*/);
+static void ok_to_send();
+static void FlushSerialRequestResend();
+void print_doais();
 
 /*
  * --------------------------
  * Functions
  * --------------------------
  */
-static bool drain_injected_commands_P() {
+
+bool drain_injected_commands_P()
+{
 	if (injected_commands_P != NULL) {
 		uint8_t i = 0;
-		char c, cmd[30];
+		char c, cmd[MAX_CMD_SIZE];
 		memcpy(cmd, injected_commands_P, sizeof(cmd) - 1);
 		cmd[sizeof(cmd) - 1]='\0';
 		while ((c = cmd[i]) && c != '\n') i++; // find the end of this gcode command
 		cmd[i]='\0';
-		if (enqueue_and_echo_command(cmd))     // success?
+		if (enqueue_and_echo_command(cmd,false))     // success?
 			injected_commands_P = c ? injected_commands_P + i + 1 : NULL; // next command or done
 	}
 	return (injected_commands_P != NULL);    // return whether any more remain
 }
 
-void enqueue_and_echo_commands_P(const char* pgcode) {
+void enqueue_and_echo_commands_P(const char* pgcode)
+{
 	injected_commands_P = pgcode;
 	drain_injected_commands_P(); // first command executed asap (when possible)
 }
 
-void clear_command_queue() {
+void clear_command_queue()
+{
 	cmd_queue_index_r = cmd_queue_index_w;
 	commands_in_queue = 0;
 }
 
-inline void _commit_command(bool say_ok) {
+void get_available_commands()
+{
+	// if any immediate commands remain, don't get other commands yet
+	if (drain_injected_commands_P()) return;
+}
+
+inline void _commit_command(bool say_ok)
+{
 	send_ok[cmd_queue_index_w] = say_ok;
 	if (++cmd_queue_index_w >= LOGGER_BUFSIZE) cmd_queue_index_w = 0;
 	commands_in_queue++;
 }
 
-inline bool _enqueuecommand(const char* cmd, bool say_ok=false) {
+inline bool _enqueuecommand(const char* cmd, bool say_ok=false)
+{
 	if (*cmd == ';' || commands_in_queue >= LOGGER_BUFSIZE) return false;
 	strcpy(command_queue[cmd_queue_index_w], cmd);
 	_commit_command(say_ok);
 	return true;
 }
 
-bool enqueue_and_echo_command(const char* cmd, bool say_ok/*=false*/) {
+bool enqueue_and_echo_command(const char* cmd, bool say_ok/*=false*/)
+{
 	if (_enqueuecommand(cmd, say_ok)) {
 		LOG_I("->Enqueueing %s\n",cmd);
 		return true;
@@ -126,92 +144,15 @@ void gcode_line_error(const char* err, bool doFlush = true) {
 	serial_count = 0;
 }
 
-
-void get_serial_commands()
+void FlushSerialRequestResend()
 {
-	char buf_c;
-	int ret_u16;
-	char serial_line_buffer[MAX_CMD_SIZE];
-	bool serial_comment_mode = false;
-
-	/**
-	 * Loop while serial characters are incoming and the queue is not full
-	 */
-	ret_u16 = read(Serial_fd, &buf_c, sizeof(buf_c));
-	while ((commands_in_queue < LOGGER_BUFSIZE) && (ret_u16 > 0)) {
-
-		char serial_char = buf_c;
-
-		/**
-		 * If the character ends the line
-		 */
-		if (serial_char == '\n' || serial_char == '\r') {
-
-			serial_comment_mode = false; // end of line == end of comment
-
-			if (!serial_count) continue; // skip empty lines
-
-			serial_line_buffer[serial_count] = 0; // terminate string
-			serial_count = 0; //reset buffer
-
-			char* command = serial_line_buffer;
-
-			while (*command == ' ') command++; // skip any leading spaces
-
-			// Movement commands alert when stopped
-			if (IsStopped()) {
-				char* gpos = strchr(command, 'G');
-				if (gpos) {
-					const int codenum = strtol(gpos + 1, NULL, 10);
-					switch (codenum) {
-					case 0:
-					case 1:
-					case 2:
-					case 3:
-						printf("Error: Device stopped due to errors. Fix the error and use M999 to restart.\n");
-						break;
-					}
-				}
-			}
-
-#if defined(NO_TIMEOUTS) && NO_TIMEOUTS > 0
-			last_command_time = ms;
-#endif
-
-			// Add the command to the queue
-			_enqueuecommand(serial_line_buffer, true);
-		}
-		else if (serial_count >= MAX_CMD_SIZE - 1) {
-			// Keep fetching, but ignore normal characters beyond the max length
-			// The command will be injected when EOL is reached
-		}
-		else if (serial_char == '\\') {  // Handle escapes
-			ret_u16 = read(Serial_fd, &buf_c, sizeof(buf_c));
-			if (ret_u16 > 0) {
-				// if we have one more character, copy it over
-				serial_char = buf_c;
-				if (!serial_comment_mode) serial_line_buffer[serial_count++] = serial_char;
-			}
-			// otherwise do nothing
-		}
-		else { // it's not a newline, carriage return or escape char
-			if (serial_char == ';') serial_comment_mode = true;
-			if (!serial_comment_mode) serial_line_buffer[serial_count++] = serial_char;
-		}
-
-	} // queue has space, serial has data
+	printf("Resend");
+	ok_to_send();
 }
 
 
-void get_available_commands() {
-
-	// if any immediate commands remain, don't get other commands yet
-	if (drain_injected_commands_P()) return;
-
-	get_serial_commands();
-}
-
-inline bool code_has_value() {
+inline bool code_has_value()
+{
 	int i = 1;
 	char c = seen_pointer[i];
 	while (c == ' ') c = seen_pointer[++i];
@@ -220,7 +161,8 @@ inline bool code_has_value() {
 	return NUMERIC(c);
 }
 
-inline float code_value_float() {
+inline float code_value_float()
+{
 	char* e = strchr(seen_pointer, 'E');
 	if (!e) return strtod(seen_pointer + 1, NULL);
 	*e = 0;
@@ -302,48 +244,13 @@ FLASH\n\
 		ais_wifi::wifi_udp_write(debug_str,strlen(debug_str));
 #endif
 	}
-	*/
+	 */
 	printf("%s",help_str);
 #if DEV_MODE
 	printf("%s",debug_str);
 #endif
 }
 
-/*
- * ------------------------
- * print_doais
- * ------------------------
- * https://onlineasciitools.com/convert-text-to-ascii-art
- * Doh
- * ------------------------
- */
-inline void print_doais(){
-	printf(
-			"\n"
-			"	 ))))))    ))))))    ))))))     DDDDDDDDDDDDD                                      AAA                 iiii                   \n"
-			"	)::::::)) )::::::)) )::::::))   D::::::::::::DDD                                  A:::A               i::::i                  \n"
-			"	 ):::::::))):::::::))):::::::)) D:::::::::::::::DD                               A:::::A               iiii                   \n"
-			"	  )):::::::))):::::::))):::::::)DDD:::::DDDDD:::::D                             A:::::::A                                     \n"
-			"	    )::::::)  )::::::)  )::::::)  D:::::D    D:::::D    ooooooooooo            A:::::::::A           iiiiiii     ssssssssss   \n"
-			"	     ):::::)   ):::::)   ):::::)  D:::::D     D:::::D oo:::::::::::oo         A:::::A:::::A          i:::::i   ss::::::::::s  \n"
-			"	     ):::::)   ):::::)   ):::::)  D:::::D     D:::::Do:::::::::::::::o       A:::::A A:::::A          i::::i ss:::::::::::::s \n"
-			"	     ):::::)   ):::::)   ):::::)  D:::::D     D:::::Do:::::ooooo:::::o      A:::::A   A:::::A         i::::i s::::::ssss:::::s\n"
-			"	     ):::::)   ):::::)   ):::::)  D:::::D     D:::::Do::::o     o::::o     A:::::A     A:::::A        i::::i  s:::::s  ssssss \n"
-			"	     ):::::)   ):::::)   ):::::)  D:::::D     D:::::Do::::o     o::::o    A:::::AAAAAAAAA:::::A       i::::i    s::::::s      \n"
-			"	     ):::::)   ):::::)   ):::::)  D:::::D     D:::::Do::::o     o::::o   A:::::::::::::::::::::A      i::::i       s::::::s   \n"
-			"	    )::::::)  )::::::)  )::::::)  D:::::D    D:::::D o::::o     o::::o  A:::::AAAAAAAAAAAAA:::::A     i::::i ssssss   s:::::s \n"
-			"	  )):::::::))):::::::))):::::::)DDD:::::DDDDD:::::D  o:::::ooooo:::::o A:::::A             A:::::A   i::::::is:::::ssss::::::s\n"
-			"	 ):::::::))):::::::))):::::::)) D:::::::::::::::DD   o:::::::::::::::oA:::::A               A:::::A  i::::::is::::::::::::::s \n"
-			"	)::::::)  )::::::)  )::::::)    D::::::::::::DDD      oo:::::::::::ooA:::::A                 A:::::A i::::::i s:::::::::::ss  \n"
-			"	 ))))))    ))))))    ))))))     DDDDDDDDDDDDD           ooooooooooo AAAAAAA                   AAAAAAAiiiiiiii  sssssssssss    \n"
-			"	                                                                                                                              \n"
-			"	                                                                                                                              \n"
-			"	                                                                                                                              \n"
-			"	                                                                                                                              \n"
-			"	                                                                                                                              \n"
-			"\n"
-	);
-}
 
 
 /*
@@ -353,7 +260,9 @@ inline void print_doais(){
  * About
  * ------------------------
  */
-void gcode_M001(){
+void gcode_M001()
+{
+	print_doais();
 	printf("Last Updated: %s-%s\n",STRING_DISTRIBUTION_DATE,STRING_CONFIG_H_AUTHOR);
 	printf("Compiled: %s\n",__DATE__);
 	printf("%s %s\n",MACHINE_NAME,SHORT_BUILD_VERSION);
@@ -429,22 +338,7 @@ void gcode_M999() {
  */
 void process_next_command() {
 	current_command = command_queue[cmd_queue_index_r];
-	// Sanitize the current command:
-	//  - Skip leading spaces
-	//  - Bypass N[-0-9][0-9]*[ ]*
-	//  - Overwrite * with null to mark the end
 	while (*current_command == ' ') ++current_command;
-	/*HBL021022
-	if (*current_command == 'N' && NUMERIC_SIGNED(current_command[1])) {
-		current_command += 2; // skip N[-0-9]
-		while (NUMERIC(*current_command)) ++current_command; // skip [0-9]*
-		while (*current_command == ' ') ++current_command; // skip [ ]*
-	}
-	 */
-	/* HBL021022
-	char* starpos = strchr(current_command, '*');  // * should always be the last parameter
-	if (starpos) while (*starpos == ' ' || *starpos == '*') *starpos-- = '\0'; // nullify '*' and ' '
-	 */
 	char *cmd_ptr = current_command;
 	LOG_I("process_next_command: %s",current_command);
 
@@ -532,21 +426,72 @@ void ok_to_send(){
 	printf("-> ok\n");
 }
 
+
+
 /*
- * ====================
- * serial_task
+ * --------------------
+ * serial_thread
  * --------------------
  */
-int serial_task(int argc, FAR char *argv[])
+FAR void *serial_thread(pthread_addr_t arg)
 {
-	printf("Starting serial_task\n");
 
-	Serial_fd = open("/dev/ttyS0", O_RDWR);
-	if (Serial_fd < 0) {
-		printf("Error UART");
+	struct pollfd fds[1];
+	struct mng_msg_s sample;
+	bool updated;
+	int sfd;
+	int ret;
+
+	// Subscribe
+	if ((sfd = orb_subscribe(ORB_ID(mng_msg))) < 0)
+	{
+		printf("mng_subscriber_task: subscribe failed: %d\n", errno);
+		return NULL;
 	}
+
+	/* Get all published messages,
+	 * ensure that publish and subscribe message match
+	 */
+	do
+	{
+		// Check and get
+		orb_check(sfd, &updated);
+		if (updated)
+		{
+			orb_copy(ORB_ID(mng_msg),sfd,&sample);
+		}
+	}
+	while (updated);
+
+	fds[0].fd     = sfd;
+	fds[0].events = POLLIN;
+
 	while(1){
-		if (commands_in_queue < LOGGER_BUFSIZE) get_available_commands();
+		int poll_ret;
+
+		// Timeout
+		poll_ret = poll(fds,1,TIMEOUT_UORB_US);
+		if (!poll_ret){
+			printf("serial_task: poll timeout\n");
+		}
+
+		if (OK!=orb_check(sfd, &updated))
+		{
+			 printf("serial_task: check failed\n");
+			 return NULL;
+		}
+		else if (poll_ret < 0 && errno != EINTR)
+		{
+			LOG_E("serial_task: poll error (%d, %d)\n", poll_ret, errno);
+		}
+
+		if (fds[0].revents & POLLIN)
+		{
+			orb_copy(ORB_ID(mng_msg),sfd,&sample);
+			printf("serial_task: %s\n",sample.cmd_cha);
+			enqueue_and_echo_commands_P(sample.cmd_cha);
+		}
+		if (commands_in_queue<LOGGER_BUFSIZE) get_available_commands();
 
 		if (commands_in_queue) {
 			process_next_command();
@@ -556,11 +501,48 @@ int serial_task(int argc, FAR char *argv[])
 				if (++cmd_queue_index_r >= LOGGER_BUFSIZE) cmd_queue_index_r = 0;
 			}
 		}
-		usleep(USLEPP_50MS);
 	}
-	return 0;
+
+	// unsubscribe
+	ret = orb_unsubscribe(sfd);
+	if (ret != OK)
+	{
+		printf("serial_task: orb_unsubscribe failed: %i", ret);
+		return NULL;
+	}
+	return NULL;
 }
 
 
-
+/*
+ * print_doais
+ */
+void print_doais()
+{
+	printf(
+			"\n"
+			"	 ))))))    ))))))    ))))))     DDDDDDDDDDDDD                                      AAA                 iiii                   \n"
+			"	)::::::)) )::::::)) )::::::))   D::::::::::::DDD                                  A:::A               i::::i                  \n"
+			"	 ):::::::))):::::::))):::::::)) D:::::::::::::::DD                               A:::::A               iiii                   \n"
+			"	  )):::::::))):::::::))):::::::)DDD:::::DDDDD:::::D                             A:::::::A                                     \n"
+			"	    )::::::)  )::::::)  )::::::)  D:::::D    D:::::D    ooooooooooo            A:::::::::A           iiiiiii     ssssssssss   \n"
+			"	     ):::::)   ):::::)   ):::::)  D:::::D     D:::::D oo:::::::::::oo         A:::::A:::::A          i:::::i   ss::::::::::s  \n"
+			"	     ):::::)   ):::::)   ):::::)  D:::::D     D:::::Do:::::::::::::::o       A:::::A A:::::A          i::::i ss:::::::::::::s \n"
+			"	     ):::::)   ):::::)   ):::::)  D:::::D     D:::::Do:::::ooooo:::::o      A:::::A   A:::::A         i::::i s::::::ssss:::::s\n"
+			"	     ):::::)   ):::::)   ):::::)  D:::::D     D:::::Do::::o     o::::o     A:::::A     A:::::A        i::::i  s:::::s  ssssss \n"
+			"	     ):::::)   ):::::)   ):::::)  D:::::D     D:::::Do::::o     o::::o    A:::::AAAAAAAAA:::::A       i::::i    s::::::s      \n"
+			"	     ):::::)   ):::::)   ):::::)  D:::::D     D:::::Do::::o     o::::o   A:::::::::::::::::::::A      i::::i       s::::::s   \n"
+			"	    )::::::)  )::::::)  )::::::)  D:::::D    D:::::D o::::o     o::::o  A:::::AAAAAAAAAAAAA:::::A     i::::i ssssss   s:::::s \n"
+			"	  )):::::::))):::::::))):::::::)DDD:::::DDDDD:::::D  o:::::ooooo:::::o A:::::A             A:::::A   i::::::is:::::ssss::::::s\n"
+			"	 ):::::::))):::::::))):::::::)) D:::::::::::::::DD   o:::::::::::::::oA:::::A               A:::::A  i::::::is::::::::::::::s \n"
+			"	)::::::)  )::::::)  )::::::)    D::::::::::::DDD      oo:::::::::::ooA:::::A                 A:::::A i::::::i s:::::::::::ss  \n"
+			"	 ))))))    ))))))    ))))))     DDDDDDDDDDDDD           ooooooooooo AAAAAAA                   AAAAAAAiiiiiiii  sssssssssss    \n"
+			"	                                                                                                                              \n"
+			"	                                                                                                                              \n"
+			"	                                                                                                                              \n"
+			"	                                                                                                                              \n"
+			"	                                                                                                                              \n"
+			"\n"
+	);
+}
 

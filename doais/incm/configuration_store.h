@@ -27,7 +27,6 @@ public:
 	static void report(bool onwifi=false);
 
 private:
-	static FILE *File_p;
 	static void postprocess();
 	static uint16_t eeprom_checksum;
 	static bool eeprom_read_error, eeprom_write_error;
