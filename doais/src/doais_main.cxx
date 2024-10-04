@@ -131,10 +131,11 @@ ORB_DEFINE(orb_test1,struct orb_test1_s,0);
  * Threads
  */
 FAR void *serial_thread(pthread_addr_t arg);
+FAR void *display_thread(pthread_addr_t arg);
 
 
 static int display_init(void);
-static int display_task(int argc, FAR char *argv[]);
+//static int display_task(int argc, FAR char *argv[]);
 static int gps_task(int argc, FAR char *argv[]);
 
 static int publisher_task(int argc, char *argv[]);
@@ -217,10 +218,24 @@ int main(int argc, FAR char *argv[])
 	 * Display Task
 	 */
 	display_init();
+/*
 	display_pid = task_create("Display",TASK_PRIORITY,TASK_STACK_SIZE,display_task,(char* const*)NULL);
 	if (display_pid < 0) {
 		printf("Failed to create DISPLAY task\n");
 	}
+	*/
+
+	{
+		pthread_t pid;
+		pthread_attr_t tattr;
+		struct sched_param sparam;
+		pthread_attr_init(&tattr);
+		sparam.sched_priority = sched_get_priority_max(SCHED_FIFO) - 9;
+		pthread_attr_setschedparam(&tattr, &sparam);
+		pthread_attr_setstacksize(&tattr, 4096);
+		pthread_create(&pid, &tattr,display_thread,(pthread_addr_t)0);
+		pthread_setname_np(pid, "display_thread");
+		}
 
 	/*
 	 * Serial task
@@ -231,9 +246,11 @@ int main(int argc, FAR char *argv[])
 		printf("Failed to create Publisher task\n");
 	}
 	 */
+
 	/*
 	 * Serial Thread
 	 */
+	{
 	pthread_t pid;
 	pthread_attr_t tattr;
 	struct sched_param sparam;
@@ -243,6 +260,7 @@ int main(int argc, FAR char *argv[])
 	pthread_attr_setstacksize(&tattr, 4096);
 	pthread_create(&pid, &tattr,serial_thread,(pthread_addr_t)0);
 	pthread_setname_np(pid, "serial_thread");
+	}
 
 	/*
 	 * Publisher Task
@@ -388,7 +406,8 @@ static int display_init(void)
 /*
  * display_task
  */
-static int display_task(int argc, FAR char *argv[])
+//static int display_task(int argc, FAR char *argv[])
+FAR void *display_thread(pthread_addr_t arg)
 {
 	while (1)
 	{
