@@ -239,14 +239,14 @@ private:
  */
 
 extern Ais_monitoring Monitoring;
-extern Gui_page Page_target;
-extern Gui_page Page_vessels;
-extern Gui_page Page_settings;
-extern Gui_animation Animation_wifi;
-extern Gui_animation Animation_spk;
-extern Gui_animation Animation_gps;
-extern Gui_animation Animation_bell;
-extern Gui_slider Slider;
+//extern Gui_page Page_target;
+//extern Gui_page Page_vessels;
+//extern Gui_page Page_settings;
+//extern Gui_animation Animation_wifi;
+//extern Gui_animation Animation_spk;
+//extern Gui_animation Animation_gps;
+//extern Gui_animation Animation_bell;
+//extern Gui_slider Slider;
 
 
 #endif //__AIS_MONITORING_H__

@@ -61,6 +61,7 @@
 #include <nuttx/arch.h>
 #include <pthread.h>
 #include <semaphore.h>
+#include <nuttx/timers/timer.h>
 
 
 #if defined(CONFIG_FS_BINFS) && (CONFIG_BUILTIN)
@@ -75,6 +76,7 @@
 
 #include "doais_mng.h"
 #include "doais_serial.h"
+#include "doais_db_update.h"
 #include "ais_channels.h"
 #include "ais_monitoring.h"
 
@@ -91,7 +93,8 @@ extern "C" {
 #define TASK_PRIORITY 120
 #define TASK_STACK_SIZE 8192
 #define TASK_SERIAL_STACK_SIZE 20000
-#define USLEPP_50MS (50*1000)
+#define USLEEP_50MS (50*1000)
+
 
 /*
  * Globals
@@ -107,19 +110,8 @@ const struct symtab_s CONFIG_EXECFUNCS_SYMTAB[1];
 #endif
 
 StationData Station_data_s;
-//Ais_monitoring Monitoring(AIS_CHAINED_LIST_MAX_SZ,AIS_CHAINED_LABEL_MAX_SZ);
+Ais_monitoring Monitoring(AIS_CHAINED_LIST_MAX_SZ,AIS_CHAINED_LABEL_MAX_SZ);
 
-
-/*
-#define ORB_DEFINE(name, structure, cb) \
-  const struct orb_metadata g_orb_##name = \
-  { \
-    #name, \
-    sizeof(structure), \
-  };
-#endif
- */
-ORB_DEFINE(orb_test1,struct orb_test1_s,0);
 
 /*
  * ----------------
@@ -127,16 +119,11 @@ ORB_DEFINE(orb_test1,struct orb_test1_s,0);
  * ----------------
  */
 
-/*
- * Threads
- */
-FAR void *serial_thread(pthread_addr_t arg);
-FAR void *display_thread(pthread_addr_t arg);
-
-
 static int display_init(void);
 //static int display_task(int argc, FAR char *argv[]);
 static int gps_task(int argc, FAR char *argv[]);
+
+FAR void *display_thread(pthread_addr_t arg);
 
 static int publisher_task(int argc, char *argv[]);
 static int subscriber_task(int argc, FAR char *argv[]);
@@ -172,59 +159,21 @@ int main(int argc, FAR char *argv[])
 	int ret = 0;
 	char *child_argv[2];
 
-	/* Check the task priority that we were started with */
-	//	sched_getparam(0, &param);
-	//	if (param.sched_priority != CONFIG_SYSTEM_NSH_PRIORITY)
-	//	{
-	//		/* If not then set the priority to the configured priority */
-	//		param.sched_priority = CONFIG_SYSTEM_NSH_PRIORITY;
-	//		sched_setparam(0, &param);
-	//	}
-
-
-	/* Make sure that we are using our symbol table */
-	//#if defined(CONFIG_LIBC_EXECFUNCS) && defined(CONFIG_EXECFUNCS_SYMTAB)
-	//  exec_setsymtab(CONFIG_EXECFUNCS_SYMTAB, 0);
-	//#endif
-	//
-	//	/* Register the BINFS file system */
-	//#if defined(CONFIG_FS_BINFS) && (CONFIG_BUILTIN)
-	//	ret = builtin_initialize();
-	//	if (ret < 0)
-	//	{
-	//		fprintf(stderr, "ERROR: builtin_initialize failed: %d\n", ret);
-	//		exitval = 1;
-	//	}
-	//#endif
 
 #ifdef CONFIG_NSH_CONSOLE
 	/* Initialize the NSH library */
 	nsh_initialize();
 #endif // CONFIG_NSH_CONSOLE
 
-	/*
-	 * =================
-	 * Creation of tasks
-	 * =================
-	 */
-	/*
-	gps_pid = task_create("GPS",TASK_PRIORITY,TASK_STACK_SIZE,gps_task,(char* const*)child_argv);
-	if (serial_pid < 0) {
-		printf("Failed to create GPS task\n");
-	}
-	 */
 
 	/*
 	 * Display Task
 	 */
 	display_init();
-/*
-	display_pid = task_create("Display",TASK_PRIORITY,TASK_STACK_SIZE,display_task,(char* const*)NULL);
-	if (display_pid < 0) {
-		printf("Failed to create DISPLAY task\n");
-	}
-	*/
 
+	/*
+	 * Display thread
+	 */
 	{
 		pthread_t pid;
 		pthread_attr_t tattr;
@@ -235,59 +184,61 @@ int main(int argc, FAR char *argv[])
 		pthread_attr_setstacksize(&tattr, 4096);
 		pthread_create(&pid, &tattr,display_thread,(pthread_addr_t)0);
 		pthread_setname_np(pid, "display_thread");
-		}
-
-	/*
-	 * Serial task
-	 */
-	/*
-	publisher_pid = task_create("Serial",TASK_PRIORITY,TASK_SERIAL_STACK_SIZE,serial_task,(char* const*)child_argv);
-	if (publisher_pid < 0) {
-		printf("Failed to create Publisher task\n");
 	}
-	 */
+
 
 	/*
 	 * Serial Thread
 	 */
 	{
-	pthread_t pid;
-	pthread_attr_t tattr;
-	struct sched_param sparam;
-	pthread_attr_init(&tattr);
-	sparam.sched_priority = sched_get_priority_max(SCHED_FIFO) - 9;
-	pthread_attr_setschedparam(&tattr, &sparam);
-	pthread_attr_setstacksize(&tattr, 4096);
-	pthread_create(&pid, &tattr,serial_thread,(pthread_addr_t)0);
-	pthread_setname_np(pid, "serial_thread");
+		pthread_t pid;
+		pthread_attr_t tattr;
+		struct sched_param sparam;
+		pthread_attr_init(&tattr);
+		sparam.sched_priority = sched_get_priority_max(SCHED_FIFO) - 9;
+		pthread_attr_setschedparam(&tattr, &sparam);
+		pthread_attr_setstacksize(&tattr, 4096);
+		pthread_create(&pid,&tattr,serial_thread,(pthread_addr_t)0);
+		pthread_setname_np(pid, "serial_thread");
 	}
 
 	/*
-	 * Publisher Task
+	 * Timer
 	 */
-	/*
-	publisher_pid = task_create("Publisher",120,7000,publisher_task,(char* const*)child_argv);
-	if (publisher_pid < 0) {
-		printf("Failed to create Publisher task\n");
+	{
+		pthread_t pid;
+		pthread_attr_t tattr;
+		struct sched_param sparam;
+		pthread_attr_init(&tattr);
+		sparam.sched_priority = sched_get_priority_max(SCHED_FIFO) - 9;
+		pthread_attr_setschedparam(&tattr, &sparam);
+		pthread_attr_setstacksize(&tattr, 4096);
+		pthread_create(&pid,&tattr,timer_thread,(pthread_addr_t)0);
+		pthread_setname_np(pid, "timer_thread");
 	}
-	 */
 
 	/*
-	 * Subscriber Task
+	 * DB update
 	 */
-	/*
-	subscriber_pid = task_create("Subscriber",120,7000,subscriber_task,(char* const*)child_argv);
-	if (subscriber_pid < 0) {
-		printf("Failed to create Subscriber task\n");
+	{
+		pthread_t pid;
+		pthread_attr_t tattr;
+		struct sched_param sparam;
+		pthread_attr_init(&tattr);
+		sparam.sched_priority = sched_get_priority_max(SCHED_FIFO) - 9;
+		pthread_attr_setschedparam(&tattr, &sparam);
+		pthread_attr_setstacksize(&tattr, 4096);
+		pthread_create(&pid,&tattr,db_update_thread,(pthread_addr_t)0);
+		pthread_setname_np(pid, "db_update_thread");
 	}
-	 */
+
 
 #ifdef CONFIG_NSH_CONSOLE
 	ret = nsh_consolemain(argc, argv);
 #else
 	while (1)
 	{
-		usleep(USLEPP_50MS);
+		usleep(USLEEP_50MS);
 	}
 #endif // CONFIG_NSH_CONSOLE
 
@@ -382,8 +333,6 @@ int setBaudrate(int _serial_fd, unsigned baud)
 
 
 
-
-
 /*
  * display_init
  */
@@ -406,7 +355,6 @@ static int display_init(void)
 /*
  * display_task
  */
-//static int display_task(int argc, FAR char *argv[])
 FAR void *display_thread(pthread_addr_t arg)
 {
 	while (1)
@@ -418,6 +366,10 @@ FAR void *display_thread(pthread_addr_t arg)
 	}
 	return 0;
 }
+
+
+
+
 
 
 /*
@@ -469,45 +421,6 @@ static void print_mng_msg(FAR const struct orb_metadata *meta,FAR const void *bu
 
 
 /*
- * publisher_tasks
- */
-static int publisher_task0(int argc, FAR char *argv[])
-{
-	struct orb_test1_s sample;
-	int instance = 0;
-	int afd;
-	int ret;
-
-	// advertise
-	sample.val = 0;
-	afd = orb_advertise_multi_queue_persist(ORB_ID(orb_test1),&sample, &instance, 1);
-	if (afd < 0)
-	{
-		printf("publisher_task: advertise failed: %d", errno);
-		return ERROR;
-	}
-
-	while(1)
-	{
-		usleep(2000*1000);
-		sample.val++;
-		// Publish
-		if (OK != orb_publish(ORB_ID(orb_test1), afd, &sample))
-		{
-			return printf("publisher_task: publish failed\n");
-		}
-	}
-	// unadvertise
-	ret = orb_unadvertise(afd);
-	if (ret != OK)
-	{
-		return printf("publisher_task: orb_unadvertise failed: %i", ret);
-	}
-	return 0;
-}
-
-
-/*
  * publisher_task
  */
 static int publisher_task(int argc, char *argv[])
@@ -518,7 +431,7 @@ static int publisher_task(int argc, char *argv[])
 	int ptopic;
 
 	// Reset
-	memset(&sample, '\0', sizeof(sample));
+	memset(&sample,'\0',sizeof(sample));
 
 
 	/****************************************************************************
@@ -544,7 +457,7 @@ static int publisher_task(int argc, char *argv[])
 	 ****************************************************************************/
 	//#define ORB_ID(name)  &g_orb_##name
 
-	ptopic = orb_advertise_multi_queue(ORB_ID(orb_test1), &sample, &instance, queue_size);
+	ptopic=orb_advertise_multi_queue(ORB_ID(orb_test1),&sample,&instance,queue_size);
 	if (ptopic < 0)
 	{
 		printf("publisher_task: advertise failed: %d", errno);
@@ -632,115 +545,6 @@ static int subscriber_task(int argc, FAR char *argv[])
 	if (ret != OK)
 	{
 		return printf("subscriber_task: orb_unsubscribe failed: %i", ret);
-	}
-	return 0;
-}
-
-
-/*
- * mng_publisher_task
- */
-static int mng_publisher_task(int argc, char *argv[])
-{
-	const int queue_size = 50;
-	struct mng_msg_s sample;
-	int instance = 0;
-	int ptopic;
-	uint16_t cpt_u16=0;
-
-	// Reset
-	memset(&sample,0,sizeof(sample));
-
-	// Advertise
-	ptopic = orb_advertise_multi_queue_persist(ORB_ID(mng_msg), &sample, &instance, queue_size);
-	if (ptopic < 0)
-	{
-		printf("mng_publisher_task: advertise failed: %d", errno);
-		return 0;
-	}
-
-	while(1)
-	{
-		cpt_u16++;
-		memset(sample.cmd_cha,0,MNG_CMD_SIZE);
-		snprintf(sample.cmd_cha,MNG_CMD_SIZE,"msg(%d)",cpt_u16);
-		// Publish
-		orb_publish(ORB_ID(mng_msg), ptopic, &sample);
-		usleep(2000 * 1000);
-	}
-
-	orb_unadvertise(ptopic);
-
-	return 0;
-}
-
-
-/*
- * mng_subscriber_task
- */
-static int mng_subscriber_task(int argc, FAR char *argv[])
-{
-	struct pollfd fds[1];
-	struct mng_msg_s sample;
-	bool updated;
-	int sfd;
-	int ret;
-
-	// Subscribe
-	if ((sfd = orb_subscribe(ORB_ID(mng_msg))) < 0)
-	{
-		printf("mng_subscriber_task: subscribe failed: %d\n", errno);
-		return 0;
-	}
-
-	/* Get all published messages,
-	 * ensure that publish and subscribe message match
-	 */
-	do
-	{
-		// Check and get
-		orb_check(sfd, &updated);
-		if (updated)
-		{
-			orb_copy(ORB_ID(mng_msg),sfd,&sample);
-		}
-	}
-	while (updated);
-
-	fds[0].fd     = sfd;
-	fds[0].events = POLLIN;
-
-	while(1){
-		int poll_ret;
-
-		// Timeout 1000ms
-		poll_ret = poll(fds, 1,1000*1000);
-		if (poll_ret == 0){
-			printf("mng_subscriber_task: poll timeout\n");
-		}
-
-		if (OK != orb_check(sfd, &updated))
-		{
-			return printf("mng_subscriber_task: check failed\n");
-		}
-		else if (poll_ret < 0 && errno != EINTR)
-		{
-			printf("mng_subscriber_task: poll error (%d, %d)\n", poll_ret, errno);
-		}
-
-		if (fds[0].revents & POLLIN)
-		{
-			orb_copy(ORB_ID(mng_msg),sfd,&sample);
-
-			printf("mng_subscriber_task: %s\n",sample.cmd_cha);
-		}
-	}
-
-	// unsubscribe
-	ret = orb_unsubscribe(sfd);
-	if (ret != OK)
-	{
-		return printf("mng_subscriber_task: orb_unsubscribe failed: %i", ret);
 	}
 	return 0;
 }

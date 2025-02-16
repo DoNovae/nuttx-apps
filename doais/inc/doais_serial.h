@@ -20,7 +20,10 @@
 /*
  * Prptotypes
  */
-
+/*
+ * Threads
+ */
+FAR void *serial_thread(pthread_addr_t arg);
 
 
 #endif //DOAIS_SERIAL_H

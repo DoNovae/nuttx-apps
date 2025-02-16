@@ -50,7 +50,6 @@ static int           g_pubsubtest_res;
 static int pubsubtest_thread_entry(int argc, FAR char *argv[])
 {
   /* poll on test topic and output latency */
-
   struct pollfd fds[1];
   struct orb_test_medium_s t;
 

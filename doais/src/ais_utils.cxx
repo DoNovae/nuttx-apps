@@ -1,7 +1,7 @@
 #include "ais_utils.h"
 #include <errno.h>
 #include "ais_channels.h"
-#include "_assert.h"
+// TODO #include "_assert.h"
 #include "utilities.h"
 #include "gmath.h"
 
@@ -76,7 +76,7 @@ float Utils::arc_rad(const float lat1_r, const float lon1_r, const float lat2_r,
 	float lat2Rad = lat2_r;
 
 	float a = sin(dLat/2.0) * sin(dLat/2.0) + sin(dLon/2.0) * sin(dLon/2) * cos(lat1Rad) * cos(lat2Rad);
-	float radians = 2 * asin(min(1.0, (double)sqrt(a)));
+	float radians = 2 * asin(_min(1.0, (double)sqrt(a)));
 	return radians;
 }
 

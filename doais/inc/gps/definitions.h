@@ -107,7 +107,7 @@ typedef struct{
 // HBL #define gps_absolute_time hrt_absolute_time
 static inline gps_abstime gps_absolute_time() {
 	//gps_abstime time_u64=millis()*1000;
-	gps_abstime time_u64= esp_timer_get_time();
+	// TODO gps_abstime time_u64= esp_timer_get_time();
 	//GPS_DEBUG("%d us",time_u64);
 	return time_u64;
 }
