@@ -24,13 +24,15 @@
 #define __GPS_H__
 
 #include <stdbool.h>
+#include <time.h>
 #include "tok.h"
 
 
 
 #define LAT_LONG_SCALE ((float)10000000.0)
 
-typedef tm timeinfo_t;
+//typedef tm timeinfo_t;
+typedef timespec timeinfo_t;
 
 /**
  * Summary GPS information from all parsed packets,

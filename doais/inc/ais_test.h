@@ -50,8 +50,8 @@ public:
 class Ais_test_bench{
 public:
 	static StationData my_station_s;
-	static SI4463::Si446x si446x_tx;
-    static SI4362::Si446x si446x_rx;
+	//static SI4463::Si446x si446x_tx;
+    //static SI4362::Si446x si446x_rx;
 	static Ais_test_vessel vessel1,vessel2,vessel3;
 	static void init();
 	static void set_direction(int32_t direction_i32);

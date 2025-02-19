@@ -1171,7 +1171,7 @@ void Ais_monitoring::display_pos()
 
 void Ais_monitoring::display_date()
 {
-	Ais_display::draw_date_values(Gps_info_s.utc_s.tm_hour,Gps_info_s.utc_s.tm_min,Gps_info_s.utc_s.tm_sec);
+	// TODO Ais_display::draw_date_values(Gps_info_s.utc_s.tm_hour,Gps_info_s.utc_s.tm_min,Gps_info_s.utc_s.tm_sec);
 }
 
 /*

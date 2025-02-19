@@ -41,7 +41,6 @@
 #include <time.h>
 #include "satellite_info.h"
 #include "sensor_gps.h"
-//#include "esp_timer.h"
 
 #ifndef __DEFINITIONS_H__
 #define __DEFINITIONS_H__
@@ -105,10 +104,12 @@ typedef struct{
 }sensor_gnss_relative_s;
 
 // HBL #define gps_absolute_time hrt_absolute_time
-static inline gps_abstime gps_absolute_time() {
-	//gps_abstime time_u64=millis()*1000;
-	// TODO gps_abstime time_u64= esp_timer_get_time();
-	//GPS_DEBUG("%d us",time_u64);
+static inline gps_abstime gps_absolute_time()
+{
+	struct timespec tp;
+	uint64_t time_u64;
+	clock_gettime(CLOCK_MONOTONIC,&tp);
+	time_u64 = ((uint64_t)(tp.tv_sec)*1000000)+tp.tv_nsec/1000;
 	return time_u64;
 }
 

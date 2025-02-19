@@ -269,7 +269,7 @@ public:
 	 */
 	inline bool del_next(List<T> **prev_p){
 		List<T>* nxt_p;
-		LOG_D("count_u8(%d) - *prev_p(0x%04x) - orig_p(0x%04x)",count_u8,*prev_p,orig_p);
+		LOG_D("count_u8(%d) - *prev_p(0x%04x) - orig_p(0x%04x)",count_u8,(uint16_t*)*prev_p,(uint16_t*)orig_p);
 		/*
 		 * prev_p null means it is the origin
 		 * nexp_p null means it is the last element

@@ -89,6 +89,9 @@ extern "C" {
  * Defines
  * -------------------
  */
+#define THREAD_STACK_SIZE 4096
+#define THREAD_SERIAL_STACK_SIZE (4096*16)
+#define THREAD_DB_UPDATE_STACK_SIZE (4096*16)
 #define ACCEL_TASK_INTERVAL_MS 1000
 #define TASK_PRIORITY 120
 #define TASK_STACK_SIZE 8192
@@ -181,7 +184,7 @@ int main(int argc, FAR char *argv[])
 		pthread_attr_init(&tattr);
 		sparam.sched_priority = sched_get_priority_max(SCHED_FIFO) - 9;
 		pthread_attr_setschedparam(&tattr, &sparam);
-		pthread_attr_setstacksize(&tattr, 4096);
+		pthread_attr_setstacksize(&tattr,THREAD_STACK_SIZE);
 		pthread_create(&pid, &tattr,display_thread,(pthread_addr_t)0);
 		pthread_setname_np(pid, "display_thread");
 	}
@@ -197,7 +200,7 @@ int main(int argc, FAR char *argv[])
 		pthread_attr_init(&tattr);
 		sparam.sched_priority = sched_get_priority_max(SCHED_FIFO) - 9;
 		pthread_attr_setschedparam(&tattr, &sparam);
-		pthread_attr_setstacksize(&tattr, 4096);
+		pthread_attr_setstacksize(&tattr,THREAD_SERIAL_STACK_SIZE);
 		pthread_create(&pid,&tattr,serial_thread,(pthread_addr_t)0);
 		pthread_setname_np(pid, "serial_thread");
 	}
@@ -212,7 +215,7 @@ int main(int argc, FAR char *argv[])
 		pthread_attr_init(&tattr);
 		sparam.sched_priority = sched_get_priority_max(SCHED_FIFO) - 9;
 		pthread_attr_setschedparam(&tattr, &sparam);
-		pthread_attr_setstacksize(&tattr, 4096);
+		pthread_attr_setstacksize(&tattr,THREAD_STACK_SIZE);
 		pthread_create(&pid,&tattr,timer_thread,(pthread_addr_t)0);
 		pthread_setname_np(pid, "timer_thread");
 	}
@@ -227,7 +230,7 @@ int main(int argc, FAR char *argv[])
 		pthread_attr_init(&tattr);
 		sparam.sched_priority = sched_get_priority_max(SCHED_FIFO) - 9;
 		pthread_attr_setschedparam(&tattr, &sparam);
-		pthread_attr_setstacksize(&tattr, 4096);
+		pthread_attr_setstacksize(&tattr,THREAD_DB_UPDATE_STACK_SIZE);
 		pthread_create(&pid,&tattr,db_update_thread,(pthread_addr_t)0);
 		pthread_setname_np(pid, "db_update_thread");
 	}

@@ -17,7 +17,7 @@
 #include <string.h>
 #include "utilities.h"
 #include "ais_utils.h"
-#include "wifi_.h"
+//#include "wifi_.h"
 #include "gmath.h"
 #include "ais_messages.h"
 
@@ -256,10 +256,12 @@ uint8_t AISMessage::nmea_crc(const char* buff)
  */
 void AISMessage::nmea_send(char* nmea_sentence6_a){
 	LOG_D("%s\n",nmea_sentence6_a);
+	/*
 	if (ais_wifi::state==AIS_WIFI_ON)
 	{
 		ais_wifi::wifi_udp_write(nmea_sentence6_a,(int)strlen(nmea_sentence6_a));
 	}
+	*/
 }
 
 
@@ -738,6 +740,11 @@ AISMessage24A::AISMessage24A()
 	partno=PARTNO_24A;
 }
 
+void AISMessage24A::encode(const StationData &station,const gps_data_t &gps_info_ps,TXPacket &packet)
+{
+	encode(packet);
+}
+
 void AISMessage24A::encode(const StationData &station,TXPacket &packet)
 {
 	mmsi=station.mmsi;
@@ -858,6 +865,11 @@ AISMessage24B::AISMessage24B()
 	partno=PARTNO_24B;
 	repeat=0;
 	shiptype=SHIPTYPE_NONE;
+}
+
+void AISMessage24B::encode(const StationData &station,const gps_data_t &gps_info_ps,TXPacket &packet)
+{
+	encode(packet);
 }
 
 void AISMessage24B::encode(const StationData &station, TXPacket &packet)
@@ -1046,7 +1058,6 @@ void AISMessage4::encode(const StationData &station,const gps_data_t &gps_i_s,TX
 	lon_d=double2lon_d((float)gps_i_s.lon_d/LAT_LONG_SCALE);
 	lat_d=double2lat_d((float)gps_i_s.lat_d/LAT_LONG_SCALE);
 
-
 	encode(packet);
 }
 
@@ -1222,7 +1233,10 @@ void AISMessage12::encode(const StationData &station,TXPacket &packet)
 	encode(packet);
 }
 
-
+void AISMessage12::encode(const StationData &station,const gps_data_t &gps_info_ps,TXPacket &packet)
+{
+	encode(packet);
+}
 
 void AISMessage12::encode(TXPacket &packet)
 {

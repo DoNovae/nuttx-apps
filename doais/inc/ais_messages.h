@@ -195,6 +195,7 @@ public:
 	AISMessage24A();
 
 	void encode(const StationData &station, TXPacket &packet)override;
+	void encode(const StationData &station,const gps_data_t &gps_info_ps,TXPacket &packet)override;
 	void encode(TXPacket &packet) override;
 	bool decode(const RXPacket &packet,uint8_t ch_u8) override;
 };
@@ -211,6 +212,7 @@ public:
 	AISMessage24B();
 
 	void encode(const StationData &station, TXPacket &packet) override;
+	void encode(const StationData &station,const gps_data_t &gps_info_ps,TXPacket &packet)override;
 	void encode(TXPacket &packet) override;
 	bool decode(const RXPacket &packet,uint8_t ch_u8) override;
 };
@@ -244,6 +246,7 @@ class AISMessage12 : public AISMessage
 public:
 	AISMessage12();
 
+	void encode(const StationData &station,const gps_data_t &gps_info_ps,TXPacket &packet)override;
 	void encode(const StationData &station,TXPacket &packet) override;
 	void encode(TXPacket &packet) override;
 	bool decode(const RXPacket &packet,uint8_t ch_u8)  override;

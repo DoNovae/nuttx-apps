@@ -25,21 +25,20 @@
 /*
  * Debug by levels
  */
-// LOG_ALERT - Indicates a condition that should be corrected immediately; for example, a corrupted database.
-// LOG_CRIT - Indicates critical conditions; for example, hard device errors.
-// LOG_ERR - Indicated error conditions.
-// LOG_DEBUG - Displays messages containing information useful to debug a program.
-// LOG_EMERG - Indicates a panic condition reported to all users; system is unusable.
-// LOG_ERR - Indicated error conditions.
-// LOG_INFO - Indicates general information messages.
-// LOG_NOTICE - Indicates a condition requiring special handling, but not an error condition.
-// LOG_WARNING - Logs warning messages.
+// LOG_EMERG System is unusable
+// LOG_ALERT Action must be taken immediately
+// LOG_CRIT Critical conditions
+// LOG_ERR Error conditions
+// LOG_WARNING Warning conditions
+// LOG_NOTICE Normal, but significant, condition
+// LOG_INFO Informational message
+// LOG_DEBUG Debug-level message
 
 #define LOG_E(format, ...) syslog(LOG_ERR,    format, ##__VA_ARGS__)
-#define LOG_D(format, ...) syslog(LOG_DEBUG,  format, ##__VA_ARGS__)
 #define LOG_I(format, ...) syslog(LOG_INFO,   format, ##__VA_ARGS__)
 #define LOG_W(format, ...) syslog(LOG_WARNING,format, ##__VA_ARGS__)
-#define LOG_V(format, ...) syslog(LOG_WARNING,format, ##__VA_ARGS__)
+#define LOG_D(format, ...) syslog(LOG_DEBUG,  format, ##__VA_ARGS__)
+#define LOG_V(format, ...) /*syslog(LOG_DEBUG,  format, ##__VA_ARGS__)*/
 
 #define _min(a,b) ((a)<(b)?(a):(b))
 #define _max(a,b) ((a)>(b)?(a):(b))
