@@ -29,8 +29,8 @@ CXXFLAGS += -Iinc -Iincm -Iinc -Iinc/gps
 #CSRCS    += $(wildcard src/*.c)
 CSRCS    += src/ui_clock.c src/img_hand.c
 
-CXXSRCS  += srcm/configuration_store.cxx
-CXXSRCS  += src/doais_serial.cxx src/ais_utils.cxx src/doais_db_update.cxx
+CXXSRCS  += src/configuration_store.cxx
+CXXSRCS  += src/doais_serial.cxx src/ais_utils.cxx src/doais_db_update.cxx src/doais_gps.cxx
 CXXSRCS  += src/ais_messages.cxx src/ais_monitoring.cxx src/ais_utils.cxx src/utilities.cxx src/ais_test.cxx
 CXXSRCS  += src/gps/gmath.cxx src/rx_packet.cxx src/tx_packet.cxx
 

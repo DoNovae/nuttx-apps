@@ -5,4 +5,5 @@ mount -t smartfs /dev/smart0 $FLASH_MNT_DIR
 if test $? -eq 1 
 then 
 mksmartfs /dev/smart0
+mount -t smartfs /dev/smart0 $FLASH_MNT_DIR
 fi

@@ -19,11 +19,9 @@
  * Defines
  * --------------------------
  */
-//#define EEPROM_VERSION "V01"
-#define EEPROM_VERSION "01234567890123456789"
 #define SETTINGS_FILE_NAME "/mnt/settings.dat"
 #define WIFI_CLIENT_IP_SZ 12
-#define GPS_DEFAULT_BAUDRATE 9600
+#define GPS_DEFAULT_BAUDRATE 230400
 
 #define EEPROM_START() rewind(File_p)
 #define EEPROM_SKIP(VAR) fseek(File_p,sizeof(VAR),SEEK_CUR)
@@ -57,9 +55,6 @@ Ais_settings::Ais_settings()
 
 Ais_settings::~Ais_settings()
 {
-	if (File_p) {
-		fclose(File_p);
-	}
 }
 
 FILE * Ais_settings::File_p=0;
@@ -76,6 +71,7 @@ void Ais_settings::begin()
 	} else {
 		LOG_D("Ais_settings: file %s opened\n",SETTINGS_FILE_NAME);
 	}
+	fclose(File_p);
 }
 
 
@@ -95,53 +91,50 @@ void Ais_settings::postprocess()
 	/*
 	 * Monitoring
 	 */
-	//Monitoring.settings_s.lost_target_ticks_u32=Monitoring.settings_s.lost_target_mn_u32*MONOTORING_TICKS_1MN;
+	Monitoring.settings_s.lost_target_ticks_u32=Monitoring.settings_s.lost_target_mn_u32*MONOTORING_TICKS_1MN;
 }
 
-const char Version[sizeof(EEPROM_VERSION)]=EEPROM_VERSION;
+const char Ais_settings::Version[sizeof(EEPROM_VERSION)]=EEPROM_VERSION;
 
-uint16_t Ais_settings::eeprom_checksum;
+uint16_t Ais_settings::Eeprom_checksum_u16=0;
 
-bool Ais_settings::eeprom_write_error, Ais_settings::eeprom_read_error;
-
-void Ais_settings::write_data(const uint8_t* val_pu8, uint16_t size_u16)
+void Ais_settings::write_data(const uint8_t* val_pu8,uint16_t size_u16)
 {
-	//if (eeprom_write_error) return;
-	while (size_u16--) {
-		uint8_t v_u8;
-
-		v_u8 = *val_pu8;
-		//LOG_D("Ais_settings::write_data: %c",v_u8);
+	uint8_t v_u8;
+	do{
+		v_u8=*val_pu8;
+		//LOG_D("Ais_settings::write_data: 0x%x - %c",v_u8,v_u8);
 		fputc(v_u8,File_p);
-		eeprom_checksum += v_u8;
+		Eeprom_checksum_u16+=v_u8;
 		val_pu8++;
-	}
+	} while (size_u16--);
 }
 
 
-void Ais_settings::read_data(uint8_t* val_pu8, uint16_t size_u16)
+void Ais_settings::read_data(uint8_t* val_pu8,uint16_t size_u16)
 {
-	uint8_t c_u8;
-	do {
-		c_u8=fgetc(File_p);
-		*val_pu8 = c_u8;
-		eeprom_checksum += c_u8;
-		//LOG_D("read_data: %c",*val_pu8);
+	uint8_t v_u8;
+	do{
+		v_u8=fgetc(File_p);
+		*val_pu8=v_u8;
+		Eeprom_checksum_u16+=v_u8;
+		//LOG_D("read_data: 0x%x - %c",v_u8,v_u8);
 		val_pu8++;
-	} while (--size_u16);
+	}while (size_u16--);
 }
 
 /*
  * M600 - Store Configuration
  */
-bool Ais_settings::save()
+void Ais_settings::save()
 {
+	uint16_t new_eeprom_checksum_u16;
 	//char wifi_ip_ac[WIFI_CLIENT_IP_SZ]="0.0.0.0";
+	File_p = fopen(SETTINGS_FILE_NAME,"rb+");
 	EEPROM_START();
-	eeprom_write_error=false;
-	EEPROM_SKIP(Version);    // Skip the version
-	EEPROM_SKIP(eeprom_checksum); // Skip the checksum slot
-	eeprom_checksum=0; // clear
+	EEPROM_WRITE(Version);
+	EEPROM_WRITE(Eeprom_checksum_u16);
+	Eeprom_checksum_u16=0; // clear
 
 	/*
 	 * AIS
@@ -185,42 +178,45 @@ bool Ais_settings::save()
 	EEPROM_WRITE(Monitoring.settings_s.speed_min_kt_u32);
 	EEPROM_WRITE(Monitoring.settings_s.gps_bauds_u32);
 
-	if (!eeprom_write_error) {
-		const uint16_t final_checksum=eeprom_checksum;
+	/*
+	 * Write the EEPROM header
+	 */
+	new_eeprom_checksum_u16=Eeprom_checksum_u16;
+	EEPROM_START();
+	EEPROM_WRITE(Version);
+	EEPROM_WRITE(new_eeprom_checksum_u16);
 
-		// Write the EEPROM header
-		EEPROM_START();
-		EEPROM_WRITE(Version);
-		EEPROM_WRITE(final_checksum);
-
-		// Report storage size
-		printf("Ais_settings: settings stored\n");
-	}
+	// Report storage size
+	printf("Ais_settings: settings stored - Eeprom_checksum_u16(%d)\n",new_eeprom_checksum_u16);
 
 	// Commit
 	fflush(File_p);
-	return !eeprom_write_error;
+	fclose(File_p);
 }
 
 
 /*
  * M601 - Retrieve Configuration
  */
-bool Ais_settings::load()
+int Ais_settings::load()
 {
-	//char wifi_ip_ac[WIFI_CLIENT_IP_SZ];
-	EEPROM_START();
-	eeprom_read_error=false;
-
 	char stored_ver[sizeof(EEPROM_VERSION)];
+	uint16_t stored_checksum_u16;
+	//char wifi_ip_ac[WIFI_CLIENT_IP_SZ];
+
+	File_p = fopen(SETTINGS_FILE_NAME,"rb+");
+	EEPROM_START();
 	EEPROM_READ(stored_ver);
+	EEPROM_READ(stored_checksum_u16);
+	Eeprom_checksum_u16=0; // Clear before reading first "real data"
 
-	uint16_t stored_checksum;
-	EEPROM_READ(stored_checksum);
+	// Version
+	if (strncmp(Version,stored_ver,sizeof(EEPROM_VERSION))!=0)
+	{
+		LOG_W("Settings version mismatch: stored %s/%s",stored_ver,EEPROM_VERSION);
+		reset();
+	}
 
-	// Version has to match or defaults are used
-	LOG_I("EEPROM=%s",stored_ver);
-	eeprom_checksum = 0; // clear before reading first "real data"
 
 	/*
 	 * AIS
@@ -257,27 +253,26 @@ bool Ais_settings::load()
 	/*
 	 * Monitoring
 	 */
-		EEPROM_READ(Monitoring.settings_s.cpa_warn_10thnm_u32);
-		EEPROM_READ(Monitoring.settings_s.lost_target_mn_u32);
-		EEPROM_READ(Monitoring.settings_s.tcpa_max_mn_u32);
-		EEPROM_READ(Monitoring.settings_s.display_target_step_nm_u32);
-		EEPROM_READ(Monitoring.settings_s.speed_min_kt_u32);
-		EEPROM_READ(Monitoring.settings_s.gps_bauds_u32);
+	EEPROM_READ(Monitoring.settings_s.cpa_warn_10thnm_u32);
+	EEPROM_READ(Monitoring.settings_s.lost_target_mn_u32);
+	EEPROM_READ(Monitoring.settings_s.tcpa_max_mn_u32);
+	EEPROM_READ(Monitoring.settings_s.display_target_step_nm_u32);
+	EEPROM_READ(Monitoring.settings_s.speed_min_kt_u32);
+	EEPROM_READ(Monitoring.settings_s.gps_bauds_u32);
 
-	if (eeprom_checksum == stored_checksum){
-		if (eeprom_read_error)
-			reset();
-		else {
-			postprocess();
-			LOG_I("Ais_settings: %s stored settings retrieved",Version);
-		}
-	} else {
-		LOG_W("Ais_settings: checksum mismatch: stored %d/%d",stored_checksum,eeprom_checksum);
+	if (Eeprom_checksum_u16==stored_checksum_u16)
+	{
+		postprocess();
+		LOG_I("Ais_settings: %s stored settings retrieved - Eeprom_checksum_u16(%d)",Version,stored_checksum_u16);
+	} else
+	{
+		LOG_W("Ais_settings: checksum mismatch - stored %d/%d",stored_checksum_u16,Eeprom_checksum_u16);
+		report(false);
 		reset();
 	}
 
-
-	return !eeprom_read_error;
+	fclose(File_p);
+	return (Eeprom_checksum_u16!=stored_checksum_u16);
 }
 
 
@@ -313,7 +308,6 @@ void Ais_settings::reset()
 	 */
 	//Ais_nmea_gps_s.gps_nmea_on_u8=0;
 
-
 	/*
 	 * Monitoring
 	 */
@@ -330,6 +324,7 @@ void Ais_settings::reset()
 	postprocess();
 	report(false);
 }
+
 
 void Ais_settings::report(bool onwifi)
 {
@@ -381,7 +376,7 @@ void Ais_settings::report(bool onwifi)
 	/*
 	ais_wifi::wifi_printf("%s\n","NMEA");
 	ais_wifi::wifi_printf("  gps_nmea_on_u8: %d\n",Ais_nmea_gps_s.gps_nmea_on_u8);
-	*/
+	 */
 	//printf("%s\n","NMEA");
 	//printf("  gps_nmea_on_u8: %d\n",Ais_nmea_gps_s.gps_nmea_on_u8);
 
