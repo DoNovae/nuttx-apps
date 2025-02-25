@@ -32,8 +32,6 @@ public:
     void ais_ready_to_send();
 	inline Ais_test_vessel(){;};
 	void new_postion(float azimuth_d,float dist_nm,float speed_kt,float direction);
-	void new_mmsi(uint8_t msg_type_u8,uint32_t mmsi_u32,float range_nm_u32);
-	void new_mmsi(uint8_t msg_type_u8);
 };
 
 
@@ -50,13 +48,10 @@ public:
 class Ais_test_bench{
 public:
 	static StationData my_station_s;
-	//static SI4463::Si446x si446x_tx;
-    //static SI4362::Si446x si446x_rx;
 	static Ais_test_vessel vessel1,vessel2,vessel3;
 	static void init();
 	static void set_direction(int32_t direction_i32);
-	static void send_nmea_ais();
-	static void new_mmsi();
+	static void ais_ready_to_send();
 
 	static int8_t on_off;
 };

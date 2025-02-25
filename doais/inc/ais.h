@@ -12,16 +12,17 @@
 #include <nuttx/mutex.h>
 #include "types.h"
 #include "ais_channels.h"
-#include "si4463.h"
-#include "si4362.h"
+//#include "si4463.h"
+//#include "si4362.h"
 #include "version.h"
+#include "gps.h"
 
 
 #define SI4463_PART_INFO 0x4463
 #define SI4362_PART_INFO 0x4362
 
-#define si446x_1 SI4362::si446x1_
-#define si446x_2 SI4362::si446x2_
+//#define si446x_1 SI4362::si446x1_
+//#define si446x_2 SI4362::si446x2_
 
 
 

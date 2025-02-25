@@ -59,8 +59,8 @@ struct orb_timer_db_update_s
   };
 #endif
  */
-ORB_DEFINE(timer_db_update,struct orb_timer_db_update_s,0);
-ORB_DEFINE(orb_ais_db_update,struct orb_ais_db_update_s,0);
+static ORB_DEFINE(timer_db_update,struct orb_timer_db_update_s,0);
+static ORB_DEFINE(ais_db_update,struct orb_ais_db_update_s,0);
 
 
 
@@ -128,11 +128,11 @@ FAR void *db_update_thread(pthread_addr_t arg)
 	fds[0].events = POLLIN;
 
 	/*
-	 * Subscribe orb_ais_db_update_s
+	 * Subscribe ais_db_update_s
 	 */
-	if ((sfd=orb_subscribe(ORB_ID(orb_ais_db_update)))<0)
+	if ((sfd=orb_subscribe(ORB_ID(ais_db_update)))<0)
 	{
-		LOG_E("db_update_thread: orb_ais_db_update_s subscribe failed: %d\n", errno);
+		LOG_E("db_update_thread: ais_db_update_s subscribe failed: %d\n", errno);
 		return NULL;
 	}
 
@@ -145,7 +145,7 @@ FAR void *db_update_thread(pthread_addr_t arg)
 		orb_check(sfd,&updated);
 		if (updated)
 		{
-			orb_copy(ORB_ID(orb_ais_db_update),sfd,&ais_s);
+			orb_copy(ORB_ID(ais_db_update),sfd,&ais_s);
 		}
 	}
 	while (updated);
@@ -189,7 +189,7 @@ FAR void *db_update_thread(pthread_addr_t arg)
 			RXPacket rx_packet_s(MAX_AIS_RX_PACKET_SIZE);
 
 			// Get bit_payload_pu8 from uORB msg
-			orb_copy(ORB_ID(orb_ais_db_update),fds[1].fd,&ais_s);
+			orb_copy(ORB_ID(ais_db_update),fds[1].fd,&ais_s);
 			LOG_D("db_update_thread : ais_s.id_u8(%d)",ais_s.id_u8);
 			memcpy(rx_packet_s.mPacket,ais_s.packet_au8,ORB_AIS_PACKET);
 			LOG_D("db_update_thread : rx_packet_s");

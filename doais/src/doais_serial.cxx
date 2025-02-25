@@ -65,7 +65,7 @@ static bool send_ok[LOGGER_BUFSIZE];
 static const char *injected_commands_P = NULL;
 
 
-ORB_DEFINE(orb_ais_db_update,struct orb_ais_db_update_s,0);
+static ORB_DEFINE(ais_db_update,struct orb_ais_db_update_s,0); // const struct orb_metadata g_orb_ais_db_update=...
 
 /*
  * --------------------------
@@ -480,7 +480,8 @@ inline void gcode_M700()
 #define LAT_D (47.21350504)
 #define LON_D (-1.56928539)
 
-void gcode_M312(){
+void gcode_M312()
+{
 	uint8_t msg_type_u8=code_seen('T')?code_value_ushort():0;
 	TXPacket tx_packet_s(MAX_AIS_RX_PACKET_SIZE);
 	printf("gcode_M312: msg_type_u8(%d) in {1,4,18,12,240,241,100,101,102,104,112,138}\n",msg_type_u8);
@@ -652,16 +653,56 @@ void gcode_M312(){
 		memcpy(ais_s.packet_au8,tx_packet_s.mPacket,ORB_AIS_PACKET);
 		ais_s.id_u8=3;
 
-		ptopic_ais=orb_advertise_queue(ORB_ID(orb_ais_db_update),&ais_s,ORB_AIS_DB_UPDATE_QUEUE_SIZE);
+		ptopic_ais=orb_advertise_queue(ORB_ID(ais_db_update),&ais_s,ORB_AIS_DB_UPDATE_QUEUE_SIZE);
 		if (ptopic_ais<0)
 		{
 			LOG_E("timer_thread: orb_ais_db_update advertise failed: %d",errno);
 		}
-		orb_publish(ORB_ID(orb_ais_db_update),ptopic_ais,&ais_s);
+		orb_publish(ORB_ID(ais_db_update),ptopic_ais,&ais_s);
 		orb_unadvertise(ptopic_ais);
 	}
 
 
+}
+
+/*
+ * ------------------------
+ * M315 D<direction>
+ * Test bench
+ * ------------------------
+ */
+void gcode_M315()
+{
+	int16_t direction_i16, tx_i16;
+	direction_i16=code_seen('D')?code_value_int():0;
+	/*
+	 * Nantes
+	 */
+	/*
+	Gps_info_s.lat_d=(int32_t)((float)47.22143353*LAT_LONG_SCALE);
+	Gps_info_s.lon_d=(int32_t)((float)-1.58430576*LAT_LONG_SCALE);
+	Gps_info_s.fix=2;
+	 */
+	/*
+	 * Saint Malo
+	 */
+	//Gps_info_s.lat_d=nmea_degree2ndeg((const double)48.6472222);
+	//Gps_info_s.lon_d=nmea_degree2ndeg((const double)-2.0088889);
+	Gps_info_s.lat_d=(int32_t)((float)48.6472222*LAT_LONG_SCALE);
+	Gps_info_s.lon_d=(int32_t)((float)-2.0088889*LAT_LONG_SCALE);
+	Gps_info_s.fix=2;
+
+	/*
+	 * Test bench
+	 */
+	LOG_D("Ais_test_bench");
+	Ais_test_bench::init();
+
+	/*
+	 * Test bench
+	 */
+	Ais_test_bench::set_direction(direction_i16%360);
+	Ais_test_bench::ais_ready_to_send();
 }
 
 
@@ -719,12 +760,10 @@ void gcode_M316()
 	station_s.shiptype=SAILING;
 	vessel.init(station_s,Gps_info_s);
 	vessel.new_postion((double)azimut_d_i32,(double)range_nm_u32,(float)speed_kt_u32/(float)10.0,(double)heading_d_i32);
+
 	range_nm_d64=Ais_monitoring::range3_nm((float)vessel.gps_i_s.lon_d/LAT_LONG_SCALE,(float)vessel.gps_i_s.lat_d/LAT_LONG_SCALE);
 	LOG_W("range_nm_d64(%.1f)",range_nm_d64);
-
-	vessel.new_mmsi(msg_type_u8,mmsi_u32,range_nm_d64);
-	vessel.new_mmsi(AIS_MSG_TYPE_24A,mmsi_u32,range_nm_d64);
-	vessel.new_mmsi(AIS_MSG_TYPE_24B,mmsi_u32,range_nm_d64);
+	vessel.ais_ready_to_send();
 }
 
 
@@ -807,6 +846,10 @@ void process_next_command() {
 
 	case 312: // Debug
 		gcode_M312();
+		break;
+
+	case 315: // Debug
+		gcode_M315();
 		break;
 
 	case 316: // Debug

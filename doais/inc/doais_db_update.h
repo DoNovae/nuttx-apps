@@ -29,7 +29,7 @@ struct orb_ais_db_update_s
 	uint8_t id_u8;
 };
 
-//ORB_DECLARE(orb_ais_db_update_s);
+//ORB_DECLARE(ais_db_update); // extern const struct orb_metadata g_orb_ais_db_update
 
 /*
  * Prptotypes

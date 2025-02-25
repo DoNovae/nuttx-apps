@@ -30,11 +30,19 @@ struct mng_msg_s
 	char cmd_cha[MNG_CMD_SIZE];
 };
 
+
 /*
- * #define ORB_DECLARE(name) extern const struct orb_metadata g_orb_##name
+ * ORB_DECLARE(name) extern const struct orb_metadata g_orb_##name
+ * ORB_DEFINE(name, structure, cb) \
+ *  const struct orb_metadata g_orb_##name = \
+ *   { \
+ *   #name, \
+ *   sizeof(structure), \
+ *   };
+ *   #endif
  */
-ORB_DECLARE(mng_msg);
-ORB_DECLARE(orb_test1);
+ORB_DECLARE(mng_msg); // extern const struct orb_metadata g_orb_mng_msg
+ORB_DECLARE(orb_test1); //extern const struct orb_metadata g_orb_orb_test1
 
 
 #endif //DOAIS_MNG_H
