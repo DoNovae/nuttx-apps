@@ -45,17 +45,17 @@
 #ifndef __DEFINITIONS_H__
 #define __DEFINITIONS_H__
 
-/*
 #define GPS_INFO(...) LOG_I(__VA_ARGS__)
 #define GPS_WARN(...) LOG_W(__VA_ARGS__)
 #define GPS_DEBUG(...) LOG_D(__VA_ARGS__)
 #define GPS_ERR(...) LOG_E(__VA_ARGS__)
-*/
 
+/*
 #define GPS_INFO(...)
 #define GPS_WARN(...)
 #define GPS_DEBUG(...)
 #define GPS_ERR(...)
+*/
 
 #define M_DEG_TO_RAD 		(M_PI / 180.0)
 #define M_RAD_TO_DEG 		(180.0 / M_PI)
@@ -63,7 +63,6 @@
 #define M_RAD_TO_DEG_F 		57.2957795130823f
 
 
-//HBL #define gps_usleep px4_usleep
 #define gps_usleep usleep
 
 /**
@@ -109,15 +108,9 @@ static inline gps_abstime gps_absolute_time()
 	struct timespec tp;
 	uint64_t time_u64;
 	clock_gettime(CLOCK_MONOTONIC,&tp);
-	time_u64 = ((uint64_t)(tp.tv_sec)*1000000)+tp.tv_nsec/1000;
+	time_u64=((uint64_t)(tp.tv_sec)*1000000)+tp.tv_nsec/1000;
 	return time_u64;
 }
-
-
-// TODO: this functionality is not available on the Snapdragon yet
-// HBL #ifdef __PX4_QURT
-//#define NO_MKTIME
-// HBL #endif
 
 #define NO_MKTIME
 

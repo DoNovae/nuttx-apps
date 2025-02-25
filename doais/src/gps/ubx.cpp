@@ -60,12 +60,12 @@
 
 /**** Trace macros, disable for production builds */
 #define UBX_TRACE_PARSER(...) {/*GPS_INFO(__VA_ARGS__);*/}    // decoding progress in parse_char()
-#define UBX_TRACE_RXMSG(...)  {GPS_INFO(__VA_ARGS__);}    // Rx msgs in payload_rx_done()
-#define UBX_TRACE_SVINFO(...) {GPS_INFO(__VA_ARGS__);}    // NAV-SVINFO processing (debug use only, will cause rx buffer overflows)
+#define UBX_TRACE_RXMSG(...)  {/*GPS_INFO(__VA_ARGS__);*/}    // Rx msgs in payload_rx_done()
+#define UBX_TRACE_SVINFO(...) {/*GPS_INFO(__VA_ARGS__);*/}    // NAV-SVINFO processing (debug use only, will cause rx buffer overflows)
 
 /**** Warning macros, disable to save memory */
 #define UBX_WARN(...)         {GPS_WARN(__VA_ARGS__);}
-#define UBX_DEBUG(...)        {GPS_DEBUG(__VA_ARGS__);}
+#define UBX_DEBUG(...)        {/*GPS_WARN(__VA_ARGS__);*/}
 
 GPSDriverUBX::GPSDriverUBX(Interface gpsInterface, GPSCallbackPtr callback, void *callback_user,
 			   sensor_gps_s *gps_position, satellite_info_s *satellite_info, uint8_t dynamic_model,
@@ -1080,12 +1080,12 @@ GPSDriverUBX::receive(unsigned timeout)
 			return -1;
 
 		} else if (ret > 0) {
-			UBX_DEBUG("read %d bytes", ret);
+			//UBX_DEBUG("read %d bytes", ret);
 
 			/* pass received bytes to the packet decoder */
 			for (int i = 0; i < ret; i++) {
 				handled |= parseChar(buf[i]);
-				UBX_DEBUG("parsed %d: 0x%x", i, buf[i]);
+				//UBX_DEBUG("parsed %d: 0x%x", i, buf[i]);
 			}
 
 			if (_interface == Interface::SPI) {

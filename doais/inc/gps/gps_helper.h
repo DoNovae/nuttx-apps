@@ -39,7 +39,8 @@
 
 #pragma once
 
-
+#include <cstdint>
+#include <cstring>
 #include "definitions.h"
 
 #ifndef GPS_READ_BUFFER_SIZE
@@ -48,10 +49,6 @@
 
 #ifndef M_PI_F
 # define M_PI_F 3.14159265358979323846f
-#endif
-
-#ifndef M_PI_2_F
-# define M_PI_2_F (3.14159265358979323846f/2.0f)
 #endif
 
 enum class GPSCallbackType {

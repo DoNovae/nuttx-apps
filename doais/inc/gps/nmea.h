@@ -64,7 +64,8 @@ public:
 		      satellite_info_s *satellite_info,
 		      float heading_offset = 0.f);
 
-	virtual ~GPSDriverNMEA();
+	// HBL virtual ~GPSDriverNMEA();
+	~GPSDriverNMEA();
 
 	int receive(unsigned timeout) override;
 	int configure(unsigned &baudrate, const GPSConfig &config) override;

@@ -419,7 +419,7 @@ class RTCMParsing;
 
 
 /*** u-blox protocol binary message and payload definitions ***/
-//HBL #pragma pack(push, 1)
+#pragma pack(push, 1)
 
 /* General: Header */
 typedef struct {
@@ -891,7 +891,7 @@ typedef union {
 	ubx_payload_rx_nav_relposned_t    payload_rx_nav_relposned;
 } ubx_buf_t;
 
-//HBL #pragma pack(pop)
+#pragma pack(pop)
 /*** END OF u-blox protocol binary message and payload definitions ***/
 
 /* Decoder state */

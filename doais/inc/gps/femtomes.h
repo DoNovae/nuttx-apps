@@ -37,12 +37,12 @@
 
 #include "base_station.h"
 #include "gps_helper.h"
-#include "definitions.h"
+#include "../../definitions.h"
 
 class RTCMParsing;
 
 /*** femtomes protocol binary message and payload definitions ***/
-//HBL #pragma pack(push, 1)
+#pragma pack(push, 1)
 
 /**
 * femto_uav_gps_t struct need to be packed
@@ -138,7 +138,7 @@ typedef struct {
 	uint16_t 		read;			/**< receive Frame message read bytes count */
 } femto_msg_t;
 
-//HBL #pragma pack(pop)
+#pragma pack(pop)
 /*** END OF femtomes protocol binary message and payload definitions ***/
 
 enum class FemtoDecodeState {

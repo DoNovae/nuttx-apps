@@ -33,6 +33,7 @@
 
 #pragma once
 
+#include <cstdint>
 
 
 class UnicoreParser

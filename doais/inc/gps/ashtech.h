@@ -39,7 +39,7 @@
 
 #include "gps_helper.h"
 #include "base_station.h"
-#include "definitions.h"
+#include "../../definitions.h"
 
 #include <math.h>
 

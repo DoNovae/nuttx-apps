@@ -9,6 +9,7 @@
 #ifndef AIS_H
 #define AIS_H
 
+#include <nuttx/mutex.h>
 #include "types.h"
 #include "ais_channels.h"
 #include "si4463.h"
@@ -29,11 +30,10 @@
 /*
  * =========================
  * Externals
- * =========================
+ * -------------------------
  */
 extern gps_data_t Gps_info_s;
-//extern StationData Station_data_s;
-extern volatile uint32_t Timer_ticks_5_u32;
-extern volatile uint32_t Timer_ticks_1_u32;
+extern StationData Station_data_s;
+extern FAR mutex_t Gps_data_mutex_s;
 
 #endif //AIS_H

@@ -46,14 +46,14 @@
 #include "gps_helper.h"
 #include "base_station.h"
 #include "rtcm.h"
-#include "definitions.h"
+#include "../../definitions.h"
 
 
 #define SBF_CONFIG_FORCE_INPUT "SSSSSSSSSS\n"
 
 #define SBF_CONFIG_BAUDRATE "setCOMSettings, %s, baud%d\n"
 
-#define SBF_CONFIG_RESET "setSBFOutput, all, %s, none, off\n"
+#define SBF_CONFIG_RESET "setSBFOutput, Stream1, %s, none, off\n"
 
 #define SBF_CONFIG_RECEIVER_DYNAMICS "setReceiverDynamics, %s, UAV\n"
 
@@ -112,7 +112,7 @@
 #define SBF_ID_AttCovEuler    5939
 
 /*** SBF protocol binary message and payload definitions ***/
-//HBL #pragma pack(push, 1)
+#pragma pack(push, 1)
 
 typedef struct {
 	uint8_t mode_type: 4;       /**< Bit field indicating the PVT mode type, as follows:
@@ -348,7 +348,7 @@ uint8_t msg_revision:
 	uint8_t padding[16];
 } sbf_buf_t;
 
-//HBL #pragma pack(pop)
+#pragma pack(pop)
 /*** END OF SBF protocol binary message and payload definitions ***/
 
 /* Decoder state */

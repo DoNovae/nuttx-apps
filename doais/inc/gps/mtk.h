@@ -41,7 +41,7 @@
 #pragma once
 
 #include "gps_helper.h"
-#include "definitions.h"
+#include "../../definitions.h"
 
 #define MTK_SYNC1_V16 0xd0
 #define MTK_SYNC1_V19 0xd1
@@ -63,7 +63,7 @@ typedef enum {
 } mtk_decode_state_t;
 
 /** the structures of the binary packets */
-//HBL #pragma pack(push, 1)
+#pragma pack(push, 1)
 
 typedef struct {
 	uint8_t payload; ///< Number of payload bytes
@@ -81,7 +81,7 @@ typedef struct {
 	uint8_t ck_b;
 } gps_mtk_packet_t;
 
-//HBL #pragma pack(pop)
+#pragma pack(pop)
 
 #define MTK_RECV_BUFFER_SIZE 40
 

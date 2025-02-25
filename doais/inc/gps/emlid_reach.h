@@ -40,7 +40,7 @@
 #pragma once
 
 #include "gps_helper.h"
-#include "definitions.h"
+#include "../../definitions.h"
 
 // Emlid documentation
 //   https://docs.emlid.com/reachm-plus/
@@ -53,7 +53,7 @@
 #define MAX_CONST(a, b) ((a>b) ? a : b)
 
 // Emlid ERB message definition
-//HBL #pragma pack(push, 1)
+#pragma pack(push, 1)
 
 typedef struct {
 	uint8_t		sync1;
@@ -128,7 +128,7 @@ typedef struct {
 	erb_payload_t	payload;
 } erb_message_t;
 
-//HBL #pragma pack(pop)
+#pragma pack(pop)
 
 
 /**

@@ -91,12 +91,18 @@ extern "C" {
 #define USLEEP_50MS (50*1000)
 
 
-/*
+/* ==================
  * Globals
+ * ------------------
  */
 static pid_t gps_pid;
 //static pid_t publisher_pid;
 //static pid_t subscriber_pid;
+
+/*
+ * Mutex
+ */
+FAR mutex_t Gps_data_mutex_s;
 
 #if defined(CONFIG_LIBC_EXECFUNCS) && defined(CONFIG_EXECFUNCS_SYMTAB)
 const struct symtab_s CONFIG_EXECFUNCS_SYMTAB[1];
@@ -155,6 +161,10 @@ int main(int argc, FAR char *argv[])
 	nsh_initialize();
 #endif // CONFIG_NSH_CONSOLE
 
+	/*
+	 * Mutex
+	 */
+	nxmutex_init(&Gps_data_mutex_s);
 
 	/*
 	 * Tasks
