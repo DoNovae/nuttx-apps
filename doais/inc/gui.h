@@ -9,9 +9,6 @@
 #ifndef __GUI_H
 #define __GUI_H
 
-#include <stdint.h>
-//#include <M5Unified.h>
-//#include <M5GFX.h>
 #include "gui_spk.h"
 #include "ais.h"
 

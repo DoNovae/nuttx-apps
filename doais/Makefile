@@ -22,12 +22,15 @@ include $(APPDIR)/Make.defs
 
 MODULE_DIR = $(APPDIR)/doais
 
-CFLAGS += -Iinc -Iincm -Iinc -Iinc/gps
-CXXFLAGS += -Iinc -Iincm -Iinc -Iinc/gps 
+# -D CONFIG_LV_PORT_USE_TOUCHPAD=y
+CFLAGS += -Iinc -Iincm -Iinc -Iinc/gps 
+CXXFLAGS += -Iinc -Iincm -Iinc -Iinc/gps
 
 #-I$(TOPDIR)/fs/littlefs/littlefs
 #CSRCS    += $(wildcard src/*.c)
-CSRCS    += src/ui_clock.c src/img_hand.c
+CSRCS    += src/img/img_target.c src/img/ui_target.c src/img/img_vessels.c src/img/ui_vessels.c src/img/img_settings.c src/img/ui_settings.c
+CSRCS    += src/img/LiberationMono_Bold30pt.c src/img/LiberationMono_Bold24pt.c src/img/LiberationMono_Bold12pt.c src/img/lv_font_montserrat_30b.c
+CSRCS    += src/img/ui_clock.c src/img/ui_wind.c src/img/ui_autopilot.c 
 
 CXXSRCS  += src/configuration_store.cxx
 CXXSRCS  += src/doais_serial.cxx src/ais_utils.cxx src/doais_db_update.cxx src/doais_gps.cxx
@@ -45,7 +48,7 @@ PROGNAME += "doais_mng"
 #MODULE    = $(CONFIG_DOAIS)
 
 PRIORITY  = 100
-STACKSIZE = 20480
+STACKSIZE = 20480*16
 MODULE    = $(CONFIG_DOAIS)
 
 include $(APPDIR)/Application.mk
