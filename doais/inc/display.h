@@ -14,7 +14,6 @@
  * Defines
  * -----------------
  */
-#define DISPLAY_NBR 3
 #define ALIGN_LEFT 1
 #define ALIGN_RIGHT -1
 #define ALIGN_TOP 7
@@ -22,7 +21,9 @@
 
 
 /*
+ * -----------------
  * LV_SYMBOL
+ * -----------------
  */
 #define LV_SYMBOL_DEGREE "\xC2\xB0"
 #define LV_SYMBOL_SIGNAL "\xEF\x80\x92"
@@ -33,7 +34,12 @@
 
 
 /*
+ * -----------------
  * Colors
+ * lv_palette_darken(LV_PALETTE_BLUE, 2)
+ * lv_palette_lighten(LV_PALETTE_GREY,2)
+ * lv_palette_main(LV_PALETTE_GREY)
+ * -----------------
  */
 #define DISPLAY_GREEN_RGB 0x8fc748
 #define DISPLAY_GOLD_RGB 0x998579
@@ -48,13 +54,14 @@
  * Types
  * -----------------
  */
+#define DISPLAY_NBR 3
 
 typedef enum
 {
 	DISPLAY_TARGET_ID=0,
-	DISPLAY_VESSELS_ID,
-	DISPLAY_SETTINGS_ID,
-	DISPLAY_CHARTS_ID
+	DISPLAY_VESSELS_ID=1,
+	DISPLAY_SETTINGS_ID=2,
+	DISPLAY_CHARTS_ID=3
 } Display_id_e;
 
 typedef struct
@@ -72,6 +79,7 @@ typedef struct
 	uint8_t Date;
 	uint16_t Year;
 } RTC_DateTypeDef;
+
 
 /*
  * Displays
@@ -93,10 +101,12 @@ typedef struct
  * Prototypes
  * -----------------
  */
-void lv_display_init(Display_id_e id_e);
+void lv_display_init(void);
+void lv_display_load(Display_id_e id_e);
+void lv_display_cmd(lv_obj_t *parent);
+void lv_audio_cmd(lv_obj_t *parent);
 
 void lv_display_status(lv_obj_t *parent);
-void lv_display_init(Display_id_e id_e);
 
 void lv_target_display(lv_obj_t * parent);
 void lv_target_update(void);
@@ -122,6 +132,7 @@ LV_FONT_DECLARE(lv_font_doais_speed);
 LV_FONT_DECLARE(lv_font_doais_status);
 LV_FONT_DECLARE(lv_font_doais_24);
 LV_FONT_DECLARE(lv_font_doais_12);
+
 extern lv_updatable_display_t Displays_as[DISPLAY_NBR];
 extern Display_id_e Display_id;
 

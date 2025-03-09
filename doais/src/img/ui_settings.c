@@ -6,7 +6,7 @@
  * Extern
  * -------------------
  */
-extern const lv_img_dsc_t Img_settings_s; //LV_IMG_DECLARE(Img_settings_s)
+LV_IMG_DECLARE(Img_settings_s);
 
 /*
  * ===================
@@ -19,7 +19,7 @@ extern const lv_img_dsc_t Img_settings_s; //LV_IMG_DECLARE(Img_settings_s)
  * Globals
  * -------------------
  */
-lv_obj_t *Settings_display_s;
+static lv_obj_t *Settings_display_s,*Vessels_display_s;
 
 
 /**
@@ -34,6 +34,7 @@ void lv_settings_display(lv_obj_t *parent)
 
     lv_display_cmd(parent);
     lv_display_status(parent);
+	lv_audio_cmd(parent);
 }
 
 

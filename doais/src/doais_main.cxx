@@ -428,17 +428,7 @@ static int display_init(void)
 	/*
 	 * Init Displays_as
 	 */
-	Displays_as[DISPLAY_TARGET_ID].display_ps=lv_obj_create(NULL);
-	Displays_as[DISPLAY_TARGET_ID].init_cb=lv_target_display;
-	Displays_as[DISPLAY_TARGET_ID].update_cb=lv_target_update;
-	Displays_as[DISPLAY_VESSELS_ID].display_ps=lv_obj_create(NULL);
-	Displays_as[DISPLAY_VESSELS_ID].init_cb=lv_vessels_display;
-	Displays_as[DISPLAY_VESSELS_ID].update_cb=lv_vessels_update;
-	Displays_as[DISPLAY_SETTINGS_ID].display_ps=lv_obj_create(NULL);
-	Displays_as[DISPLAY_SETTINGS_ID].init_cb=lv_settings_display;
-	Displays_as[DISPLAY_SETTINGS_ID].update_cb=lv_settings_update;
-	Display_id=DISPLAY_TARGET_ID;
-	lv_display_init(Display_id);
+	lv_display_init();
 
 	return 0;
 }
