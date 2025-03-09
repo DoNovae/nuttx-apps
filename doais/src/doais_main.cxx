@@ -346,13 +346,6 @@ int main(int argc, FAR char *argv[])
 //lv_obj_t *Vessels_s,*Target_s, *Settings_s;
 //lv_obj_t *Dspl_wind_s,*Clock_s,*Compass_s,*Autopilot_s;
 
-void lv_display_init(Display_id_e id_e)
-{
-	lv_obj_clean(Displays_as[id_e].display_ps);
-	lv_scr_load(Displays_as[id_e].display_ps);
-	Displays_as[id_e].init_cb(Displays_as[id_e].display_ps);
-}
-
 static int display_init(void)
 {
 	/* LVGL initialization */
@@ -414,36 +407,6 @@ static int display_init(void)
 
 
 	/*
-	 * Clock
-	 */
-	/*	Clock_s=lv_obj_create(NULL);
-	lv_clock_display(Clock_s);*/
-
-	/*
-	 * Target
-	 */
-	/*	Target_s=lv_obj_create(NULL);
-	lv_obj_clean(Target_s);
-	lv_scr_load(Target_s);
-	lv_target_display(Target_s);*/
-
-	/*
-	 * Vessels
-	 */
-	/*	Vessels_s=lv_obj_create(NULL);
-	lv_obj_clean(Vessels_s);
-	lv_scr_load(Vessels_s);
-	lv_vessels_display(Vessels_s);*/
-
-	/*
-	 * Settings
-	 */
-	/*	Settings_s=lv_obj_create(NULL);
-	lv_obj_clean(Settings_s);
-	lv_scr_load(Settings_s);
-	lv_settings_display(Settings_s);*/
-
-	/*
 	 * Wind
 	 */
 	/*	Dspl_wind_s=lv_obj_create(NULL);
@@ -452,14 +415,6 @@ static int display_init(void)
 	lv_obj_clean(Dspl_wind_s);
 	lv_scr_load(Dspl_wind_s);
 	lv_wind_display(Dspl_wind_s);*/
-
-	/*
-	 * Compass
-	 */
-	/*	Compass_s=lv_obj_create(NULL);
-	lv_obj_clean(Compass_s);
-	lv_scr_load(Compass_s);
-	lv_compass_display(Compass_s);*/
 
 	/*
 	 * Autopilot
@@ -476,7 +431,12 @@ static int display_init(void)
 	Displays_as[DISPLAY_TARGET_ID].display_ps=lv_obj_create(NULL);
 	Displays_as[DISPLAY_TARGET_ID].init_cb=lv_target_display;
 	Displays_as[DISPLAY_TARGET_ID].update_cb=lv_target_update;
-
+	Displays_as[DISPLAY_VESSELS_ID].display_ps=lv_obj_create(NULL);
+	Displays_as[DISPLAY_VESSELS_ID].init_cb=lv_vessels_display;
+	Displays_as[DISPLAY_VESSELS_ID].update_cb=lv_vessels_update;
+	Displays_as[DISPLAY_SETTINGS_ID].display_ps=lv_obj_create(NULL);
+	Displays_as[DISPLAY_SETTINGS_ID].init_cb=lv_settings_display;
+	Displays_as[DISPLAY_SETTINGS_ID].update_cb=lv_settings_update;
 	Display_id=DISPLAY_TARGET_ID;
 	lv_display_init(Display_id);
 

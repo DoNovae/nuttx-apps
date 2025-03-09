@@ -15,15 +15,18 @@
  * -----------------
  */
 #define DISPLAY_NBR 3
+#define ALIGN_LEFT 1
+#define ALIGN_RIGHT -1
+#define ALIGN_TOP 7
+#define ALIGN_BOTTOM -1
 
 
 /*
  * LV_SYMBOL
  */
-#define LV_SYMBOL_DOUBLE_LEFT LV_SYMBOL_LEFT " " LV_SYMBOL_LEFT
-#define LV_SYMBOL_DOUBLE_RIGHT LV_SYMBOL_RIGHT " " LV_SYMBOL_RIGHT
 #define LV_SYMBOL_DEGREE "\xC2\xB0"
 #define LV_SYMBOL_SIGNAL "\xEF\x80\x92"
+
 
 
 
@@ -91,38 +94,36 @@ typedef struct
  * -----------------
  */
 void lv_display_init(Display_id_e id_e);
-void displays_cmd_event_cb(lv_event_t *e);
-void lv_display_cmd(lv_obj_t *parent);
+
+void lv_display_status(lv_obj_t *parent);
+void lv_display_init(Display_id_e id_e);
 
 void lv_target_display(lv_obj_t * parent);
 void lv_target_update(void);
 
 void lv_vessels_display(lv_obj_t *parent);
+void lv_vessels_update(void);
+
 void lv_settings_display(lv_obj_t *parent);
-void lv_settings_update_cb(void);
+void lv_settings_update(void);
 
-
-void lv_wind_display(lv_obj_t * parent);
+/*void lv_wind_display(lv_obj_t * parent);
 void wind_update_cb(void);
 
-void lv_compass_display(lv_obj_t *parent);
-void compass_update_cb(void);
-
 void autopilot_update_cb(void);
-void lv_autopilot_display(lv_obj_t *parent);
-
-void lv_clock_display(lv_obj_t * parent);
-void clock_update_cb(void);
+void lv_autopilot_display(lv_obj_t *parent);*/
 
 /**
  * ==================
  * Extern
  * -----------------
  */
-LV_FONT_DECLARE(lv_font_montserrat_30b);
-const lv_font_t LiberationMono_Bold30pt;
-const lv_font_t LiberationMono_Bold24pt;
-const lv_font_t LiberationMono_Bold12pt;
+LV_FONT_DECLARE(lv_font_doais_speed);
+LV_FONT_DECLARE(lv_font_doais_status);
+LV_FONT_DECLARE(lv_font_doais_24);
+LV_FONT_DECLARE(lv_font_doais_12);
+extern lv_updatable_display_t Displays_as[DISPLAY_NBR];
+extern Display_id_e Display_id;
 
 
 

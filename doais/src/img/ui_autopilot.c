@@ -70,8 +70,8 @@ static lv_obj_t *ap_temp_l;
  */
 static const char *autopilot_btnm_map[] =
 {
-		LV_SYMBOL_DOUBLE_LEFT, LV_SYMBOL_DOUBLE_RIGHT, "\n",
-		LV_SYMBOL_LEFT, LV_SYMBOL_RIGHT, "\n",
+		LV_SYMBOL_DOUBLE_LEFT, LV_SYMBOL_DOUBLE_RIGHT,"\n",
+		LV_SYMBOL_LEFT, LV_SYMBOL_RIGHT,"\n",
 		"STANDBY", "AUTO", "\n",
 		AP_MODE_COMPASS, LV_SYMBOL_EYE_OPEN, ""
 };
@@ -248,7 +248,8 @@ void autopilot_event_cb(lv_event_t *e)
 		const char *txt = lv_btnmatrix_get_btn_text(obj, id);
 		LOG_D("autopilot_event_cb: %s",txt);
 
-		if (txt != NULL) {
+		if (txt != NULL)
+		{
 			if (strcmp("AUTO", txt) == 0)
 			{
 				//				app.onDelay(0, []() {
