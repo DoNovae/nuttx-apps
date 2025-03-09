@@ -98,9 +98,9 @@ void lv_target_display(lv_obj_t *parent)
 	lv_obj_align(Target_display_s,LV_ALIGN_CENTER, 0, 0);
 
 	Speed_Heading_l = lv_label_create(parent);
-	//lv_obj_set_style_text_font(Speed_Heading_l,&lv_font_montserrat_30,0);
+	lv_obj_set_style_text_font(Speed_Heading_l,&lv_font_montserrat_30,0);
 	//lv_obj_set_style_text_font(Speed_Heading_l,&lv_font_montserrat_30b,0);
-	lv_obj_set_style_text_font(Speed_Heading_l,&LiberationMono_Bold30pt,0);
+	//lv_obj_set_style_text_font(Speed_Heading_l,&LiberationMono_Bold30pt,0);
 	lv_obj_set_style_text_color(Speed_Heading_l,lv_color_hex(DISPLAY_WHITE_RGB),0);
 
 	//lv_label_set_text(Speed_Heading_l,LV_SYMBOL_SIGNAL);
