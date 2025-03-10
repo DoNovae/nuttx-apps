@@ -83,6 +83,7 @@ extern "C"
  */
 // THREAD_STACK_MAX_SIZE (4096*16)
 #define THREAD_STACK_SIZE 4096
+#define THREAD_DISPLAY_STACK_SIZE (4096*16)
 #define THREAD_SERIAL_STACK_SIZE (4096*16)
 #define THREAD_DB_UPDATE_STACK_SIZE (4096*16)
 #define THREAD_GPS_STACK_SIZE (4096)
@@ -213,7 +214,7 @@ int main(int argc, FAR char *argv[])
 		pthread_attr_init(&tattr);
 		sparam.sched_priority=THREAD_DISPLAY_PRIORITY;
 		pthread_attr_setschedparam(&tattr, &sparam);
-		pthread_attr_setstacksize(&tattr,THREAD_STACK_SIZE);
+		pthread_attr_setstacksize(&tattr,THREAD_DISPLAY_STACK_SIZE);
 		pthread_create(&pid, &tattr,display_thread,(pthread_addr_t)0);
 		pthread_setname_np(pid, "display_thread");
 	}

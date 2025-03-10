@@ -39,6 +39,8 @@ void displays_cmd_event_cb(lv_event_t *e);
 void target_cmd_event_cb(lv_event_t *e);
 void target_audio_event_cb(lv_event_t *e);
 void lv_target_bell(lv_obj_t *parent);
+void lv_display_speed(lv_obj_t *parent);
+void lv_update_speed(void);
 
 /*
  * ===================
@@ -51,6 +53,7 @@ static lv_obj_t *Target_display_btn;
 static lv_obj_t *Target_btn;
 static lv_obj_t *Audio_btn,*Audio_l;
 static lv_style_t Style_btn, Style_bg;
+
 static char Status_str[]={LV_SYMBOL_SIGNAL LV_SYMBOL_WIFI LV_SYMBOL_VOLUME_MID};
 
 
@@ -65,6 +68,10 @@ static const char *Target_btnm_map[]=
 		" ","X",""
 };
 
+static const char *Audio_btnm_map[]=
+{
+		LV_SYMBOL_VOLUME_MID,""
+};
 
 
 /*
@@ -78,6 +85,12 @@ static const char *Target_btnm_map[]=
  * lv_display_init
  * -------------------
  */
+static lv_color_t btn_darken(const lv_color_filter_dsc_t * dsc, lv_color_t color, lv_opa_t opa)
+{
+    LV_UNUSED(dsc);
+    return lv_color_darken(color, opa);
+}
+
 void lv_display_init(void)
 {
 	/*
@@ -102,8 +115,7 @@ void lv_display_init(void)
 	lv_style_set_pad_all(&Style_bg,0);
 	lv_style_set_pad_gap(&Style_bg,0);
 	lv_style_set_clip_corner(&Style_bg,true);
-	lv_style_set_radius(&Style_bg, LV_RADIUS_CIRCLE);
-	lv_style_set_border_width(&Style_bg, 0);
+	lv_style_set_radius(&Style_bg,LV_RADIUS_CIRCLE);
 	lv_style_set_border_width(&Style_bg, 0);
 	lv_style_set_border_color(&Style_bg,lv_color_hex(DISPLAY_DARKGREY_RGB));
 	lv_style_set_bg_color(&Style_bg,BUTTON_BG_COLOR);
@@ -111,12 +123,12 @@ void lv_display_init(void)
 	lv_style_init(&Style_btn);
 	lv_style_set_radius(&Style_btn, 0);
 	lv_style_set_border_width(&Style_btn, 1);
-	lv_style_set_border_opa(&Style_btn, LV_OPA_50);
+	lv_style_set_border_opa(&Style_btn,LV_OPA_50);
 	lv_style_set_border_side(&Style_btn,LV_BORDER_SIDE_INTERNAL);
 	lv_style_set_radius(&Style_btn, 0);
 	lv_style_set_border_color(&Style_btn,lv_color_hex(DISPLAY_DARKGREY_RGB));
 	lv_style_set_bg_color(&Style_btn,BUTTON_BG_COLOR);
-	lv_style_set_text_font(&Style_btn,&lv_font_montserrat_12);
+	lv_style_set_text_font(&Style_btn,&lv_font_montserrat_18);
 	lv_style_set_text_color(&Style_btn,BUTTON_TEXT_COLOR);
 }
 
@@ -217,13 +229,198 @@ void lv_display_cmd(lv_obj_t *parent)
 {
 	Target_display_btn = lv_btnmatrix_create(parent);
 	lv_btnmatrix_set_map(Target_display_btn,Target_display_btnm_map);
-	lv_obj_add_style(Target_display_btn,&Style_bg, 0);
-	lv_obj_add_event_cb(Target_display_btn,displays_cmd_event_cb, LV_EVENT_PRESSED, NULL);
+	lv_obj_add_event_cb(Target_display_btn,displays_cmd_event_cb,LV_EVENT_PRESSED,NULL);
 	lv_obj_set_size(Target_display_btn,DISPLAY_CMD_BTN_WITH,DISPLAY_CMD_BTN_HIGH);
 	lv_obj_align(Target_display_btn,LV_ALIGN_BOTTOM_LEFT,ALIGN_LEFT,ALIGN_BOTTOM);
-	lv_obj_add_style(Target_display_btn, &Style_btn, LV_PART_ITEMS);
+	lv_obj_add_style(Target_display_btn,&Style_bg,0);
+	lv_obj_add_style(Target_display_btn, &Style_btn,LV_PART_ITEMS);
 }
 
+
+
+
+/*
+ * ===================
+ * autopilot_event_cb
+ * -------------------
+ *
+ */
+void target_audio_event_cb(lv_event_t *e)
+{
+	lv_event_code_t code=lv_event_get_code(e);
+	if (code==LV_EVENT_PRESSED)
+	{
+		LOG_D("target_audio_event_cb");
+	}
+}
+
+/*
+ * ===================
+ * lv_audio_cmd
+ * -------------------
+ *
+ */
+void lv_audio_cmd(lv_obj_t *parent)
+{
+	Audio_btn = lv_btnmatrix_create(parent);
+	lv_btnmatrix_set_map(Audio_btn,Audio_btnm_map);
+	lv_obj_add_style(Audio_btn,&Style_bg,0);
+	lv_obj_add_style(Audio_btn, &Style_btn,LV_PART_ITEMS);
+	lv_obj_add_event_cb(Audio_btn,target_audio_event_cb, LV_EVENT_PRESSED,NULL);
+	lv_obj_set_size(Audio_btn,TARGET_AUDIO_BTN_WITH,TARGET_AUDIO_BTN_HIGH);
+	lv_obj_align(Audio_btn,LV_ALIGN_BOTTOM_RIGHT,ALIGN_RIGHT,ALIGN_BOTTOM);
+}
+
+
+/*
+ * ===========================
+ * lv_display_header_status
+ * ---------------------------
+ *   Audio
+ *     - LV_SYMBOL_VOLUME_MID / LV_SYMBOL_MUTE
+ *   Wifi
+ *   	- LV_SYMBOL_WIFI
+ *   Signal
+ *      - LV_SYMBOL_SIGNAL
+ * ---------------------------
+ *
+ */
+void lv_display_status(lv_obj_t *parent)
+{
+	Status_header_l=lv_label_create(parent);
+	lv_obj_set_style_text_font(Status_header_l,&lv_font_doais_status,0);
+	lv_obj_set_style_text_color(Status_header_l,lv_color_hex(DISPLAY_GREEN_RGB),0);
+	//lv_label_set_text(Status_header_l,LV_SYMBOL_SIGNAL LV_SYMBOL_WIFI LV_SYMBOL_VOLUME_MID );
+	lv_label_set_text(Status_header_l,Status_str);
+	//lv_label_set_text(Status_header_l,LV_SYMBOL_SIGNAL"    "LV_SYMBOL_VOLUME_MID );
+	lv_obj_align(Status_header_l, LV_ALIGN_TOP_RIGHT,ALIGN_RIGHT,3);
+}
+
+
+
+
+
+
+
+
+/*
+ * ================================================================
+ *           TARGET FUNCTIONS
+ */
+
+/**
+ * ===================
+ * lv_display_speed
+ * -------------------
+ *
+ */
+void lv_display_speed(lv_obj_t *parent)
+{
+	Speed_Heading_l = lv_label_create(parent);
+	lv_obj_set_style_text_font(Speed_Heading_l,&lv_font_doais_speed,0);
+	lv_obj_set_style_text_color(Speed_Heading_l,lv_color_hex(DISPLAY_WHITE_RGB),0);
+	lv_obj_set_width(Speed_Heading_l,SPEED_HEADING_LABEL_WITH);
+	lv_obj_set_style_text_align(Speed_Heading_l, LV_TEXT_ALIGN_LEFT, 0);
+	lv_obj_align(Speed_Heading_l, LV_ALIGN_TOP_LEFT,ALIGN_LEFT,4);
+}
+
+void lv_update_speed(void)
+{
+	lv_label_set_text_fmt(Speed_Heading_l,"%04.1fk%03d" LV_SYMBOL_DEGREE,(float)6.7,270);
+}
+
+
+/**
+ * ===================
+ * lv_target_display
+ * -------------------
+ *
+ */
+void lv_target_display(lv_obj_t *parent)
+{
+	/*
+	 * Display bkgd image
+	 */
+	Target_display_s=lv_img_create(parent);
+	lv_img_set_src(Target_display_s,&Img_target_s);
+	lv_obj_align(Target_display_s,LV_ALIGN_CENTER, 0, 0);
+
+	lv_display_speed(parent);
+	lv_update_speed();
+
+	lv_display_cmd(parent);
+	lv_display_status(parent);
+	lv_target_cmd(parent);
+	lv_audio_cmd(parent);
+	lv_target_bell(parent);
+}
+
+
+
+/*
+ * ===================
+ * lv_target_update
+ * -------------------
+ *
+ */
+void lv_target_update(void)
+{
+}
+
+/*
+ * ===================
+ * lv_target_bell
+ * -------------------
+ *
+ */
+#define BELL_CORNER_RL_POSX 23
+#define BELL_CORNER_RL_POSY 129
+#define BELL_CORNER_WIDTH 50
+#define BELL_CORNER_HEIGHT 50
+#define BELL_ANIM_DURATION_MS 250
+
+/*
+ * Set the zoom factor of the image.
+ * Zoom factor.
+ *    - 256 or LV_ZOOM_IMG_NONE for no zoom
+ *    - <256: scale down
+ *    - >256 scale up
+ *    - 128 half size
+ *    - 512 double size
+ */
+static void set_zoom(void * img, int32_t v)
+{
+	lv_img_set_zoom(img, v);
+}
+
+
+/*
+ * ===================
+ * lv_target_bell
+ * -------------------
+ *
+ */
+void lv_target_bell(lv_obj_t *parent)
+{
+	lv_anim_t a;
+	Bell_display_s=lv_img_create(parent);
+	lv_img_set_src(Bell_display_s,&Img_bell_s);
+	lv_obj_set_pos(Bell_display_s,BELL_CORNER_RL_POSX,BELL_CORNER_RL_POSY);
+	lv_img_set_size_mode(Bell_display_s,LV_IMG_SIZE_MODE_VIRTUAL);
+
+	/*
+	 * Animation
+	 */
+	lv_anim_init(&a);
+	lv_anim_set_var(&a,Bell_display_s);
+	lv_anim_set_exec_cb(&a, set_zoom);
+	lv_anim_set_values(&a,256,300);
+	lv_anim_set_time(&a,BELL_ANIM_DURATION_MS);
+	lv_anim_set_repeat_count(&a,LV_ANIM_REPEAT_INFINITE);
+
+	lv_anim_start(&a);
+	//lv_obj_add_flag(Bell_display_s,LV_OBJ_FLAG_HIDDEN);
+}
 
 
 /*
@@ -273,167 +470,10 @@ void lv_target_cmd(lv_obj_t *parent)
 {
 	Target_btn = lv_btnmatrix_create(parent);
 	lv_btnmatrix_set_map(Target_btn,Target_btnm_map);
-	lv_obj_add_style(Target_btn,&Style_bg,0);
 	lv_obj_add_event_cb(Target_btn,target_cmd_event_cb, LV_EVENT_PRESSED,NULL);
 	lv_obj_set_size(Target_btn,TARGET_CMD_BTN_WITH,TARGET_CMD_BTN_HIGH);
 	// From top : 60 - from left: 4
 	lv_obj_set_pos(Target_btn,4,60);
+	lv_obj_add_style(Target_btn,&Style_bg,0);
 	lv_obj_add_style(Target_btn,&Style_btn,LV_PART_ITEMS);
-}
-
-
-
-/*
- * ===================
- * autopilot_event_cb
- * -------------------
- *
- */
-void target_audio_event_cb(lv_event_t *e)
-{
-	lv_event_code_t code=lv_event_get_code(e);
-	if (code==LV_EVENT_PRESSED)
-	{
-		LOG_D("target_audio_event_cb");
-	}
-}
-
-/*
- * ===================
- * lv_audio_cmd
- * -------------------
- *
- */
-void lv_audio_cmd(lv_obj_t *parent)
-{
-	Audio_btn=lv_btn_create(parent);
-	lv_obj_add_style(Audio_btn,&Style_bg,0);
-	lv_obj_add_event_cb(Audio_btn,target_audio_event_cb,LV_EVENT_PRESSED,NULL);;
-	lv_obj_add_style(Audio_btn,&Style_btn,LV_PART_ITEMS);
-	lv_obj_set_size(Audio_btn,TARGET_AUDIO_BTN_WITH,TARGET_AUDIO_BTN_HIGH);
-	lv_obj_align(Audio_btn,LV_ALIGN_BOTTOM_RIGHT,ALIGN_RIGHT,ALIGN_BOTTOM);
-	Audio_l=lv_label_create(Audio_btn);
-	lv_obj_set_style_text_color(Audio_l,BUTTON_TEXT_COLOR,0);
-	lv_label_set_text(Audio_l,LV_SYMBOL_VOLUME_MID);
-	lv_obj_center(Audio_l);
-}
-
-
-/*
- * ===========================
- * lv_display_header_status
- * ---------------------------
- *   Audio
- *     - LV_SYMBOL_VOLUME_MID / LV_SYMBOL_MUTE
- *   Wifi
- *   	- LV_SYMBOL_WIFI
- *   Signal
- *      - LV_SYMBOL_SIGNAL
- * ---------------------------
- *
- */
-void lv_display_status(lv_obj_t *parent)
-{
-	Status_header_l=lv_label_create(parent);
-	lv_obj_set_style_text_font(Status_header_l,&lv_font_doais_status,0);
-	lv_obj_set_style_text_color(Status_header_l,lv_color_hex(DISPLAY_GREEN_RGB),0);
-	//lv_label_set_text(Status_header_l,LV_SYMBOL_SIGNAL LV_SYMBOL_WIFI LV_SYMBOL_VOLUME_MID );
-	lv_label_set_text(Status_header_l,Status_str);
-	//lv_label_set_text(Status_header_l,LV_SYMBOL_SIGNAL"    "LV_SYMBOL_VOLUME_MID );
-	lv_obj_align(Status_header_l, LV_ALIGN_TOP_RIGHT,ALIGN_RIGHT,3);
-}
-
-
-
-
-
-
-
-
-/*
- * ===============================
- *           TARGET FUNCTIONS
- * ===============================
- */
-
-
-
-/**
- * ===================
- * lv_target_display
- * -------------------
- *
- */
-void lv_target_display(lv_obj_t *parent)
-{
-	Target_display_s=lv_img_create(parent);
-	lv_img_set_src(Target_display_s,&Img_target_s);
-	lv_obj_align(Target_display_s,LV_ALIGN_CENTER, 0, 0);
-
-	Speed_Heading_l = lv_label_create(parent);
-	lv_obj_set_style_text_font(Speed_Heading_l,&lv_font_doais_speed,0);
-	lv_obj_set_style_text_color(Speed_Heading_l,lv_color_hex(DISPLAY_WHITE_RGB),0);
-
-	lv_label_set_text_fmt(Speed_Heading_l,"%04.1fk%03d" LV_SYMBOL_DEGREE,(float)6.7,270);
-
-	lv_obj_set_width(Speed_Heading_l,SPEED_HEADING_LABEL_WITH);
-	lv_obj_set_style_text_align(Speed_Heading_l, LV_TEXT_ALIGN_LEFT, 0);
-	lv_obj_align(Speed_Heading_l, LV_ALIGN_TOP_LEFT,ALIGN_LEFT,4);
-
-	lv_display_cmd(parent);
-	lv_display_status(parent);
-	lv_target_cmd(parent);
-	lv_audio_cmd(parent);
-	lv_target_bell(parent);
-}
-
-
-
-/*
- * ===================
- * lv_target_update
- * -------------------
- *
- */
-void lv_target_update(void)
-{
-}
-
-/*
- * ===================
- * lv_target_bell
- * -------------------
- *
- */
-#define BELL_CORNER_RL_POSX 23
-#define BELL_CORNER_RL_POSY 129
-#define BELL_CORNER_WIDTH 50
-#define BELL_CORNER_HEIGHT 50
-#define BELL_ANIM_DURATION_MS 500
-static void set_angle(void * img, int32_t v)
-{
-	lv_img_set_angle(img, v);
-}
-
-void lv_target_bell(lv_obj_t *parent)
-{
-	lv_anim_t a;
-	Bell_display_s=lv_img_create(parent);
-	lv_img_set_src(Bell_display_s,&Img_bell_s);
-	lv_obj_set_pos(Bell_display_s,BELL_CORNER_RL_POSX,BELL_CORNER_RL_POSY);
-
-	/*
-	 * Animation
-	 */
-/*
-	lv_img_set_pivot(Bell_display_s,BELL_CORNER_RL_POSX,BELL_CORNER_RL_POSY);
-	lv_anim_init(&a);
-	lv_anim_set_var(&a,Bell_display_s);
-	lv_anim_set_exec_cb(&a, set_angle);
-	lv_anim_set_values(&a,-45,45);
-	lv_anim_set_time(&a,BELL_ANIM_DURATION_MS);
-	lv_anim_set_repeat_count(&a,LV_ANIM_REPEAT_INFINITE);
-	lv_anim_start(&a);
-	//lv_obj_add_flag(Bell_display_s,LV_OBJ_FLAG_HIDDEN);
-*/
 }
