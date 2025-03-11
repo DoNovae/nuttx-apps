@@ -3,7 +3,7 @@
 #include "gps.h"
 #include "ais_messages.h"
 #include "circular_queue.h"
-#include "gui.h"
+//#include "gui.h"
 #include "gui_spk.h"
 #include "gmath.h"
 

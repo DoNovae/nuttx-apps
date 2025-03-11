@@ -59,8 +59,6 @@ satellite_info_s Satellite_info; // Satellite info
 
 int callback(GPSCallbackType type, void *buf, int buf_length, void *user);
 GPSDriverNMEA parser(GPSDriverNMEA(callback,(void *)0,&Sensor_gps,&Satellite_info,(float)0));
-//GPSDriverUBX neo(GPSDriverUBX(GPSHelper::Interface::UART,callback,(void *)0,&sensor_gps,&satellite_info,GPS_NEO_MODEL,0.f,GPS_DEFAULT_BAUDRATE,GPSDriverUBX::UBXMode::Normal));
-
 
 /*
  * --------------------------
@@ -75,7 +73,8 @@ void update_gps_info(gps_data_t * gps_info_ps);
  * Externs
  * --------------------------
  */
-extern gps_data_t Gps_info_s;
+extern gps_data_t Gps_info_s; // Cf doais_db_update.c
+extern FAR mutex_t Gps_data_mutex_s;// Cf ais_main.c
 
 
 /*
@@ -173,12 +172,13 @@ void update_gps_info()
 			float dist_nm_f, duration_h_f;
 
 			dist_nm_f=(float)Utils::distance_nm((float)Gps_info_s.lat_d/LAT_LONG_SCALE,(float)Gps_info_s.lon_d/LAT_LONG_SCALE,Sensor_gps.lat/LAT_LONG_SCALE,Sensor_gps.lon/LAT_LONG_SCALE);
-			dist_nm_f=((Sensor_gps.utc_s.tv_sec-Gps_info_s.utc_s.tv_sec)+(float)(Sensor_gps.utc_s.tv_nsec-Gps_info_s.utc_s.tv_nsec)/(float)1000000)/(float)3600;
+			duration_h_f=(float)Gps_info_s.utc_s.tm_hour+(float)Gps_info_s.utc_s.tm_min/(float)60.0+(float)Gps_info_s.utc_s.tm_sec/(float)3600.0;
 
 			LOG_D("update_gps_info: dist_nm_f(%.2f)/duration_h_f(%.2f)",dist_nm_f,duration_h_f);
 			Gps_info_s.speed_kt=(duration_h_f>0.01)? dist_nm_f/duration_h_f:0.0;
 		}
 		memcpy((void*)&(Gps_info_s.utc_s),(void*)&(Sensor_gps.utc_s),sizeof(timeinfo_t));
+		LOG_D("update_gps_info: tm_hour(%d) - tm_min(%d) - tm_sec(%d)",Sensor_gps.utc_s.tm_hour,Sensor_gps.utc_s.tm_min,Sensor_gps.utc_s.tm_sec);
 		Gps_info_s.lat_d=Sensor_gps.lat;
 		Gps_info_s.lon_d=Sensor_gps.lon;
 		Gps_info_s.speed_kt=Sensor_gps.vel_m_s*(float)3.6/(float)KM_PER_MILE;

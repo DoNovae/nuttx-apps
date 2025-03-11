@@ -1,3 +1,15 @@
+/**
+ * =====================================
+ *  doais_db_update.h
+ * -------------------------------------
+ *  AIS DoNovae
+ *  www.DoNovae.com
+ *  Herve Bailly
+ * =====================================
+ *
+ * =====================================
+ */
+
 #include <errno.h>
 #include <math.h>
 #include <poll.h>
@@ -15,7 +27,7 @@
 /*
  * Defines
  */
-#define TIMER_INTERVAL_US 5000000
+
 #define ORB_AIS_PACKET ((MAX_AIS_RX_PACKET_SIZE+1)>>3)
 #define ORB_AIS_DB_UPDATE_QUEUE_SIZE 10
 

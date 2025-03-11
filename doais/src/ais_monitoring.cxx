@@ -799,7 +799,7 @@ double Ais_monitoring::range3_nm(double lon_d,double lat_d)
  */
 void Ais_monitoring::beep()
 {
-	Speaker.play_tone2k();
+	//Speaker.play_tone2k();
 }
 
 /*
@@ -809,7 +809,7 @@ void Ais_monitoring::beep()
  */
 void Ais_monitoring::voice()
 {
-	if (min_time_to_cpa_mn_u32<(MONITORING_MIN_TIME_CPA_5+MONITORING_MIN_TIME_CPA_10+1)/2)
+/*	if (min_time_to_cpa_mn_u32<(MONITORING_MIN_TIME_CPA_5+MONITORING_MIN_TIME_CPA_10+1)/2)
 	{
 		Speaker.play_five();
 	} else if (min_time_to_cpa_mn_u32<(MONITORING_MIN_TIME_CPA_10+MONITORING_MIN_TIME_CPA_15+1)/2)
@@ -829,6 +829,7 @@ void Ais_monitoring::voice()
 	{
 		Speaker.play_tone2k();
 	}
+	*/
 }
 
 
@@ -840,11 +841,11 @@ void Ais_monitoring::voice()
  */
 void Ais_monitoring::start()
 {
-	Speaker.begin();
-	Speaker.play_tone2k();
+	//Speaker.begin();
+	//Speaker.play_tone2k();
 	//Slider.begin();
-	Ais_display::begin();
-	Gui_state_s=GUI_SM_TARGET;
+	//Ais_display::begin();
+	//Gui_state_s=GUI_SM_TARGET;
 	//Page_target.draw_background();
 }
 
@@ -1156,17 +1157,17 @@ void Ais_monitoring::display_gps()
 {
 	if (Gps_info_s.fix>0)
 	{
-		Ais_display::draw_gps_values(Gps_info_s.speed_kt,Gps_info_s.heading_d);
+		//Ais_display::draw_gps_values(Gps_info_s.speed_kt,Gps_info_s.heading_d);
 	} else
 	{
-		Ais_display::draw_gps_values(0.0,0.0);
+		//Ais_display::draw_gps_values(0.0,0.0);
 	}
 }
 
 
 void Ais_monitoring::display_pos()
 {
-	Ais_display::draw_pos_values(Gps_info_s.lon_d,Gps_info_s.lat_d);
+	//Ais_display::draw_pos_values(Gps_info_s.lon_d,Gps_info_s.lat_d);
 }
 
 void Ais_monitoring::display_date()
@@ -1211,7 +1212,7 @@ void Ais_monitoring::display_wifi()
 uint16_t Ais_monitoring::draw_vessels_color(uint8_t shiptype_u8)
 {
 	uint16_t color_u16;
-	switch(shiptype_u8){
+/*	switch(shiptype_u8){
 	case SAILING:
 		color_u16=DISPLAY_GREEN;
 		break;
@@ -1230,7 +1231,7 @@ uint16_t Ais_monitoring::draw_vessels_color(uint8_t shiptype_u8)
 	default:
 		color_u16=DISPLAY_DARKGREY;
 		break;
-	}
+	}*/
 	return color_u16;
 }
 

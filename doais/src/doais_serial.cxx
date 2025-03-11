@@ -86,9 +86,9 @@ void print_doais();
  * Externs
  * --------------------------
  */
-extern StationData Station_data_s;
-extern Ais_monitoring Monitoring;
-extern gps_data_t Gps_info_s;
+extern StationData Station_data_s; // Cf doais_db_update
+extern Ais_monitoring Monitoring;// Cf doais_db_update
+extern gps_data_t Gps_info_s; // Cf doais_db_update
 
 
 /*

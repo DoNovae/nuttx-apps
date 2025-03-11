@@ -33,7 +33,7 @@ CSRCS    += src/img/lv_font_doais_speed.c src/img/lv_font_doais_status.c src/img
 #CSRCS    += src/img/ui_wind.c src/img/ui_autopilot.c
 
 
-CXXSRCS  += src/configuration_store.cxx
+CXXSRCS  += src/configuration_store.cxx src/doais_gui.cxx
 CXXSRCS  += src/doais_serial.cxx src/ais_utils.cxx src/doais_db_update.cxx src/doais_gps.cxx
 CXXSRCS  += src/ais_messages.cxx src/ais_monitoring.cxx src/ais_utils.cxx src/utilities.cxx src/ais_test.cxx src/rx_packet.cxx
 CXXSRCS  += src/gps/gmath.cxx src/tx_packet.cxx src/gps/nmea.cxx src/gps/unicore.cxx src/gps/rtcm.cxx src/gps/crc.cxx src/gps/gps_helper.cxx

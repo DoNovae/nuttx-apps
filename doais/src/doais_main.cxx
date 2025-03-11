@@ -1,22 +1,13 @@
-/****************************************************************************
- * apps/examples/hello/hello_main.c
+/**
+ * =====================================
+ *  doais_main.cxx
+ * -------------------------------------
+ *  AIS DoNovae
+ *  www.DoNovae.com
+ *  Herve Bailly
+ * =====================================
  *
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.  The
- * ASF licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the
- * License.  You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
- * License for the specific language governing permissions and limitations
- * under the License.
- *
- ****************************************************************************/
+ */
 
 /****************************************************************************
  * Included Files
@@ -52,6 +43,8 @@
 #include <lvgl/lvgl.h>
 #include <nuttx/input/touchscreen.h>
 
+#include "ais_monitoring.h"
+
 
 
 #if defined(CONFIG_FS_BINFS) && (CONFIG_BUILTIN)
@@ -63,18 +56,15 @@
 #endif
 
 
-
+#include "ais.h"
 #include "doais_mng.h"
 #include "doais_serial.h"
 #include "doais_db_update.h"
 #include "doais_gps.h"
 #include "ais_channels.h"
 #include "ais_monitoring.h"
+#include "doais_gui.h"
 
-extern "C"
-{
-#include "display.h"
-}
 
 /*
  * ===================
@@ -127,6 +117,9 @@ Display_id_e Display_id=DISPLAY_TARGET_ID;
  * Mutex
  */
 FAR mutex_t Gps_data_mutex_s;
+
+
+
 
 #if defined(CONFIG_LIBC_EXECFUNCS) && defined(CONFIG_EXECFUNCS_SYMTAB)
 const struct symtab_s CONFIG_EXECFUNCS_SYMTAB[1];
@@ -442,13 +435,21 @@ static int display_init(void)
  */
 FAR void *display_thread(pthread_addr_t arg)
 {
+	uint8_t cpt_u8=0;
 	while (1)
 	{
 		lv_timer_handler();
 		usleep(DISPLAY_TIMER_MS*1000);
 		lv_tick_inc(DISPLAY_TIMER_MS);
-		//clock_update_cb();
-		//wind_update_cb();
+		/*
+		 * Displays update
+		 */
+		if (cpt_u8>>4)
+		{
+			cpt_u8=0;
+			lv_displays_update();
+		}
+		cpt_u8++;
 	}
 	return 0;
 }

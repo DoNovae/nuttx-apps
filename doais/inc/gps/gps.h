@@ -20,19 +20,26 @@
 
 /*! \file */
 
-#ifndef __GPS_H__
-#define __GPS_H__
 
 #include <stdbool.h>
 #include <time.h>
 #include "tok.h"
 
+#ifndef __GPS_H__
+#define __GPS_H__
 
 
 #define LAT_LONG_SCALE ((float)10000000.0)
 
-//typedef tm timeinfo_t;
-typedef timespec timeinfo_t;
+
+typedef tm timeinfo_t;
+
+//typedef timespec timeinfo_t;
+//struct timespec
+//{
+// time_t tv_sec;  /* Seconds */
+// long   tv_nsec; /* Nanoseconds */
+//} timeinfo_t;
 
 /**
  * Summary GPS information from all parsed packets,

@@ -26,13 +26,16 @@
 #include "ais_monitoring.h"
 #include "types.h"
 #include <pthread.h>
+#include "doais_gui.h"
 
 /*
  * --------------------------
  * Defines
  * --------------------------
  */
-
+#define ORB_AIS_DB_UPDATE_QUEUE_SIZE 10
+#define TIMER_INTERVAL_1MS 10000
+#define TIMER_INTERVAL_US (1000*TIMER_INTERVAL_1MS)
 
 /*
  * --------------------------
@@ -329,7 +332,6 @@ FAR void *timer_thread(pthread_addr_t arg)
 
 	// Reset
 	memset(&timer_s,'\0',sizeof(timer_s));
-
 
 	/****************************************************************************
 	 * Name: orb_advertise_multi_queue

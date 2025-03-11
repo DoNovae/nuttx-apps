@@ -42,13 +42,14 @@
  *
  */
 
+#include "nmea.h"
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
 #include <string.h>
 #include <ctime>
 
-#include "nmea.h"
 #include "rtcm.h"
 #include "types.h"
 
@@ -60,8 +61,10 @@
 #define NMEA_UNUSED(x) (void)x;
 
 /**** Warning macros, disable to save memory */
-//#define NMEA_WARN(...)         {GPS_WARN(__VA_ARGS__);}
-//#define NMEA_DEBUG(...)        {/*GPS_WARN(__VA_ARGS__);*/}
+/*
+#define NMEA_WARN(...)         {GPS_WARN(__VA_ARGS__);}
+#define NMEA_DEBUG(...)        {GPS_DEBUG(__VA_ARGS__);}
+*/
 #define NMEA_WARN(...)         {LOG_W(__VA_ARGS__);}
 #define NMEA_DEBUG(...)        {LOG_D(__VA_ARGS__);}
 
@@ -148,14 +151,14 @@ int GPSDriverNMEA::handleMessage(int len)
 		/*
 		* convert to unix timestamp
 		*/
-		struct tm timeinfo = {};
-		timeinfo.tm_year = year - 1900;
-		timeinfo.tm_mon = month - 1;
-		timeinfo.tm_mday = day;
-		timeinfo.tm_hour = utc_hour;
-		timeinfo.tm_min = utc_minute;
-		timeinfo.tm_sec = int(utc_sec);
-		timeinfo.tm_isdst = 0;
+		//HBL struct tm timeinfo = {};
+		_gps_position->utc_s.tm_year = year - 1900;
+		_gps_position->utc_s.tm_mon = month - 1;
+		_gps_position->utc_s.tm_mday = day;
+		_gps_position->utc_s.tm_hour = utc_hour;
+		_gps_position->utc_s.tm_min = utc_minute;
+		_gps_position->utc_s.tm_sec = int(utc_sec);
+		_gps_position->utc_s.tm_isdst = 0;
 
 #ifndef NO_MKTIME
 		time_t epoch = mktime(&timeinfo);
@@ -200,24 +203,24 @@ int GPSDriverNMEA::handleMessage(int len)
 		  GGA message fields
 		  Field   Meaning
 		  0   Message ID $GPGGA
-		  1   UTC of position fix
-		  2   Latitude
+		  1   UTC of position fix : hhmmss.sss
+		  2   Latitude : ddmm.mmmm
 		  3   Direction of latitude:
-		  N: North
-		  S: South
-		  4   Longitude
+		    N: North
+		    S: South
+		  4   Longitude : dddmm.mmmm
 		  5   Direction of longitude:
-		  E: East
-		  W: West
+		    E: East
+		    W: West
 		  6   GPS Quality indicator:
-		  0: Fix not valid
-		  1: GPS fix
-		  2: Differential GPS fix, OmniSTAR VBS
-		  4: Real-Time Kinematic, fixed integers
-		  5: Real-Time Kinematic, float integers, OmniSTAR XP/HP or Location RTK
+		    0: Fix not valid
+		    1: GPS fix
+		    2: Differential GPS fix, OmniSTAR VBS
+		    4: Real-Time Kinematic, fixed integers
+		    5: Real-Time Kinematic, float integers, OmniSTAR XP/HP or Location RTK
 		  7   Number of SVs in use, range from 00 through to 24+
 		  8   HDOP
-		  9   Orthometric height (MSL reference)
+		  9   Orthometric height (MSL reference) : m cf 10
 		  10  M: unit of measure for orthometric height is meters
 		  11  Geoid separation
 		  12  M: geoid separation measured in meters
@@ -314,11 +317,19 @@ int GPSDriverNMEA::handleMessage(int len)
 		T "T" for "True"
 		 */
 
-		float heading_deg = 0.f;
+		float heading = 0.f;
 
 		if (bufptr && *(++bufptr) != ',') {
-			heading_deg = strtof(bufptr, &endp); bufptr = endp;
-			handleHeading(heading_deg, NAN);
+			heading = strtof(bufptr, &endp); bufptr = endp;
+
+			heading *= M_PI_F / 180.0f; // rad in range [0, 2pi]
+			heading -= _heading_offset; // rad in range [-pi, 3pi]
+
+			if (heading > M_PI_F) {
+				heading -= 2.f * M_PI_F; // rad in range [-pi, pi]
+			}
+
+			_gps_position->heading = heading;
 		}
 
 		_HEAD_received = true;
@@ -423,10 +434,10 @@ int GPSDriverNMEA::handleMessage(int len)
 		GPRMC message fields
 		Field	Meaning
 		0	Message ID $GPRMC
-		1	UTC of position fix
+		1	UTC of position fix : hhmmss.sss
 		2	Status A=active or V=void
-		3	Latitude
-		4	Longitude
+		3	Latitude : ddmm.mmmm
+		4	Longitude : ddmm.mmmm
 		5	Speed over the ground in knots
 		6	Track angle in degrees (True)
 		7	Date
@@ -507,6 +518,7 @@ int GPSDriverNMEA::handleMessage(int len)
 		/*
 		 * convert to unix timestamp
 		 */
+		/*
 		struct tm timeinfo = {};
 		timeinfo.tm_year = nmea_year + 100;
 		timeinfo.tm_mon = nmea_mth - 1;
@@ -515,6 +527,15 @@ int GPSDriverNMEA::handleMessage(int len)
 		timeinfo.tm_min = utc_minute;
 		timeinfo.tm_sec = int(utc_sec);
 		timeinfo.tm_isdst = 0;
+		*/
+
+		_gps_position->utc_s.tm_year = nmea_year - 1900;
+		_gps_position->utc_s.tm_mon = nmea_mth - 1;
+		_gps_position->utc_s.tm_mday = nmea_day;
+		_gps_position->utc_s.tm_hour = utc_hour;
+		_gps_position->utc_s.tm_min = utc_minute;
+		_gps_position->utc_s.tm_sec = int(utc_sec);
+		_gps_position->utc_s.tm_isdst = 0;
 
 #ifndef NO_MKTIME
 		time_t epoch = mktime(&timeinfo);
@@ -867,68 +888,32 @@ int GPSDriverNMEA::handleMessage(int len)
 
 int GPSDriverNMEA::receive(unsigned timeout)
 {
-	uint8_t buf[GPS_READ_BUFFER_SIZE];
+	uint8_t buf[GPS_READ_BUFFER_SIZE+1];
+	// Set \0 at the end
+	buf[GPS_READ_BUFFER_SIZE]=0;
+
 
 	/* timeout additional to poll */
-	gps_abstime time_started = gps_absolute_time();
+	gps_abstime time_started = gps_absolute_time();// in ms
 
 	int handled = 0;
 
-	while (true) {
-		int ret = read(buf, sizeof(buf), timeout);
-		//LOG_D("%s - len: %d",buf,ret);
+	while (true)
+	{
+		int ret = read(buf,GPS_READ_BUFFER_SIZE,timeout);
+		NMEA_DEBUG("%s - len: %d",buf,ret);
 
 		if (ret < 0) {
 			/* something went wrong when polling or reading */
-			NMEA_WARN("poll_or_read err");
+			NMEA_DEBUG("poll_or_read err");
 			return -1;
 
 		} else if (ret != 0) {
-
 			/* pass received bytes to the packet decoder */
 			for (int i = 0; i < ret; i++) {
 				int l = parseChar(buf[i]);
-
 				if (l > 0) {
 					handled |= handleMessage(l);
-				}
-
-				UnicoreParser::Result result = _unicore_parser.parseChar(buf[i]);
-
-				if (result == UnicoreParser::Result::GotHeading) {
-					++handled;
-					_unicore_heading_received_last = gps_absolute_time();
-
-					// Unicore seems to publish heading and standard deviation of 0
-					// to signal that it has not initialized the heading yet.
-					if (_unicore_parser.heading().heading_stddev_deg > 0.0f) {
-						// Unicore publishes the heading between True North and
-						// the baseline vector from master antenna to slave
-						// antenna.
-						// Assuming that the master is in front and the slave
-						// in the back, this means that we need to flip the
-						// heading 180 degrees.
-
-						handleHeading(
-							_unicore_parser.heading().heading_deg + 180.0f,
-							_unicore_parser.heading().heading_stddev_deg);
-					}
-
-					NMEA_DEBUG("Got heading: %.1f deg, stddev: %.1f deg, baseline: %.2f m\n",
-						   (double)_unicore_parser.heading().heading_deg,
-						   (double)_unicore_parser.heading().heading_stddev_deg,
-						   (double)_unicore_parser.heading().baseline_m);
-
-				} else if (result == UnicoreParser::Result::GotAgrica) {
-					++handled;
-
-					// We don't use anything of that message at this point, however, this
-					// allows to determine whether we are talking to a UM982 and hence
-					// request the heading (UNIHEADINGA) message that we actually require.
-
-					if (gps_absolute_time() - _unicore_heading_received_last > 1000000) {
-						request_unicore_heading_message();
-					}
 				}
 			}
 
@@ -942,32 +927,7 @@ int GPSDriverNMEA::receive(unsigned timeout)
 			return -1;
 		}
 	}
-}
-
-void GPSDriverNMEA::handleHeading(float heading_deg, float heading_stddev_deg)
-{
-	float heading_rad = heading_deg * M_PI_F / 180.0f; // rad in range [0, 2pi]
-	heading_rad -= _heading_offset; // rad in range [-pi, 3pi]
-
-	if (heading_rad > M_PI_F) {
-		heading_rad -= 2.f * M_PI_F; // rad in range [-pi, pi]
-	}
-
-	// We are not publishing heading_offset because it wasn't done in the past,
-	// and the UBX driver doesn't do it either. I'm assuming it would cause the
-	// offset to be applied twice.
-
-	_gps_position->heading = heading_rad;
-
-	const float heading_stddev_rad = heading_stddev_deg * M_PI_F / 180.0f;
-	_gps_position->heading_accuracy = heading_stddev_rad;
-}
-
-void GPSDriverNMEA::request_unicore_heading_message()
-{
-	// Configure heading message on serial port at 5 Hz. Don't save it though.
-	uint8_t buf[] = "UNIHEADINGA COM1 0.2\r\n";
-	write(buf, sizeof(buf) - 1);
+	return -1;
 }
 
 #define HEXDIGIT_CHAR(d) ((char)((d) + (((d) < 0xA) ? '0' : 'A'-0xA)))
@@ -1016,6 +976,9 @@ int GPSDriverNMEA::parseChar(uint8_t b)
 		_decode_state = NMEADecodeState::got_first_cs_byte;
 		break;
 
+		/*
+		 * Checksum
+		 * */
 	case NMEADecodeState::got_first_cs_byte: {
 			_rx_buffer[_rx_buffer_bytes++] = b;
 			uint8_t checksum = 0;
@@ -1084,7 +1047,7 @@ int GPSDriverNMEA::configure(unsigned &baudrate, const GPSConfig &config)
 	}
 
 	// If we haven't found the GPS with the defined baudrate, we try other rates
-	const unsigned baudrates_to_try[] = {9600, 19200, 38400, 57600, 115200, 230400};
+	const unsigned baudrates_to_try[] = {9600, 19200, 38400, 57600, 115200};
 	unsigned test_baudrate;
 
 	for (unsigned int baud_i = 0; !_POS_received
