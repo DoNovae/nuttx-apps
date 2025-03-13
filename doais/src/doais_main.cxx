@@ -441,10 +441,11 @@ FAR void *display_thread(pthread_addr_t arg)
 		lv_timer_handler();
 		usleep(DISPLAY_TIMER_MS*1000);
 		lv_tick_inc(DISPLAY_TIMER_MS);
+
 		/*
 		 * Displays update
 		 */
-		if (cpt_u8>>4)
+		if (cpt_u8>>3)
 		{
 			cpt_u8=0;
 			lv_displays_update();
@@ -571,9 +572,13 @@ void indev_click_cb(lv_indev_drv_t *indevDriver,uint8_t event_u8)
 }*/
 
 
-/* =================
+
+
+
+
+/* ===============================================================================
  * uORB tasks
- * =================
+ *
  */
 
 /*

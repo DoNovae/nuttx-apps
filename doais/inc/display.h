@@ -15,6 +15,7 @@
 #include <lvgl/src/misc/lv_color.h>
 
 
+
 #ifndef DISPLAY_H
 #define DISPLAY_H
 
@@ -36,7 +37,6 @@
  * -----------------
  */
 #define LV_SYMBOL_DEGREE "\xC2\xB0"
-#define LV_SYMBOL_SIGNAL "\xEF\x80\x92"
 
 
 
@@ -46,6 +46,9 @@
  * lv_palette_darken(LV_PALETTE_BLUE, 2)
  * lv_palette_lighten(LV_PALETTE_GREY,2)
  * lv_palette_main(LV_PALETTE_GREY)
+ * lv_color_white()
+ * lv_color_black()
+ * lv_color_hex(DISPLAY_WHITE_RGB)
  * -----------------
  */
 #define DISPLAY_GREEN_RGB 0x8fc748
@@ -95,13 +98,10 @@ typedef void (*lv_init_screen_cb_t)(lv_obj_t* parent);
 
 typedef struct
 {
-  lv_obj_t* display_ps;
-  lv_init_screen_cb_t init_cb;
-  lv_update_screen_data_cb_t update_cb;
+	lv_obj_t* display_ps;
+	lv_init_screen_cb_t init_cb;
+	lv_update_screen_data_cb_t update_cb;
 } lv_updatable_display_t;
-
-
-
 
 
 
@@ -128,7 +128,8 @@ typedef struct
  * Target
  * ----------------
  */
-typedef enum {
+typedef enum
+{
 	GUI_TGT_NONE=-1,
 	GUI_TGT_VSL=0,
 	GUI_TGT_SET=1,
@@ -136,7 +137,7 @@ typedef enum {
 	GUI_TGT_CROSS=3,
 	GUI_TGT_ZIN=4,
 	GUI_TGT_ZOUT=5
-}gui_target_touch_e;
+} gui_target_touch_e;
 
 
 
@@ -145,12 +146,13 @@ typedef enum {
  * VESSELS
  * ----------------
  */
-typedef enum {
+typedef enum
+{
 	GUI_VSL_NONE=-1,
 	GUI_VSL_TGT=0,
 	GUI_VSL_SET=1,
 	GUI_VSL_SPK=2
-}gui_vessels_touch_e;
+} gui_vessels_touch_e;
 
 
 /*
@@ -158,27 +160,30 @@ typedef enum {
  * SETTINGS
  * ----------------
  */
-typedef enum {
+typedef enum
+{
 	GUI_SET_NONE=-1,
 	GUI_SET_TGT=0,
 	GUI_SET_VSL=1,
 	GUI_SET_SPK=2,
 	GUI_SET_WIFI=3
-}gui_settings_touch_e;
+} gui_settings_touch_e;
 
 
-typedef union {
+typedef union
+{
 	gui_target_touch_e tgt;
 	gui_vessels_touch_e vsl;
 	gui_settings_touch_e set;
 	int8_t i8;
-}gui_touch_id_t;
+} gui_touch_id_t;
 
-typedef enum {
+typedef enum
+{
 	GUI_TOUCH_NONE=0,
 	GUI_JUST_TOUCH=1,
 	GUI_TOUCH_HOLD=2
-}gui_touch_e;
+} gui_touch_e;
 
 
 /*
@@ -186,23 +191,25 @@ typedef enum {
  * State machine
  * -----------------------
  */
-typedef enum {
+typedef enum
+{
 	GUI_SM_START=0,
 	GUI_SM_TARGET=1,
 	GUI_SM_VESSELS=2,
 	GUI_SM_SETTINGS=3
-}gui_state_machine_e;
+} gui_state_machine_e;
 
 /*
  * -----------------------
  * Wifi animation
  * -----------------------
  */
-typedef enum {
-	GUI_ANIM_WIFI_ON=0,
-	GUI_ANIM_WIFI_OFF=1,
+typedef enum
+{
+	GUI_ANIM_WIFI_OFF=0,
+	GUI_ANIM_WIFI_ON=1,
 	GUI_ANIM_WIFI_HS=2
-}gui_animation_wifi_e;
+} gui_animation_wifi_e;
 #define GUI_ANIMATION_WIFI_NB 3
 
 /*
@@ -210,10 +217,11 @@ typedef enum {
  * Speaker animation
  * -----------------------
  */
-typedef enum {
-	GUI_ANIM_SPEAKER_ON=0,
-	GUI_ANIM_SPEAKER_OFF=1
-}gui_animation_spk_e;
+typedef enum
+{
+	GUI_ANIM_SPEAKER_OFF=0,
+	GUI_ANIM_SPEAKER_ON=1
+} gui_animation_spk_e;
 #define GUI_ANIMATION_SPK_NB 2
 
 /*
@@ -221,10 +229,11 @@ typedef enum {
  * Bell animation
  * -----------------------
  */
-typedef enum {
+typedef enum
+{
 	GUI_ANIM_BELL_ON=0,
 	GUI_ANIM_BELL_OFF=1
-}gui_animation_bell_e;
+} gui_animation_bell_e;
 #define GUI_ANIMATION_BELL_NB 2
 
 /*
@@ -232,7 +241,8 @@ typedef enum {
  * GPS animation
  * -----------------------
  */
-typedef enum {
+typedef enum
+{
 	GUI_ANIM_GPS0=0,
 	GUI_ANIM_GPS1=1,
 	GUI_ANIM_GPS2=2,
@@ -240,7 +250,7 @@ typedef enum {
 	GUI_ANIM_GPS4=4,
 	GUI_ANIM_GPS5=5,
 	GUI_ANIM_GPS6=6
-}gui_animation_gps_e;
+} gui_animation_gps_e;
 #define GUI_ANIMATION_GPS_NB 4
 
 
@@ -249,13 +259,13 @@ typedef enum {
  * Animation union
  * -----------------------
  */
-typedef union {
+typedef struct
+{
 	gui_animation_wifi_e wifi;
 	gui_animation_spk_e spk;
 	gui_animation_bell_e bell;
 	gui_animation_gps_e gps;
-	uint8_t u8;
-}gui_animation_t;
+} gui_animation_t;
 
 
 /*
@@ -263,11 +273,12 @@ typedef union {
  * Vessels
  * -----------------------
  */
-typedef enum {
+typedef enum
+{
 	VESSELS_CANNVAS_N0NE=0,
 	VESSELS_CANVAS1=1,
 	VESSELS_CANVAS2=2
-}vessels_canvas_e;
+} vessels_canvas_e;
 
 
 
@@ -286,6 +297,7 @@ void lv_update();
 void lv_display_status(lv_obj_t *parent);
 
 void lv_target_display(lv_obj_t * parent);
+void lv_update_status_gps(void);
 
 void lv_vessels_display(lv_obj_t *parent);
 
@@ -294,6 +306,7 @@ void lv_settings_update_pos(int32_t lon_d,int32_t lat_d);
 void lv_settings_update_time(int32_t hour_i32, int32_t mn_i32,int32_t s_i32);
 
 void lv_update_speed(float speed_f, uint16_t heading_u16);
+void lv_wifi_cmd(lv_obj_t *parent);
 
 /*void lv_wind_display(lv_obj_t * parent);
 void wind_update_cb(void);

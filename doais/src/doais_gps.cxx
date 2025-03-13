@@ -302,7 +302,9 @@ int setBaudrate(int _serial_fd, unsigned baud)
 
 
 /*
+ * --------------------------
  * gps_thread
+ * --------------------------
  */
 FAR void *gps_thread(pthread_addr_t arg)
 {
