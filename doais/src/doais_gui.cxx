@@ -88,7 +88,6 @@ void lv_display_init()
 	Displays_as[DISPLAY_SETTINGS_ID].init_cb=lv_settings_display;
 	Displays_as[DISPLAY_SETTINGS_ID].update_cb=lv_update;
 	Display_id=DISPLAY_TARGET_ID;
-	lv_display_load(Display_id);
 
 	/*
 	 * Buttons styles
@@ -98,10 +97,12 @@ void lv_display_init()
 	/*
 	 * Gui animation
 	 */
-	Gui_animation_s.wifi=GUI_ANIM_WIFI_OFF; // configuration_store.c
+	Gui_animation_s.wifi=GUI_ANIM_WIFI_ON; // configuration_store.c
 	Gui_animation_s.spk=GUI_ANIM_SPEAKER_ON;
 	Gui_animation_s.bell=GUI_ANIM_BELL_OFF;
 	Gui_animation_s.gps=GUI_ANIM_GPS0;
+
+	lv_display_load(Display_id);
 }
 
 /*

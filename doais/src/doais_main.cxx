@@ -95,6 +95,7 @@
  * Globals
  * ------------------
  */
+static int Touch_screen_fd;
 static pid_t gps_pid;
 //static pid_t publisher_pid;
 //static pid_t subscriber_pid;
@@ -134,6 +135,8 @@ const struct symtab_s CONFIG_EXECFUNCS_SYMTAB[1];
  * ----------------
  */
 //static int gps_task(int argc, FAR char *argv[]);
+int display_set_power(uint32_t pw_u32);
+uint32_t display_get_power(void);
 
 static int display_init(void);
 static FAR void *display_thread(pthread_addr_t arg);
@@ -332,14 +335,14 @@ int main(int argc, FAR char *argv[])
 
 
 
-/*
- * ----------------
- * display_init
- * ----------------
- */
-//lv_obj_t *Vessels_s,*Target_s, *Settings_s;
-//lv_obj_t *Dspl_wind_s,*Clock_s,*Compass_s,*Autopilot_s;
 
+
+
+/*
+ * ====================
+ * display_init
+ * --------------------
+ */
 static int display_init(void)
 {
 	/* LVGL initialization */
@@ -347,6 +350,16 @@ static int display_init(void)
 
 	/* LVGL port initialization */
 	lv_port_init();
+
+	/* Open touch screen */
+	Touch_screen_fd = open(TOUCHSCREEN_DEVPATH, O_RDONLY);
+	if (Touch_screen_fd<0)
+	{
+		int errcode = errno;
+		LOG_E("display_init: ERR opening touch-screen - errno(%d)",errcode);
+	}
+
+
 
 	/**
 	 * Initialize an input device driver with default values.
@@ -463,10 +476,9 @@ FAR void *display_thread(pthread_addr_t arg)
  */
 void indev_read_cb(lv_indev_drv_t *indevDriver,lv_indev_data_t *indevData)
 {
-	int fd;
+	struct touch_sample_s sample;
 	ssize_t nbytes;
 	int errval = 0;
-	struct touch_sample_s sample;
 	bool valid;
 
 
@@ -474,12 +486,7 @@ void indev_read_cb(lv_indev_drv_t *indevDriver,lv_indev_data_t *indevData)
 	indevData->continue_reading=false;
 	valid=false;
 
-	fd = open(TOUCHSCREEN_DEVPATH, O_RDONLY);
-	if (fd<0)
-	{
-		return;
-	}
-	nbytes=read(fd,&sample,sizeof(struct touch_sample_s));
+	nbytes=read(Touch_screen_fd,&sample,sizeof(struct touch_sample_s));
 
 	// Handle unexpected return values
 	if (nbytes == sizeof(struct touch_sample_s))
@@ -512,7 +519,7 @@ void indev_read_cb(lv_indev_drv_t *indevDriver,lv_indev_data_t *indevData)
 			LOG_D("indev_read_cb: point.x(%d) - y(%d)",indevData->point.x,indevData->point.y);
 		}
 	}
-	close(fd);
+	//close(fd);
 	return;
 }
 

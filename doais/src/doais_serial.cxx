@@ -25,6 +25,7 @@
 #include <stdio.h>
 #include <fcntl.h>
 #include <nuttx/mqueue.h>
+#include <nuttx/board.h>
 
 
 #include "doais_serial.h"
@@ -774,8 +775,11 @@ void gcode_M316()
  * M999: Restart after being stopped
  * ------------------------
  */
-void gcode_M999() {
+void gcode_M999()
+{
 	LOG_I("reboot");
+	// KO cf CONFIG_BOARDCTL_RESET
+	// boardctl(BOARDIOC_RESET);
 }
 
 
