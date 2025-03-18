@@ -11,7 +11,7 @@
 #include <lvgl/lvgl.h>
 #include <port/lv_port.h>
 #include <port/lv_port_tick.h>
-#include <lvgl/src/hal/lv_hal_tick.h>
+//#include <lvgl/src/hal/lv_hal_tick.h>
 #include <lvgl/src/misc/lv_color.h>
 
 
@@ -307,6 +307,8 @@ void lv_settings_update_time(int32_t hour_i32, int32_t mn_i32,int32_t s_i32);
 
 void lv_update_speed(float speed_f, uint16_t heading_u16);
 void lv_wifi_cmd(lv_obj_t *parent);
+void lv_target_cmd(lv_obj_t *parent);
+void lv_target_update(void);
 
 /*void lv_wind_display(lv_obj_t * parent);
 void wind_update_cb(void);

@@ -44,9 +44,10 @@
 #include <lvgl/lvgl.h>
 #include <port/lv_port.h>
 #include <port/lv_port_tick.h>
-#include <lvgl/src/hal/lv_hal_tick.h>
+//#include <lvgl/src/hal/lv_hal_tick.h>
 #include <lvgl/demos/lv_demos.h>
 #include <nuttx/input/touchscreen.h>
+#include <lvgl/src/hal/lv_hal_indev.h>
 
 #ifdef CONFIG_LIBUV
 #  include <uv.h>

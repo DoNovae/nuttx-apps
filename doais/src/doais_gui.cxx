@@ -155,6 +155,7 @@ void lv_displays_update(void)
 	switch(Display_id ){
 	case DISPLAY_TARGET_ID:
 		lv_update_speed((float)Gps_info_s.speed_kt,(uint16_t)Gps_info_s.heading_d);
+		lv_target_update();
 		break;
 	case DISPLAY_VESSELS_ID:
 		break;

@@ -10,8 +10,10 @@
  */
 #include <stdio.h>
 #include <nuttx/lcd/lcd_dev.h>
+#include <sys/ioctl.h>
+#include <fcntl.h>
 #include "display.h"
-#include  "types.h"
+#include "types.h"
 
 #ifndef LAT_LONG_SCALE
 #define LAT_LONG_SCALE ((float)10000000.0)
@@ -85,7 +87,6 @@ void lv_target_bell(lv_obj_t *parent);
 void lv_display_speed(lv_obj_t *parent);
 void lv_display_status(lv_obj_t *parent);
 void lv_update_status(void);
-void lv_target_cmd(lv_obj_t *parent);
 void lv_settings_data(lv_obj_t *parent);
 void lv_light_cmd(lv_obj_t *parent);
 
@@ -137,7 +138,7 @@ static const char *Wifi_bt_psm_map[]=
  * Prototypes
  * -------------------
  */
-uint8_t lcd_get_power();
+uint8_t lcd_get_power(void);
 int lcd_set_power(uint8_t level_u8);
 
 
@@ -204,7 +205,7 @@ int lcd_set_power(uint8_t level_u8)
 }
 
 
-void lv_update(){};
+void lv_update(void){};
 
 /*
  * ===================
@@ -212,7 +213,7 @@ void lv_update(){};
  * -------------------
  */
 
-void lv_button_init()
+void lv_button_init(void)
 {
 	/*
 	 * Buttons styles
