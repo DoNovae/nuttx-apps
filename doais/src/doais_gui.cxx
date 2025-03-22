@@ -80,13 +80,10 @@ void lv_display_init()
 	 */
 	Displays_as[DISPLAY_TARGET_ID].display_ps=lv_obj_create(NULL);
 	Displays_as[DISPLAY_TARGET_ID].init_cb=lv_target_display;
-	Displays_as[DISPLAY_TARGET_ID].update_cb=lv_update;
 	Displays_as[DISPLAY_VESSELS_ID].display_ps=lv_obj_create(NULL);
 	Displays_as[DISPLAY_VESSELS_ID].init_cb=lv_vessels_display;
-	Displays_as[DISPLAY_VESSELS_ID].update_cb=lv_update;
 	Displays_as[DISPLAY_SETTINGS_ID].display_ps=lv_obj_create(NULL);
 	Displays_as[DISPLAY_SETTINGS_ID].init_cb=lv_settings_display;
-	Displays_as[DISPLAY_SETTINGS_ID].update_cb=lv_update;
 	Display_id=DISPLAY_TARGET_ID;
 
 	/*
@@ -138,6 +135,9 @@ void lv_display_prev(void)
 }
 
 
+
+
+
 /*
  * ===================
  * lv_displays_update
@@ -145,6 +145,7 @@ void lv_display_prev(void)
  */
 void lv_displays_update(void)
 {
+	float max_nm_d32;
 	nxmutex_lock(&Gps_data_mutex_s);
 	/*
 	 * Update gps status
@@ -155,7 +156,8 @@ void lv_displays_update(void)
 	switch(Display_id ){
 	case DISPLAY_TARGET_ID:
 		lv_update_speed((float)Gps_info_s.speed_kt,(uint16_t)Gps_info_s.heading_d);
-		lv_target_update();
+		max_nm_d32=(float)Monitoring.settings_s.display_target_step_nm_u32*(float)MONITORING_DISPLAY_STEPS_NB;
+		lv_target_update(max_nm_d32);
 		break;
 	case DISPLAY_VESSELS_ID:
 		break;

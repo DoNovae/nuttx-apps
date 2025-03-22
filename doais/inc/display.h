@@ -11,7 +11,6 @@
 #include <lvgl/lvgl.h>
 #include <port/lv_port.h>
 #include <port/lv_port_tick.h>
-//#include <lvgl/src/hal/lv_hal_tick.h>
 #include <lvgl/src/misc/lv_color.h>
 
 
@@ -31,12 +30,20 @@
 #define ALIGN_BOTTOM -1
 
 
+
 /*
  * -----------------
  * LV_SYMBOL
  * -----------------
  */
 #define LV_SYMBOL_DEGREE "\xC2\xB0"
+
+#define DISPLAY_TARGET_R1 37
+#define DISPLAY_TARGET_R2 75
+#define DISPLAY_TARGET_R3 112
+#define DISPLAY_TARGET_R32 56
+#define MONITORING_DISPLAY_STEPS_NB 3
+#define MONITORING_DISPLAY_SPEED_MIN_KT 0
 
 
 
@@ -100,7 +107,6 @@ typedef struct
 {
 	lv_obj_t* display_ps;
 	lv_init_screen_cb_t init_cb;
-	lv_update_screen_data_cb_t update_cb;
 } lv_updatable_display_t;
 
 
@@ -281,6 +287,11 @@ typedef enum
 } vessels_canvas_e;
 
 
+/*
+ * ===================
+ * Globals
+ * -------------------
+ */
 
 
 
@@ -308,7 +319,8 @@ void lv_settings_update_time(int32_t hour_i32, int32_t mn_i32,int32_t s_i32);
 void lv_update_speed(float speed_f, uint16_t heading_u16);
 void lv_wifi_cmd(lv_obj_t *parent);
 void lv_target_cmd(lv_obj_t *parent);
-void lv_target_update(void);
+void lv_target_update(float max_nm_d32s);
+void lv_update_status(void);
 
 /*void lv_wind_display(lv_obj_t * parent);
 void wind_update_cb(void);
@@ -324,6 +336,7 @@ void lv_autopilot_display(lv_obj_t *parent);*/
 LV_FONT_DECLARE(lv_font_doais_speed);
 LV_FONT_DECLARE(lv_font_doais_status);
 LV_FONT_DECLARE(lv_font_doais_24);
+LV_FONT_DECLARE(lv_font_doais_20);
 LV_FONT_DECLARE(lv_font_doais_12);
 
 extern lv_updatable_display_t Displays_as[DISPLAY_NBR];

@@ -901,7 +901,7 @@ int GPSDriverNMEA::receive(unsigned timeout)
 	while (true)
 	{
 		int ret = read(buf,GPS_READ_BUFFER_SIZE,timeout);
-		NMEA_DEBUG("%s - len: %d",buf,ret);
+		// HBL NMEA_DEBUG("%s - len: %d",buf,ret);
 
 		if (ret < 0) {
 			/* something went wrong when polling or reading */

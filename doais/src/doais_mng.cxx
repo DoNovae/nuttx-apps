@@ -28,15 +28,18 @@
 #include "doais_mng.h"
 
 
-
 /*
+ * ----------------
  * Globals
+ * ----------------
  */
-//ORB_DEFINE(mng_msg,struct mng_msg_s,print_mng_msg);
-ORB_DEFINE(mng_msg,struct mng_msg_s,0);
+//ORB_DECLARE(mng_msg); // Cf doais_serial.c
+extern "C" ORB_DEFINE(mng_msg,struct orb_mng_msg_s,0);
 
 /*
+ * ----------------
  * Prototypes
+ * ----------------
  */
 static int mng_dev_publish(char *msg_pc);
 
@@ -58,14 +61,13 @@ int main(int argc, FAR char *argv[])
 }
 
 /*
+ * ----------------
  * /dev/uorb/mng_msg0
+ * ----------------
  */
 static int mng_dev_publish(char *msg_pc)
 {
-	struct mng_msg_s sample;
-	//const int queue_size = 50;
-	//int instance = 0;
-	//int ptopic;
+	struct orb_mng_msg_s msg_s;
 	int sfd;
 
 	// Subscribe
@@ -73,15 +75,20 @@ static int mng_dev_publish(char *msg_pc)
 	do
 	{
 		sfd=orb_open("mng_msg",0,O_RDWR);
-		if (sfd<0) usleep(1000 * 1000);
-	}while(sfd < 0);
+		if (sfd<0)
+		{
+			printf("mng_dev_publish: orb_open failed\n");
+			usleep(1000 * 1000);
+		}
+	} while(sfd<0);
 
-	memset(&sample,0,sizeof(sample));
-	memset(sample.cmd_cha,0,MNG_CMD_SIZE);
-	snprintf(sample.cmd_cha,MNG_CMD_SIZE,"%s",msg_pc);
+	memset(&msg_s,0,sizeof(msg_s));
+	memset(msg_s.cmd_cha,0,MNG_CMD_SIZE);
+	snprintf(msg_s.cmd_cha,MNG_CMD_SIZE,"%s",msg_pc);
+
 	// Publish
-	orb_publish(ORB_ID(mng_msg),sfd,&sample);
-	printf("mng_dev_publish: %s\n",sample.cmd_cha);
+	orb_publish(ORB_ID(mng_msg),sfd,&msg_s);
+	printf("mng_dev_publish: %s\n",msg_s.cmd_cha);
 	close(sfd);
 
 	return 0;

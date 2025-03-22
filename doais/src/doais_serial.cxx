@@ -46,7 +46,9 @@
  * --------------------------
  */
 #define USLEEP_50MS (50*1000)
-#define TIMEOUT_UORB_US (1000*1000)
+#define TIMEOUT_UORB_1MS (1000)
+#define TIMEOUT_UORB_100MS (100*TIMEOUT_UORB_1MS)
+#define TIMEOUT_UORB_1S (1000*TIMEOUT_UORB_1MS)
 
 /*
  * --------------------------
@@ -66,7 +68,8 @@ static bool send_ok[LOGGER_BUFSIZE];
 static const char *injected_commands_P = NULL;
 
 
-static ORB_DEFINE(ais_db_update,struct orb_ais_db_update_s,0); // const struct orb_metadata g_orb_ais_db_update=...
+ORB_DECLARE(ais_db_update);// Cf doais_db_update.c
+ORB_DECLARE(mng_msg);// Cf doais_mng.c
 
 /*
  * --------------------------
@@ -649,7 +652,7 @@ void gcode_M312()
 	}
 
 	if(1){
-		struct orb_ais_db_update_s ais_s;
+		/*struct orb_ais_db_update_s ais_s;
 		int ptopic_ais;
 		memcpy(ais_s.packet_au8,tx_packet_s.mPacket,ORB_AIS_PACKET);
 		ais_s.id_u8=3;
@@ -660,7 +663,7 @@ void gcode_M312()
 			LOG_E("timer_thread: orb_ais_db_update advertise failed: %d",errno);
 		}
 		orb_publish(ORB_ID(ais_db_update),ptopic_ais,&ais_s);
-		orb_unadvertise(ptopic_ais);
+		orb_unadvertise(ptopic_ais);*/
 	}
 
 
@@ -920,38 +923,33 @@ void ok_to_send(){
  * serial_thread
  * --------------------
  */
+#define ORB_SERIAL_POLL_NB 1
+#define ORB_SERIAL_TIMEOUT (-1)
 FAR void *serial_thread(pthread_addr_t arg)
 {
-
 	struct pollfd fds[1];
-	struct mng_msg_s sample;
+	struct orb_mng_msg_s msg_s;
 	bool updated;
 	int sfd;
 	int ret;
 
+	// Advertise
+	sfd = orb_advertise_queue(ORB_ID(mng_msg),&msg_s,ORB_AIS_DB_UPDATE_QUEUE_SIZE);
+	if (sfd < 0)
+	{
+		LOG_E("serial_thread: advertise failed: %d",errno);
+		return 0;
+	}
+
 	// Subscribe
-	if ((sfd = orb_subscribe(ORB_ID(mng_msg))) < 0)
+	if ((sfd=orb_subscribe(ORB_ID(mng_msg)))<0)
 	{
-		printf("mng_subscriber_task: subscribe failed: %d\n", errno);
-		return NULL;
+		LOG_E("serial_thread: subscribe failed: %d\n", errno);
+		return 0;
 	}
 
-	/*
-	 * Get mng_msg published messages
-	 */
-	do
-	{
-		// Check and get
-		orb_check(sfd, &updated);
-		if (updated)
-		{
-			orb_copy(ORB_ID(mng_msg),sfd,&sample);
-		}
-	}
-	while (updated);
-
-	fds[0].fd     = sfd;
-	fds[0].events = POLLIN;
+	fds[0].fd=sfd;
+	fds[0].events=POLLIN;
 
 	/*
 	 * Load settings
@@ -959,41 +957,44 @@ FAR void *serial_thread(pthread_addr_t arg)
 	Ais_settings::begin();
 	Ais_settings::load();
 
-
 	/*
 	 * Loop
 	 */
-	while(1){
+	while(1)
+	{
 		int poll_ret;
 
 		// Timeout
-		poll_ret = poll(fds,1,TIMEOUT_UORB_US);
-		if (!poll_ret){
-			printf("serial_task: poll timeout\n");
+		poll_ret=poll(fds,ORB_SERIAL_POLL_NB,ORB_SERIAL_TIMEOUT);
+		if (!poll_ret)
+		{
+			LOG_D("serial_task: poll timeout\n");
 		}
 
-		if (OK!=orb_check(sfd, &updated))
+		if (OK!=orb_check(fds[0].fd,&updated))
 		{
-			 printf("serial_task: check failed\n");
-			 return NULL;
-		}
-		else if (poll_ret < 0 && errno != EINTR)
+			LOG_E("serial_task: check failed\n");
+			return NULL;
+		} else if ((poll_ret<0) && (errno!=EINTR))
 		{
-			LOG_E("serial_task: poll error (%d, %d)\n", poll_ret, errno);
+			LOG_E("serial_task: poll error (%d, %d)\n", poll_ret,errno);
 		}
 
 		if (fds[0].revents & POLLIN)
 		{
-			orb_copy(ORB_ID(mng_msg),sfd,&sample);
-			printf("serial_task: %s\n",sample.cmd_cha);
-			enqueue_and_echo_commands_P(sample.cmd_cha);
+			orb_copy(ORB_ID(mng_msg),fds[0].fd,&msg_s);
+
+			LOG_D("serial_task: %s\n",msg_s.cmd_cha);
+			enqueue_and_echo_commands_P(msg_s.cmd_cha);
 		}
 		if (commands_in_queue<LOGGER_BUFSIZE) get_available_commands();
 
-		if (commands_in_queue) {
+		if (commands_in_queue)
+		{
 			process_next_command();
 			// The queue may be reset by a command handler or by code invoked by idle() within a handler
-			if (commands_in_queue) {
+			if (commands_in_queue)
+			{
 				--commands_in_queue;
 				if (++cmd_queue_index_r >= LOGGER_BUFSIZE) cmd_queue_index_r = 0;
 			}
@@ -1001,14 +1002,18 @@ FAR void *serial_thread(pthread_addr_t arg)
 	}
 
 	// unsubscribe
-	ret = orb_unsubscribe(sfd);
+	ret = orb_unsubscribe(fds[0].fd);
 	if (ret != OK)
 	{
-		printf("serial_task: orb_unsubscribe failed: %i", ret);
+		LOG_E("serial_task: orb_unsubscribe failed: %i", ret);
 		return NULL;
 	}
 	return NULL;
 }
+
+
+
+
 
 
 /*

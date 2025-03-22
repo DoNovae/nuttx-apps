@@ -32,12 +32,11 @@
 #define DISPLAY_DATE_POSY (133+10)
 #define STR_LEN 16
 
+#define AUDIO_BTN_WIDTH 49
+#define AUDIO_BTN_HIGH 24
+
 #define DISPLAY_CMD_BTN_WIDTH 148
 #define DISPLAY_CMD_BTN_HIGH 24
-#define TARGET_CMD_BTN_WIDTH 99
-#define TARGET_CMD_BTN_HIGH 48
-#define TARGET_AUDIO_BTN_WIDTH 49
-#define TARGET_AUDIO_BTN_HIGH 24
 #define BUTTON_BG_COLOR lv_palette_lighten(LV_PALETTE_GREY,2)
 #define BUTTON_TEXT_COLOR lv_palette_darken(LV_PALETTE_GREY,3)
 
@@ -81,25 +80,23 @@ extern gui_animation_t Gui_animation_s;// Cf doais_gui.c
  * -------------------
  */
 void displays_cmd_event_cb(lv_event_t *e);
-void target_cmd_event_cb(lv_event_t *e);
-void target_audio_event_cb(lv_event_t *e);
-void lv_target_bell(lv_obj_t *parent);
+void cmd_event_cb(lv_event_t *e);
+void audio_event_cb(lv_event_t *e);
 void lv_display_speed(lv_obj_t *parent);
 void lv_display_status(lv_obj_t *parent);
-void lv_update_status(void);
 void lv_settings_data(lv_obj_t *parent);
 void lv_light_cmd(lv_obj_t *parent);
+void wifi_event_cb(lv_event_t *e);
 
 /*
  * ===================
  * Globals
  * -------------------
  */
+lv_style_t Style_btn, Style_bg;
 static lv_obj_t *Status_header_ps;
 static lv_obj_t *Target_display_bt_ps;
-static lv_obj_t *Target_bt_ps;
 static lv_obj_t *Audio_bt_ps, *Wifi_bt_ps;
-static lv_style_t Style_btn, Style_bg;
 static lv_obj_t *Canvas_head_ps;
 static uint8_t Canvas_header_au8[CANVAS_BUF_SIZE];
 
@@ -115,11 +112,6 @@ static const char *Target_display_bt_psm_map[]=
 		"TGT",LV_SYMBOL_LEFT,LV_SYMBOL_RIGHT,""
 };
 
-static const char *Target_bt_psm_map[]=
-{
-		"+","-","\n",
-		" ","X",""
-};
 
 static const char *Audio_bt_psm_map[]=
 {
@@ -130,6 +122,7 @@ static const char *Wifi_bt_psm_map[]=
 {
 		LV_SYMBOL_WIFI,""
 };
+
 
 
 
@@ -205,8 +198,6 @@ int lcd_set_power(uint8_t level_u8)
 }
 
 
-void lv_update(void){};
-
 /*
  * ===================
  * lv_display_init
@@ -276,26 +267,6 @@ void lv_display_prev(void)
 }
 
 
-/*
- * ===================
- * lv_displays_update
- * -------------------
- */
-void lv_displays_update(void)
-{
-	switch(Display_id ){
-	case DISPLAY_TARGET_ID:
-		lv_target_update();
-		break;
-	case DISPLAY_VESSELS_ID:
-		break;
-	case DISPLAY_CHARTS_ID:
-		break;
-	default:
-		LOG_E("lv_displays_update: ERR Display_id(%d) unknown",Display_id);
-		break;
-	}
-}
 
 
 /*
@@ -374,11 +345,11 @@ void lv_display_cmd(lv_obj_t *parent)
 
 /*
  * ===================
- * target_audio_event_cb
+ * audio_event_cb
  * -------------------
  *
  */
-void target_audio_event_cb(lv_event_t *e)
+void audio_event_cb(lv_event_t *e)
 {
 	lv_event_code_t code=lv_event_get_code(e);
 	//nxmutex_lock(&Gui_anim_Mutex_s);
@@ -394,9 +365,9 @@ void target_audio_event_cb(lv_event_t *e)
 			Gui_animation_s.spk=GUI_ANIM_SPEAKER_ON;
 			lv_canvas_copy_buf(Canvas_head_ps,Img_spk_on_s.data,CANVAS_ICONE_WIDTH*2,0,CANVAS_ICONE_WIDTH,CANVAS_ICONE_HEIGHT);
 		}
-		//		LOG_D("target_audio_event_cb: Gui_animation_s.spk(%d)",Gui_animation_s.spk);
-		//		LOG_D("target_audio_event_cb: Gui_animation_s.wifi(%d)",Gui_animation_s.wifi);
-		//		LOG_D("target_audio_event_cb: Gui_animation_s.gps(%d)",Gui_animation_s.gps);
+		//		LOG_D("audio_event_cb: Gui_animation_s.spk(%d)",Gui_animation_s.spk);
+		//		LOG_D("audio_event_cb: Gui_animation_s.wifi(%d)",Gui_animation_s.wifi);
+		//		LOG_D("audio_event_cb: Gui_animation_s.gps(%d)",Gui_animation_s.gps);
 	}
 	lv_canvas_set_buffer(Canvas_head_ps,Canvas_header_au8,CANVAS_HD_WIDTH,CANVAS_HD_HEIGHT,LV_IMG_CF_TRUE_COLOR);
 	//nxmutex_unlock(&Gui_anim_Mutex_s);
@@ -416,18 +387,18 @@ void lv_audio_cmd(lv_obj_t *parent)
 	lv_btnmatrix_set_map(Audio_bt_ps,Audio_bt_psm_map);
 	lv_obj_add_style(Audio_bt_ps,&Style_bg,0);
 	lv_obj_add_style(Audio_bt_ps, &Style_btn,LV_PART_ITEMS);
-	lv_obj_add_event_cb(Audio_bt_ps,target_audio_event_cb, LV_EVENT_PRESSED,NULL);
-	lv_obj_set_size(Audio_bt_ps,TARGET_AUDIO_BTN_WIDTH,TARGET_AUDIO_BTN_HIGH);
+	lv_obj_add_event_cb(Audio_bt_ps,audio_event_cb, LV_EVENT_PRESSED,NULL);
+	lv_obj_set_size(Audio_bt_ps,AUDIO_BTN_WIDTH,AUDIO_BTN_HIGH);
 	lv_obj_align(Audio_bt_ps,LV_ALIGN_BOTTOM_RIGHT,ALIGN_RIGHT,ALIGN_BOTTOM);
 }
 
 /*
  * ===================
- * target_wifi_event_cb
+ * wifi_event_cb
  * -------------------
  *
  */
-void target_wifi_event_cb(lv_event_t *e)
+void wifi_event_cb(lv_event_t *e)
 {
 	lv_event_code_t code=lv_event_get_code(e);
 	if (code==LV_EVENT_PRESSED)
@@ -462,9 +433,9 @@ void lv_wifi_cmd(lv_obj_t *parent)
 	lv_btnmatrix_set_map(Wifi_bt_ps,Wifi_bt_psm_map);
 	lv_obj_add_style(Wifi_bt_ps,&Style_bg,0);
 	lv_obj_add_style(Wifi_bt_ps, &Style_btn,LV_PART_ITEMS);
-	lv_obj_add_event_cb(Wifi_bt_ps,target_wifi_event_cb, LV_EVENT_PRESSED,NULL);
-	lv_obj_set_size(Wifi_bt_ps,TARGET_AUDIO_BTN_WIDTH,TARGET_AUDIO_BTN_HIGH);
-	lv_obj_align(Wifi_bt_ps,LV_ALIGN_BOTTOM_RIGHT,ALIGN_RIGHT,ALIGN_BOTTOM-TARGET_AUDIO_BTN_HIGH*2);
+	lv_obj_add_event_cb(Wifi_bt_ps,wifi_event_cb, LV_EVENT_PRESSED,NULL);
+	lv_obj_set_size(Wifi_bt_ps,AUDIO_BTN_WIDTH,AUDIO_BTN_HIGH);
+	lv_obj_align(Wifi_bt_ps,LV_ALIGN_BOTTOM_RIGHT,ALIGN_RIGHT,ALIGN_BOTTOM-AUDIO_BTN_HIGH*2);
 }
 
 
@@ -562,24 +533,6 @@ void lv_update_status_gps(void)
 	lv_canvas_set_buffer(Canvas_head_ps,Canvas_header_au8,CANVAS_HD_WIDTH,CANVAS_HD_HEIGHT,LV_IMG_CF_TRUE_COLOR);
 }
 
-/*
- * ===================
- * lv_target_cmd
- * -------------------
- *
- */
-void lv_target_cmd(lv_obj_t *parent)
-{
-	Target_bt_ps = lv_btnmatrix_create(parent);
-	lv_btnmatrix_set_map(Target_bt_ps,Target_bt_psm_map);
-	lv_obj_add_event_cb(Target_bt_ps,target_cmd_event_cb, LV_EVENT_PRESSED,NULL);
-	lv_obj_set_size(Target_bt_ps,TARGET_CMD_BTN_WIDTH,TARGET_CMD_BTN_HIGH);
-	// From top : 60 - from left: 4
-	lv_obj_set_pos(Target_bt_ps,4,60);
-	lv_obj_add_style(Target_bt_ps,&Style_bg,0);
-	lv_obj_add_style(Target_bt_ps,&Style_btn,LV_PART_ITEMS);
-}
-
 
 
 
@@ -592,7 +545,7 @@ void lv_target_cmd(lv_obj_t *parent)
 /*
  * =========================================================================
  *           Settings
- * ===============================
+ * =========================================================================
  */
 
 

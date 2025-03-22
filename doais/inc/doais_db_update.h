@@ -16,7 +16,7 @@
 #include <string.h>
 #include <stdarg.h>
 #include <sys/param.h>
-#include "uORB/uORB.h"
+#include "doais_mng.h"
 #include "ais_channels.h"
 #include "ais_monitoring.h"
 
@@ -28,20 +28,10 @@
  * Defines
  */
 
-#define ORB_AIS_PACKET ((MAX_AIS_RX_PACKET_SIZE+1)>>3)
-#define ORB_AIS_DB_UPDATE_QUEUE_SIZE 10
-
 /*
  * Typedef
  */
-struct orb_ais_db_update_s
-{
-	uint8_t packet_au8[ORB_AIS_PACKET];
-	uint64_t timestamp;
-	uint8_t id_u8;
-};
 
-//ORB_DECLARE(ais_db_update); // extern const struct orb_metadata g_orb_ais_db_update
 
 /*
  * Prptotypes

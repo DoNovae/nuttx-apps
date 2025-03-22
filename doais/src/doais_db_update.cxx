@@ -1,6 +1,6 @@
 /**
  * =====================================
- *  doais_db_update.cxx
+ *  doais_db_update_s.cxx
  * -------------------------------------
  *  AIS DoNovae
  *  www.DoNovae.com
@@ -16,6 +16,7 @@
 #include <stdio.h>
 #include <fcntl.h>
 #include <nuttx/mqueue.h>
+#include <pthread.h>
 
 
 #include "doais_db_update.h"
@@ -25,7 +26,6 @@
 #include "circular_queue.h"
 #include "ais_monitoring.h"
 #include "types.h"
-#include <pthread.h>
 #include "doais_gui.h"
 
 /*
@@ -33,9 +33,8 @@
  * Defines
  * --------------------------
  */
-#define ORB_AIS_DB_UPDATE_QUEUE_SIZE 10
-#define TIMER_INTERVAL_1MS 10000
-#define TIMER_INTERVAL_US (1000*TIMER_INTERVAL_1MS)
+#define TIMER_INTERVAL_1MS 1000
+#define TIMER_INTERVAL_1S (1000*TIMER_INTERVAL_1MS)
 
 /*
  * --------------------------
@@ -46,24 +45,15 @@ gps_data_t Gps_info_s;
 StationData Station_data_s;
 Ais_monitoring Monitoring(AIS_CHAINED_LIST_MAX_SZ,AIS_CHAINED_LABEL_MAX_SZ);
 
-struct orb_timer_db_update_s
-{
-	uint64_t timestamp;
-	uint8_t dummy_u8;
-};
+
+
 
 /*
-#define ORB_ID(name)  &g_orb_##name
-#define ORB_DEFINE(name, structure, cb) \
-  const struct orb_metadata g_orb_##name = \
-  { \
-    #name, \
-    sizeof(structure), \
-  };
-#endif
+ * Cf doais_main.c
  */
-static ORB_DEFINE(timer_db_update,struct orb_timer_db_update_s,0);
-static ORB_DEFINE(ais_db_update,struct orb_ais_db_update_s,0);
+extern "C" ORB_DEFINE(timer_db_update,struct orb_timer_db_update_s,0);
+extern "C" ORB_DEFINE(ais_db_update,struct orb_ais_db_update_s,0);
+
 
 
 
@@ -93,8 +83,14 @@ extern Ais_monitoring Monitoring;
 
 
 /*
+ * --------------------------
  * db_update_thread
+ * --------------------------
  */
+#define ORB_DB_IMER_ID 0
+#define ORB_DB_UPDATE_ID 1
+#define ORB_DB_POLL_NB 2
+#define ORB_DB_TIMEOUT (-1)
 FAR void *db_update_thread(pthread_addr_t arg)
 {
 	struct pollfd fds[2];
@@ -102,14 +98,65 @@ FAR void *db_update_thread(pthread_addr_t arg)
 	struct orb_ais_db_update_s ais_s;
 	bool updated;
 	int sfd;
-	int ret;
+
+//	/*
+//	 * Subscribe timer_db_update
+//	 */
+//	if ((sfd=orb_subscribe(ORB_ID(timer_db_update)))<0)
+//	{
+//		LOG_E("db_update_thread: timer_db_update_s subscribe failed: %d\n", errno);
+//		return NULL;
+//	}
+//
+//		/* Get all published messages,
+//		 * ensure that publish and subscribe message match
+//		 */
+//		do
+//		{
+//			// Check and get
+//			orb_check(sfd,&updated);
+//			if (updated)
+//			{
+//				orb_copy(ORB_ID(timer_db_update),sfd,&timer_s);
+//			}
+//		}
+//
+//		fds[0].fd     = sfd;
+//		fds[0].events = POLLIN;
+//
+//	while(1)
+//	{
+//		int poll_ret;
+//
+//		// Timeout 500ms
+//		poll_ret = poll(fds, 1,1000);
+//		if (poll_ret == 0){
+//			//printf("mng_dev_subscriber_task: poll timeout\n");
+//		}
+//
+//		if (OK != orb_check(sfd, &updated))
+//		{
+//			printf("mng_dev_subscriber_task: check failed\n");
+//			return 0;
+//		}
+//		else if (poll_ret < 0 && errno != EINTR)
+//		{
+//			printf("mng_dev_subscriber_task: poll error (%d, %d)\n", poll_ret, errno);
+//		}
+//
+//				if (fds[ORB_DB_IMER_ID].revents & POLLIN)
+//				{
+//					orb_copy(ORB_ID(timer_db_update),fds[ORB_DB_IMER_ID].fd,&timer_s);
+//					LOG_D("db_update_thread: timer_s.dummy_u8(%d)\n",timer_s.dummy_u8);
+//				}
+//	}
 
 	/*
 	 * Subscribe timer_db_update
 	 */
-	if ((sfd = orb_subscribe(ORB_ID(timer_db_update)))<0)
+	if ((sfd=orb_subscribe(ORB_ID(timer_db_update)))<0)
 	{
-		LOG_E("db_update_thread: timer_db_update subscribe failed: %d\n", errno);
+		LOG_E("db_update_thread: timer_db_update_s subscribe failed: %d\n", errno);
 		return NULL;
 	}
 
@@ -129,13 +176,25 @@ FAR void *db_update_thread(pthread_addr_t arg)
 
 	fds[0].fd     = sfd;
 	fds[0].events = POLLIN;
+	fds[ORB_DB_IMER_ID].fd     = sfd;
+	fds[ORB_DB_IMER_ID].events = POLLIN;
 
 	/*
-	 * Subscribe ais_db_update_s
+	 * Advertise ais_db_update
+	 */
+	sfd=orb_advertise_queue(ORB_ID(ais_db_update),&ais_s,ORB_AIS_DB_UPDATE_QUEUE_SIZE);
+	if (sfd<0)
+	{
+		printf("db_update_thread: advertise failed: %d",errno);
+		return NULL;
+	}
+
+	/*
+	 * Subscribe ais_db_update
 	 */
 	if ((sfd=orb_subscribe(ORB_ID(ais_db_update)))<0)
 	{
-		LOG_E("db_update_thread: ais_db_update_s subscribe failed: %d\n", errno);
+		LOG_E("db_update_thread: ais_db_update_s_s subscribe failed: %d\n", errno);
 		return NULL;
 	}
 
@@ -153,20 +212,19 @@ FAR void *db_update_thread(pthread_addr_t arg)
 	}
 	while (updated);
 
-	fds[1].fd     = sfd;
-	fds[1].events = POLLIN;
+	fds[ORB_DB_UPDATE_ID].fd     = sfd;
+	fds[ORB_DB_UPDATE_ID].events = POLLIN;
 
-	while(1){
+	while(1)
+	{
 		int poll_ret;
-		const int nb_objects_i32=2;
-		const int timeout_ms_i32=-1; // Infinite timeout
 
 		/*
 		 * Infinite timeout
 		 */
-		poll_ret = poll(fds,nb_objects_i32,timeout_ms_i32);
+		poll_ret = poll(fds,ORB_DB_POLL_NB,ORB_DB_TIMEOUT);
 
-		if ((OK != orb_check(fds[0].fd,&updated)&& (OK != orb_check(fds[1].fd,&updated))))
+		if ((OK!=orb_check(fds[ORB_DB_IMER_ID].fd,&updated)&&(OK!=orb_check(fds[ORB_DB_UPDATE_ID].fd,&updated))))
 		{
 			LOG_E("db_update_thread: check failed\n");
 			return NULL;
@@ -178,22 +236,23 @@ FAR void *db_update_thread(pthread_addr_t arg)
 		/*
 		 * Timer processing
 		 */
-		if (fds[0].revents & POLLIN)
+		if (fds[ORB_DB_IMER_ID].revents & POLLIN)
 		{
-			orb_copy(ORB_ID(timer_db_update),fds[0].fd,&timer_s);
+			orb_copy(ORB_ID(timer_db_update),fds[ORB_DB_IMER_ID].fd,&timer_s);
 			//LOG_D("db_update_thread: timer_s.dummy_u8(%d)\n",timer_s.dummy_u8);
 		}
 
 		/*
 		 * AIS processing
 		 */
-		if (fds[1].revents & POLLIN)
+		if (fds[ORB_DB_UPDATE_ID].revents & POLLIN)
 		{
 			RXPacket rx_packet_s(MAX_AIS_RX_PACKET_SIZE);
 
 			// Get bit_payload_pu8 from uORB msg
-			orb_copy(ORB_ID(ais_db_update),fds[1].fd,&ais_s);
+			orb_copy(ORB_ID(ais_db_update),fds[ORB_DB_UPDATE_ID].fd,&ais_s);
 			LOG_D("db_update_thread : ais_s.id_u8(%d)",ais_s.id_u8);
+
 			memcpy(rx_packet_s.mPacket,ais_s.packet_au8,ORB_AIS_PACKET);
 			LOG_D("db_update_thread : rx_packet_s");
 			rx_packet_s.print_bytes();
@@ -206,17 +265,17 @@ FAR void *db_update_thread(pthread_addr_t arg)
 	}
 
 	// unsubscribe
-	ret = orb_unsubscribe(fds[0].fd);
-	if (ret != OK)
+	sfd = orb_unsubscribe(fds[ORB_DB_IMER_ID].fd);
+	if (sfd != OK)
 	{
-		LOG_E("db_update_thread: orb_unsubscribe failed: %i", ret);
+		LOG_E("db_update_thread: orb_unsubscribe failed: %i", sfd);
 		return NULL;
 	}
 
-	ret = orb_unsubscribe(fds[1].fd);
-	if (ret != OK)
+	sfd = orb_unsubscribe(fds[ORB_DB_UPDATE_ID].fd);
+	if (sfd != OK)
 	{
-		LOG_E("db_update_thread: orb_unsubscribe failed: %i", ret);
+		LOG_E("db_update_thread: orb_unsubscribe failed: %i", sfd);
 		return NULL;
 	}
 	return NULL;
@@ -228,7 +287,9 @@ FAR void *db_update_thread(pthread_addr_t arg)
 
 
 /*
+ * --------------------------
  * rx_ais_decode
+ * --------------------------
  */
 bool rx_ais_decode(RXPacket &rx_packet_s, uint8_t ch_u8)
 {
@@ -317,59 +378,37 @@ bool rx_ais_decode(RXPacket &rx_packet_s, uint8_t ch_u8)
 
 
 
-
-
-
 /*
+ * --------------------------
  * db_update_thread
+ * --------------------------
  */
 FAR void *timer_thread(pthread_addr_t arg)
 {
-	const int queue_size = 10;
 	struct orb_timer_db_update_s timer_s;
-	int instance = 0;
-	int ptopic_timer;
+	int sfd;
 
 	// Reset
 	memset(&timer_s,'\0',sizeof(timer_s));
 
-	/****************************************************************************
-	 * Name: orb_advertise_multi_queue
-	 *
-	 * Description:
-	 *   This performs the initial advertisement of a topic; it creates the topic
-	 *   node in /dev/uorb and publishes the initial data.
-	 *
-	 * Input Parameters:
-	 *   meta         The uORB metadata (usually from the ORB_ID() macro)
-	 *   data         A pointer to the initial data to be published.
-	 *   instance     Pointer to an integer which yield the instance ID,
-	 *                (has default 0 if pointer is NULL).
-	 *   queue_size   Maximum number of buffered elements.
-	 *
-	 * Returned Value:
-	 *   -1 on error, otherwise returns an file descriptor
-	 *   that can be used to publish to the topic.
-	 *   If the topic in question is not known (due to an
-	 *   ORB_DEFINE with no corresponding ORB_DECLARE)
-	 *   this function will return -1 and set errno to ENOENT.
-	 ****************************************************************************/
-
-	ptopic_timer=orb_advertise_multi_queue(ORB_ID(timer_db_update),&timer_s,&instance,queue_size);
-	if (ptopic_timer < 0)
+	// Advertise
+	sfd=orb_advertise_queue(ORB_ID(timer_db_update),&timer_s,ORB_TIMER_DB_UPDATE_QUEUE_SIZE);
+	if (sfd < 0)
 	{
-		LOG_E("timer_thread: timer_db_update advertise failed: %d", errno);
+		printf("timer_thread: advertise failed: %d",errno);
+		return 0;
 	}
 
 	while(1)
 	{
 		// Publish
 		timer_s.dummy_u8++;
-		orb_publish(ORB_ID(timer_db_update),ptopic_timer,&timer_s);
-		usleep(TIMER_INTERVAL_US);
+		orb_publish(ORB_ID(timer_db_update),sfd,&timer_s);
+		//LOG_D("timer_thread: timer_s.dummy_u8(%d)\n",timer_s.dummy_u8);
+		usleep(TIMER_INTERVAL_1S);
 	}
 
-	orb_unadvertise(ptopic_timer);
+	orb_unadvertise(sfd);
 	return NULL;
 }
 

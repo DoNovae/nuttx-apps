@@ -71,14 +71,28 @@
  * Defines
  * -------------------
  */
-// THREAD_STACK_MAX_SIZE (4096*16)
-#define THREAD_STACK_SIZE 4096
-#define THREAD_DISPLAY_STACK_SIZE (4096*16)
-#define THREAD_SERIAL_STACK_SIZE (4096*16)
-#define THREAD_DB_UPDATE_STACK_SIZE (4096*16)
-#define THREAD_GPS_STACK_SIZE (4096)
-#define THREAD_PRIORITY ((sched_get_priority_max(SCHED_FIFO)+sched_get_priority_min(SCHED_FIFO))/2)
-#define THREAD_DISPLAY_PRIORITY ((2*sched_get_priority_max(SCHED_FIFO)+sched_get_priority_min(SCHED_FIFO))/3)
+
+/*
+ *  TASK   |PIORITIY|STACK
+ * 	---------------------
+ * 	UORB   |  100   | 2048
+ * 	SERIAL |  100   | 2048
+ * 	GPS    |  100   | 1024
+ * 	TIMER  |  100   | 1024
+ * 	DISPLAY|  100   | 4096
+ * 	DB_UP  |  100   | 4096
+ */
+#define THREAD_TIMER_STACK_SIZE 4096
+#define THREAD_DISPLAY_STACK_SIZE 4096
+#define THREAD_SERIAL_STACK_SIZE 4096
+#define THREAD_DB_UPDATE_STACK_SIZE 4096
+#define THREAD_GPS_STACK_SIZE 4096
+//#define THREAD_PRIORITY ((sched_get_priority_max(SCHED_FIFO)+sched_get_priority_min(SCHED_FIFO))/2)
+//#define THREAD_DISPLAY_PRIORITY ((2*sched_get_priority_max(SCHED_FIFO)+sched_get_priority_min(SCHED_FIFO))/3)
+#define THREAD_PRIORITY 100
+#define THREAD_DISPLAY_PRIORITY 100
+
+
 
 #define ACCEL_TASK_INTERVAL_MS 1000
 #define TASK_PRIORITY 120
@@ -97,6 +111,8 @@
  */
 static int Touch_screen_fd;
 static pid_t gps_pid;
+
+
 //static pid_t publisher_pid;
 //static pid_t subscriber_pid;
 
@@ -118,9 +134,6 @@ Display_id_e Display_id=DISPLAY_TARGET_ID;
  * Mutex
  */
 FAR mutex_t Gps_data_mutex_s;
-
-
-
 
 #if defined(CONFIG_LIBC_EXECFUNCS) && defined(CONFIG_EXECFUNCS_SYMTAB)
 const struct symtab_s CONFIG_EXECFUNCS_SYMTAB[1];
@@ -195,6 +208,7 @@ int main(int argc, FAR char *argv[])
 	//		printf("Failed to create GPS task\n");
 	//	}
 
+
 	/*
 	 * Display Task
 	 */
@@ -228,7 +242,7 @@ int main(int argc, FAR char *argv[])
 		pthread_attr_setschedparam(&tattr, &sparam);
 		pthread_attr_setstacksize(&tattr,THREAD_SERIAL_STACK_SIZE);
 		pthread_create(&pid,&tattr,serial_thread,(pthread_addr_t)0);
-		pthread_setname_np(pid, "serial_thread");
+		pthread_setname_np(pid,"serial_thread");
 	}
 
 	/*
@@ -242,9 +256,9 @@ int main(int argc, FAR char *argv[])
 		pthread_attr_init(&tattr);
 		sparam.sched_priority=THREAD_PRIORITY;
 		pthread_attr_setschedparam(&tattr, &sparam);
-		pthread_attr_setstacksize(&tattr,THREAD_STACK_SIZE);
+		pthread_attr_setstacksize(&tattr,THREAD_TIMER_STACK_SIZE);
 		pthread_create(&pid,&tattr,timer_thread,(pthread_addr_t)0);
-		pthread_setname_np(pid, "timer_thread");
+		pthread_setname_np(pid,"timer_thread");
 	}
 
 	/*
@@ -266,7 +280,7 @@ int main(int argc, FAR char *argv[])
 	/*
 	 * GPS
 	 */
-	{
+/*	{
 		pthread_t pid;
 		pthread_attr_t tattr;
 		struct sched_param sparam;
@@ -277,7 +291,7 @@ int main(int argc, FAR char *argv[])
 		pthread_attr_setstacksize(&tattr,THREAD_GPS_STACK_SIZE);
 		pthread_create(&pid,&tattr,gps_thread,(pthread_addr_t)0);
 		pthread_setname_np(pid,"gps_thread");
-	}
+	}*/
 
 
 #ifdef CONFIG_NSH_CONSOLE
@@ -541,319 +555,7 @@ void indev_click_cb(lv_indev_drv_t *indevDriver,uint8_t event_u8)
 }
 
 
-/*// cf port/lv_port_touchpad.c
- static void touchpad_read(FAR lv_indev_drv_t *drv, FAR lv_indev_data_t *data)
-{
-  FAR struct touchpad_obj_s *touchpad_obj = drv->user_data;
-  struct touch_sample_s sample;
 
-  // Read one sample
-  int nbytes = read(touchpad_obj->fd, &sample,
-                    sizeof(struct touch_sample_s));
-
-  // Handle unexpected return values
-  if (nbytes == sizeof(struct touch_sample_s))
-    {
-      uint8_t touch_flags = sample.point[0].flags;
-
-      if (touch_flags & TOUCH_DOWN || touch_flags & TOUCH_MOVE)
-        {
-          const FAR lv_disp_drv_t *disp_drv = drv->disp->driver;
-          lv_coord_t ver_max = disp_drv->ver_res - 1;
-          lv_coord_t hor_max = disp_drv->hor_res - 1;
-
-          touchpad_obj->last_x = LV_CLAMP(0, sample.point[0].x, hor_max);
-          touchpad_obj->last_y = LV_CLAMP(0, sample.point[0].y, ver_max);
-          touchpad_obj->last_state = LV_INDEV_STATE_PR;
-        }
-      else if (touch_flags & TOUCH_UP)
-        {
-          touchpad_obj->last_state = LV_INDEV_STATE_REL;
-        }
-    }
-
-  // Update touchpad data
-  data->point.x = touchpad_obj->last_x;
-  data->point.y = touchpad_obj->last_y;
-  data->state = touchpad_obj->last_state;
-}*/
-
-
-
-
-
-
-/* ===============================================================================
- * uORB tasks
- *
- */
-
-/*
- * ----------------
- * print_mng_msg
- * ----------------
- */
-static void print_mng_msg(FAR const struct orb_metadata *meta,FAR const void *buffer)
-{
-	FAR const struct mng_msg_s *message = (const struct mng_msg_s*)buffer;
-	const orb_abstime now = orb_absolute_time();
-
-	uorbinfo_raw("%s :\ttimestamp: %llu (%llu us ago) val: %s",meta->o_name, message->timestamp, now - message->timestamp,message->cmd_cha);
-}
-
-
-
-/*
- * ----------------
- * publisher_task
- * ----------------
- */
-static int publisher_task(int argc, char *argv[])
-{
-	const int queue_size = 10;
-	struct orb_test1_s sample;
-	int instance = 0;
-	int ptopic;
-
-	// Reset
-	memset(&sample,'\0',sizeof(sample));
-
-
-	/****************************************************************************
-	 * Name: orb_advertise_multi_queue
-	 *
-	 * Description:
-	 *   This performs the initial advertisement of a topic; it creates the topic
-	 *   node in /dev/uorb and publishes the initial data.
-	 *
-	 * Input Parameters:
-	 *   meta         The uORB metadata (usually from the ORB_ID() macro)
-	 *   data         A pointer to the initial data to be published.
-	 *   instance     Pointer to an integer which yield the instance ID,
-	 *                (has default 0 if pointer is NULL).
-	 *   queue_size   Maximum number of buffered elements.
-	 *
-	 * Returned Value:
-	 *   -1 on error, otherwise returns an file descriptor
-	 *   that can be used to publish to the topic.
-	 *   If the topic in question is not known (due to an
-	 *   ORB_DEFINE with no corresponding ORB_DECLARE)
-	 *   this function will return -1 and set errno to ENOENT.
-	 ****************************************************************************/
-	//#define ORB_ID(name)  &g_orb_##name
-
-	ptopic=orb_advertise_multi_queue(ORB_ID(orb_test1),&sample,&instance,queue_size);
-	if (ptopic < 0)
-	{
-		LOG_E("publisher_task: advertise failed: %d", errno);
-	}
-
-	while(1)
-	{
-		// Publish
-		orb_publish(ORB_ID(orb_test1), ptopic, &sample);
-		sample.val++;
-		usleep(200 * 1000);
-	}
-
-	orb_unadvertise(ptopic);
-
-	return 0;
-}
-
-
-/*
- * ----------------
- * subscriber_task
- * ----------------
- */
-static int subscriber_task(int argc, FAR char *argv[])
-{
-	struct pollfd fds[1];
-	struct orb_test1_s sample;
-	bool updated;
-	int sfd;
-	int ret;
-
-	// Subscribe
-	if ((sfd = orb_subscribe(ORB_ID(orb_test1))) < 0)
-	{
-		LOG_E("subscriber_task: subscribe failed: %d", errno);
-	}
-
-	/* Get all published messages,
-	 * ensure that publish and subscribe message match
-	 */
-	do
-	{
-		// Check and get
-		orb_check(sfd, &updated);
-		if (updated)
-		{
-			orb_copy(ORB_ID(orb_test1), sfd, &sample);
-		}
-	}
-	while (updated);
-
-	fds[0].fd     = sfd;
-	fds[0].events = POLLIN;
-
-	while(1){
-		int poll_ret;
-		int nb_objects=1;
-
-		// Timeout 2s
-		poll_ret = poll(fds, nb_objects,2000*1000);
-		if (poll_ret == 0){
-			LOG_D("subscriber_task: poll timeout");
-		}
-
-		if (OK != orb_check(sfd, &updated))
-		{
-			LOG_W("subscriber_task: check failed");
-		} else if (poll_ret < 0 && errno != EINTR)
-		{
-			printf("subscriber_task: poll error (%d, %d)\n", poll_ret, errno);
-		}
-
-		if (fds[0].revents & POLLIN)
-		{
-			orb_copy(ORB_ID(orb_test1), sfd, &sample);
-
-			LOG_D("subscriber_task: sub_sample.val(%d)",sample.val);
-		}
-		usleep(250 * 1000);
-	}
-
-	// unsubscribe
-	ret = orb_unsubscribe(sfd);
-	if (ret != OK)
-	{
-		LOG_E("subscriber_task: orb_unsubscribe failed: %i", ret);
-	}
-	return 0;
-}
-
-
-
-
-/*
- * ----------------
- * mng_dev_publisher_task
- * ----------------
- */
-#define MNG_UORB_DEV_PATH "/dev/uorb/mng_msg0"
-
-static int mng_dev_publisher_task(int argc, char *argv[])
-{
-	struct mng_msg_s sample;
-	//const int queue_size = 50;
-	//int instance = 0;
-	//int ptopic;
-	uint16_t cpt_u16=0;
-	int sfd;
-
-	// Subscribe
-	sfd=-1;
-	while (sfd < 0)
-	{
-		sfd = orb_open("mng_msg",0,O_WRONLY);
-		printf("mng_dev_publisher_task: subscribe failed: %d\n",errno);
-		usleep(1000 * 1000);
-	}
-
-	// Reset
-	memset(&sample, '\0', sizeof(sample));
-
-	while(1)
-	{
-		cpt_u16++;
-		memset(sample.cmd_cha,0,MNG_CMD_SIZE);
-		snprintf(sample.cmd_cha,MNG_CMD_SIZE,"msg(%d)",cpt_u16);
-		// Publish
-		orb_publish(ORB_ID(mng_msg),sfd,&sample);
-		printf("mng_dev_publisher_task: %s\n",sample.cmd_cha);
-		usleep(2000 * 1000);
-	}
-	close(sfd);
-
-	return 0;
-}
-
-
-
-/*
- * ----------------
- * mng_dev_subscriber_task
- * ----------------
- */
-static int mng_dev_subscriber_task(int argc, FAR char *argv[])
-{
-	struct pollfd fds[1];
-	struct mng_msg_s sample;
-	const int queue_size = 20;
-	int instance = 0;
-	bool updated;
-	int sfd;
-	int ret;
-
-	// Advertise
-	sfd = orb_advertise_multi_queue_persist(ORB_ID(mng_msg), &sample, &instance, queue_size);
-	if (sfd < 0)
-	{
-		printf("mng_dev_publisher_task: advertise failed: %d", errno);
-		return 0;
-	}
-
-	// Subscribe
-	if ((sfd = orb_subscribe(ORB_ID(mng_msg))) < 0)
-	{
-		printf("mng_dev_subscriber_task: subscribe failed: %d\n", errno);
-		return 0;
-	}
-
-	fds[0].fd     = sfd;
-	fds[0].events = POLLIN;
-
-	while(1){
-		int poll_ret;
-
-		// Timeout 500ms
-		poll_ret = poll(fds, 1,1000);
-		if (poll_ret == 0){
-			//printf("mng_dev_subscriber_task: poll timeout\n");
-		}
-
-		if (OK != orb_check(sfd, &updated))
-		{
-			printf("mng_dev_subscriber_task: check failed\n");
-			return 0;
-		}
-		else if (poll_ret < 0 && errno != EINTR)
-		{
-			printf("mng_dev_subscriber_task: poll error (%d, %d)\n", poll_ret, errno);
-		}
-
-		if (fds[0].revents & POLLIN)
-		{
-			orb_copy(ORB_ID(mng_msg),sfd,&sample);
-			printf("mng_dev_subscriber_task: %s\n",sample.cmd_cha);
-			/*
-			 * TODO
-			 * Parse cmd_cha :
-			 * 	cf get_serial_commands in doais_serial.cpp
-			 */
-		}
-	}
-
-	// unsubscribe
-	ret = orb_unsubscribe(sfd);
-	if (ret != OK)
-	{
-		return printf("mng_dev_subscriber_task: orb_unsubscribe failed: %i", ret);
-	}
-	return 0;
-}
 
 
 
