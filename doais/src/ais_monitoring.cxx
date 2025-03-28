@@ -15,8 +15,10 @@
 #include "ais_utils.h"
 // TODO #include "wifi_.h"
 #include "ais_messages.h"
-
-
+#include "definitions.h"
+extern "C" {
+#include "display.h"
+}
 
 
 
@@ -157,7 +159,7 @@ void Monitor_data::cpa()
 	/*
 	 * Status
 	 */
-	if (cross && (cpa_d64<(double)Monitoring.settings_s.cpa_warn_10thnm_u32/(double)10.0))
+	if (cross && (cpa_d64<(double)Settings_s.cpa_warn_10thnm_u32/(double)10.0))
 	{
 		/*
 		 * time_to_cpa_u32
@@ -167,7 +169,7 @@ void Monitor_data::cpa()
 			time_to_cpa_mn_u32=(uint32_t)(0.5+sqrt(TM_d64*TM_d64-cpa_d64*cpa_d64)/n_d64*(double)MINUTES_PER_HOUR);
 			LOG_D("time_to_cpa_mn_u32(%d)",time_to_cpa_mn_u32);
 
-			if (time_to_cpa_mn_u32<Monitoring.settings_s.tcpa_max_mn_u32)
+			if (time_to_cpa_mn_u32<Settings_s.tcpa_max_mn_u32)
 			{
 				status_e=MONITORING_STATUS_ALERT;
 				LOG_D("MONITORING_STATUS_ALERT");
@@ -189,44 +191,35 @@ void Monitor_data::cpa()
  *
  * -----------------------
  */
-Ais_monitoring::settings_t Ais_monitoring::settings_s={0,0};
 
 monitoriring_display_status_e Ais_monitoring::display_status=MONITORING_DISPLAY_STATUS_NONE;
 uint8_t Ais_monitoring::sys_status_u8=MONITORING_SYS_STATUS_NONE;
 uint32_t Ais_monitoring::min_time_to_cpa_mn_u32=MONITORING_MIN_TIME_CPA_RST;
-monitoring_refresh_e Ais_monitoring::refresh_b=MONOTORING_REFRESH_ASAP;
 bool Ais_monitoring::is_pkt_b=false;
 bool Ais_monitoring::is_cross_b=false;
-ais_monitoring_zoom_e Ais_monitoring::zoom_s=AIS_MONITORING_Z0;
 
 Ais_monitoring::Ais_monitoring(uint16_t mx_u16,uint16_t mx_label_u16) : Chained_list<Monitor_data>(mx_u16),labels(mx_label_u16,'?')
-						{
+								{
 	// Less than AIS_CHAINED_LABEL_MAX_SZ
 	labels.enqueue('2');
+	labels.enqueue('4');
 	labels.enqueue('5');
 	labels.enqueue('7');
 	labels.enqueue('A');
 	labels.enqueue('B');
-	labels.enqueue('C');
-	labels.enqueue('D');
 	labels.enqueue('F');
 	labels.enqueue('G');
-	labels.enqueue('K');
 	labels.enqueue('J');
 	labels.enqueue('P');
 	labels.enqueue('T');
 	labels.enqueue('V');
 	labels.enqueue('Y');
-
-/*
-	labels.enqueue('1');
-	labels.enqueue('2');
-	labels.enqueue('3');
-	*/
+	labels.enqueue('Q');
+	labels.enqueue('Y');
 
 
 	LOG_D("labels.size(%d)",labels.size());
-						}
+								}
 
 /*
  * -----------------------
@@ -352,7 +345,7 @@ bool Ais_monitoring::update(const AISMessage *msg_p,Monitor_data** monit_p,uint8
 	/*
 	 * Register new or update old mmsi if range and speed match
 	 */
-	if ((range_nm_d64<(double)settings_s.display_target_step_nm_u32*(double)MONITORING_DISPLAY_STEPS_NB+0.1)&&(msg_p->speed_kt>=settings_s.speed_min_kt_u32*10))
+	if ((range_nm_d64<(double)Settings_s.display_target_step_nm_u32*(double)MONITORING_DISPLAY_STEPS_NB+0.1)&&(msg_p->speed_kt>=Settings_s.speed_min_kt_u32*10))
 	{
 		/*
 		 * Register new mmsi,
@@ -398,7 +391,7 @@ bool Ais_monitoring::update_range(Monitor_data *monit_p)
 {
 	bool del=false;
 	double range_nm_d64=Ais_monitoring::range2_nm(monit_p->lon_d,monit_p->lat_d);
-	if ((range_nm_d64<(double)Monitoring.settings_s.display_target_step_nm_u32*(double)MONITORING_DISPLAY_STEPS_NB+0.1)&&(monit_p->speed_kt>=Monitoring.settings_s.speed_min_kt_u32*10))
+	if ((range_nm_d64<(double)Settings_s.display_target_step_nm_u32*(double)MONITORING_DISPLAY_STEPS_NB+0.1)&&(monit_p->speed_kt>=Settings_s.speed_min_kt_u32*10))
 	{
 		monit_p->range_nm=range_nm_d64;
 		monit_p->cpa();
@@ -446,7 +439,7 @@ bool Ais_monitoring::update_dates_range(uint32_t ticks_u32)
 		/*
 		 * Mononitoring lost vessel
 		 */
-		if ((data_p->ticks_u32>settings_s.lost_target_ticks_u32)||(data_p->speed_kt<settings_s.speed_min_kt_u32*10))
+		if ((data_p->ticks_u32>Settings_s.lost_target_ticks_u32)||(data_p->speed_kt<Settings_s.speed_min_kt_u32*10))
 		{
 			LOG_D("MONITORING_LOST_TICKS - mmsi(%d)",data_p->mmsi);
 			update_ok=true;
@@ -465,7 +458,8 @@ bool Ais_monitoring::update_dates_range(uint32_t ticks_u32)
 		{
 			del_mmsi(data_p,&prev_p);
 			cur_p=next_p;
-		} else {
+		} else
+		{
 			prev_p=cur_p;
 			cur_p=next_p;
 		}
@@ -719,8 +713,11 @@ bool Ais_monitoring::replace_default_label(char label)
 	List<Monitor_data> *next_p=(List<Monitor_data> *)0;
 	Monitor_data *data_p=(Monitor_data*)0;
 	cur_p=orig_p;
-	while (cur_p&&next_T(cur_p,&data_p,&next_p)){
-		if (data_p==(Monitor_data*)0) {
+
+	while (cur_p && next_T(cur_p, &data_p, &next_p))
+	{
+		if (data_p==(Monitor_data*)0)
+		{
 			LOG_E("No data");
 			break;
 		}
@@ -821,172 +818,84 @@ void Ais_monitoring::voice()
 
 
 
-/*
- * -----------------------
- * start
- * -----------------------
- */
-void Ais_monitoring::start()
-{
-	//Speaker.begin();
-	//Speaker.play_tone2k();
-	//Slider.begin();
-	//Ais_display::begin();
-	//Gui_state_s=GUI_SM_TARGET;
-	//Page_target.draw_background();
-}
-
 
 
 /*
- * -----------------------
- * display_ais
- * -----------------------
+ * =============================
+ * display_target_ais_filtering
+ * -----------------------------
+ *
  */
-
-void Ais_monitoring::zoom(int8_t p_i8)
-{
-	int8_t val_i8;
-	val_i8=(int8_t)zoom_s+p_i8;
-	if (val_i8>AIS_MONITORING_Z2) val_i8=AIS_MONITORING_Z2;
-	if (val_i8<AIS_MONITORING_Z0) val_i8=AIS_MONITORING_Z0;
-	switch (val_i8){
-	case AIS_MONITORING_Z0:
-		zoom_s=AIS_MONITORING_Z0;
-		break;
-	case AIS_MONITORING_Z1:
-		zoom_s=AIS_MONITORING_Z1;
-		break;
-	case AIS_MONITORING_Z2:
-		zoom_s=AIS_MONITORING_Z2;
-		break;
-	default:
-		zoom_s=AIS_MONITORING_Z0;
-		break;
-	}
-}
-
-
-void Ais_monitoring::display_target_ais()
-{
-//	/*
-//	float scale_px_nm_d32;
-//	float max_nm_d32;
-//	float alert_circ_d32;
-//
-//	/*
-//	 * Target
-//	 */
-//	Ais_display::target.pushImage(0,0,DISPLAY_TARGET_SX,DISPLAY_TARGET_SY,(m5gfx::rgb565_t*)GUI_TARGET);
-//
-//	/*
-//	 * Circles
-//	 */
-//	Ais_display::target.drawCircle(DISPLAY_TARGET_CENTER_X,DISPLAY_TARGET_CENTER_Y,DISPLAY_TARGET_R3,TFT_BLACK);
-//	scale_px_nm_d32=(float)DISPLAY_TARGET_R3/Monitoring.settings_s.display_target_step_nm_u32/(float)MONITORING_DISPLAY_STEPS_NB;
-//	max_nm_d32=(float)settings_s.display_target_step_nm_u32*(float)MONITORING_DISPLAY_STEPS_NB;
-//	alert_circ_d32=(float)DISPLAY_TARGET_R3*(float)settings_s.cpa_warn_10thnm_u32/(float)10.0/max_nm_d32;
-//	switch (zoom_s){
-//	case AIS_MONITORING_Z0:
-//		Ais_display::target.drawCircle(DISPLAY_TARGET_CENTER_X,DISPLAY_TARGET_CENTER_Y,DISPLAY_TARGET_R2,TFT_BLACK);
-//		Ais_display::target.drawCircle(DISPLAY_TARGET_CENTER_X,DISPLAY_TARGET_CENTER_Y,DISPLAY_TARGET_R1,TFT_BLACK);
-//		break;
-//	case AIS_MONITORING_Z1:
-//		Ais_display::target.drawCircle(DISPLAY_TARGET_CENTER_X,DISPLAY_TARGET_CENTER_Y,DISPLAY_TARGET_R32,TFT_BLACK);
-//		scale_px_nm_d32*=(float)3/2;
-//		max_nm_d32=(float)max_nm_d32*(float)2.0/(float)3.0;
-//		alert_circ_d32=alert_circ_d32*(float)3.0/(float)2.0;
-//		break;
-//	case AIS_MONITORING_Z2:
-//		scale_px_nm_d32*=(float)3;
-//		max_nm_d32=(float)max_nm_d32/(float)3;
-//		alert_circ_d32=alert_circ_d32*(float)3.0;
-//		break;
-//	}
-//	Ais_display::target.drawCircle(DISPLAY_TARGET_CENTER_X,DISPLAY_TARGET_CENTER_Y,(int16_t)(alert_circ_d32+(float)0.5),DISPLAY_RED);
-//
-//	/*
-//	 * Lines
-//	 */
-//	Ais_display::target.drawLine(0,DISPLAY_TARGET_CENTER_Y,DISPLAY_TARGET_SX,DISPLAY_TARGET_CENTER_Y,TFT_BLACK);
-//	Ais_display::target.drawLine(DISPLAY_TARGET_CENTER_X,0,DISPLAY_TARGET_CENTER_X,DISPLAY_TARGET_SY,TFT_BLACK);
-//
-//	/*
-//	 * Cross
-//	 */
-//	if (is_cross_b) {
-//		Ais_display::target.drawLine(DISPLAY_TARGET_CENTER_X-10,DISPLAY_TARGET_CENTER_Y-10,DISPLAY_TARGET_CENTER_X+10,DISPLAY_TARGET_CENTER_Y+10,DISPLAY_RED);
-//		Ais_display::target.drawLine(DISPLAY_TARGET_CENTER_X-10,DISPLAY_TARGET_CENTER_Y+10,DISPLAY_TARGET_CENTER_X+10,DISPLAY_TARGET_CENTER_Y-10,DISPLAY_RED);
-//	}
-//
-//	/*
-//	 * Display filtered vessels
-//	 */
-//	display_target_ais_filtering(max_nm_d32,scale_px_nm_d32,MONITORING_STATUS_NONE);
-//	display_target_ais_filtering(max_nm_d32,scale_px_nm_d32,MONITORING_STATUS_ALERT);
-//
-//	// Scale in NM
-//	Ais_display::draw_target_scale((int16_t)(max_nm_d32+(float)0.5));
-//	M5.Lcd.pushImage(DISPLAY_TARGET_POSX,DISPLAY_TARGET_POSY,DISPLAY_TARGET_SX,DISPLAY_TARGET_SY,(m5gfx::rgb565_t*)Ais_display::target.getBuffer());
-//	*/
-}
-
-
 void Ais_monitoring::display_target_ais_filtering(float max_nm_d32,float scale_px_nm_d32,monitoriring_status_e filter_e)
 {
-//	uint16_t color_u16;
-//	List<Monitor_data> *cur_p=(List<Monitor_data>*)0;
-//	List<Monitor_data> *next_p=(List<Monitor_data>*)0;
-//	Monitor_data *data_p;
-//	float heading_d;
-//	cur_p=orig_p;
-//	while (cur_p&&next_T(cur_p,&data_p,&next_p))
-//	{
-//		if (data_p==(Monitor_data*)0)
-//		{
-//			LOG_E("No data");
-//			break;
-//		}
-//		if (data_p->status_e==filter_e)
-//		{
-//			/*
-//			 * Vessels
-//			 */
-//			float d_lat_d32=AISMessage::lat_d2double(data_p->lat_d)-(float)Gps_info_s.lat_d/LAT_LONG_SCALE;
-//			float d_lon_d32=(AISMessage::lon_d2double(data_p->lon_d)-(float)Gps_info_s.lon_d/LAT_LONG_SCALE)*cosf(AISMessage::lat_d2double(data_p->lat_d)*DEG_TO_RAD);
-//			d_lat_d32*=(float)MILES_PER_DEGREE_EQUATOR;
-//			d_lon_d32*=(float)MILES_PER_DEGREE_EQUATOR;
-//
-//			/*
-//			 * Test range
-//			 */
-//			if (sqrt(d_lat_d32*d_lat_d32+d_lon_d32*d_lon_d32)<max_nm_d32)
-//			{
-//				d_lat_d32*=scale_px_nm_d32;
-//				d_lon_d32*=scale_px_nm_d32;
-//
-//				/*
-//				 * Rotation +Gps_info_s.direction
-//				 * Inversion due to display orientation
-//				 * 	(-X)/Y and Y/X
-//				 */
-//				float lon_d32=d_lon_d32*cosf(Gps_info_s.heading_d*DEG_TO_RAD)-d_lat_d32*sinf(Gps_info_s.heading_d*DEG_TO_RAD);
-//				float lat_d32=d_lat_d32*cosf(Gps_info_s.heading_d*DEG_TO_RAD)+d_lon_d32*sinf(Gps_info_s.heading_d*DEG_TO_RAD);
-//				color_u16=draw_vessels_color(data_p->shiptype);
-//				if (data_p->status_e==MONITORING_STATUS_ALERT){
-//					color_u16=DISPLAY_RED;
-//				}
-//
-//				heading_d=is_cross_b?data_p->rel_heading_d:(float)data_p->cog_d/(float)10.0;
-//				Ais_display::draw_target_vessels(data_p->label,(int16_t)(lon_d32+0.5),(int16_t)(lat_d32+0.5),heading_d-Gps_info_s.heading_d,color_u16);
-//			}
-//		}
-//		/*
-//		 * Next
-//		 */
-//		cur_p=next_p;
-//	}
+	uint32_t color_u32;
+	List<Monitor_data> *cur_p=(List<Monitor_data>*)0;
+	List<Monitor_data> *next_p=(List<Monitor_data>*)0;
+	Monitor_data *data_p;
+	float heading_d, gps_heading_r;
+	int32_t gps_lat_d, gps_lon_d;
+
+	cur_p=orig_p;
+
+	nxmutex_lock(&Gps_data_mutex_s);
+	gps_heading_r = Gps_info_s.heading_d*DEG_TO_RAD;
+	gps_lat_d = Gps_info_s.lat_d;
+	gps_lon_d = Gps_info_s.lon_d;
+	nxmutex_unlock(&Gps_data_mutex_s);
+
+	nxmutex_lock(&Monitoring_data_mutex_s);
+	while (cur_p&&next_T(cur_p,&data_p,&next_p))
+	{
+		if (data_p==(Monitor_data*)0)
+		{
+			LOG_E("No data");
+			break;
+		}
+		if (data_p->status_e==filter_e)
+		{
+			/*
+			 * Vessels
+			 */
+			float d_lat_d32=AISMessage::lat_d2double(data_p->lat_d)-(float)gps_lat_d/LAT_LONG_SCALE;
+			float d_lon_d32=(AISMessage::lon_d2double(data_p->lon_d)-(float)gps_lon_d/LAT_LONG_SCALE)*cosf(AISMessage::lat_d2double(data_p->lat_d)*DEG_TO_RAD);
+			d_lat_d32*=(float)MILES_PER_DEGREE_EQUATOR;
+			d_lon_d32*=(float)MILES_PER_DEGREE_EQUATOR;
+
+			/*
+			 * Test range
+			 */
+			if (sqrt(d_lat_d32*d_lat_d32+d_lon_d32*d_lon_d32)<max_nm_d32)
+			{
+				d_lat_d32*=scale_px_nm_d32;
+				d_lon_d32*=scale_px_nm_d32;
+
+				/*
+				 * Rotation +Gps_info_s.direction
+				 * Inversion due to display orientation
+				 * 	(-X)/Y and Y/X
+				 */
+				float lon_d32=d_lon_d32*cosf(gps_heading_r)-d_lat_d32*sinf(gps_heading_r);
+				float lat_d32=d_lat_d32*cosf(gps_heading_r)+d_lon_d32*sinf(gps_heading_r);
+				color_u32=draw_vessel_color(data_p->shiptype);
+				if (data_p->status_e==MONITORING_STATUS_ALERT)
+				{
+					color_u32=DISPLAY_RED_RGB;
+				}
+
+				heading_d=is_cross_b?data_p->rel_heading_d:(float)data_p->cog_d/(float)10.0;
+				draw_target_vessel(data_p->label,(int16_t)(lon_d32+0.5),(int16_t)(lat_d32+0.5),heading_d-gps_heading_r*M_RAD_TO_DEG,color_u32);
+			}
+		}
+		/*
+		 * Next
+		 */
+		cur_p=next_p;
+	}
+	nxmutex_unlock(&Monitoring_data_mutex_s);
 }
+
+
+
 
 /*
  * -----------------------
@@ -1000,7 +909,7 @@ void Ais_monitoring::display_alerts()
 //	Monitor_data *data_p;
 //	cur_p=orig_p;
 //	uint8_t alert_u8=0;
-//	uint16_t color_u16;
+//	uint32_t color_u32;
 //	monitoriring_display_status_e status_s;
 //
 //	//M5S Ais_display::clear(Ais_display::alert,DISPLAY_ALERT_X,DISPLAY_ALERT_Y,EPD_WHITE);
@@ -1017,8 +926,8 @@ void Ais_monitoring::display_alerts()
 //		{
 //			status_s=MONITORING_DISPLAY_STATUS_ALERT;
 //
-//			color_u16=draw_vessels_color(data_p->shiptype);
-//			Ais_display::draw_vessels_one_alert(alert_u8,data_p->label,data_p->time_to_cpa_mn_u32,data_p->shipname,color_u16);
+//			color_u32=draw_vessel_color(data_p->shiptype);
+//			Ais_display::draw_vessels_one_alert(alert_u8,data_p->label,data_p->time_to_cpa_mn_u32,data_p->shipname,color_u32);
 //			alert_u8++;
 //			if (data_p->time_to_cpa_mn_u32 < min_time_to_cpa_mn_u32) min_time_to_cpa_mn_u32=data_p->time_to_cpa_mn_u32;
 //		}
@@ -1045,7 +954,6 @@ void Ais_monitoring::status_alerts()
 	cur_p=orig_p;
 	monitoriring_display_status_e status_s;
 
-	//M5S Ais_display::clear(Ais_display::alert,DISPLAY_ALERT_X,DISPLAY_ALERT_Y,EPD_WHITE);
 	status_s=MONITORING_DISPLAY_STATUS_NONE;
 	Ais_monitoring::min_time_to_cpa_mn_u32=MONITORING_MIN_TIME_CPA_RST;
 
@@ -1097,11 +1005,11 @@ void Ais_monitoring::display_vessels()
 //		/*
 //		 * Caption
 //		 */
-//		color_u16=draw_vessels_color(data_p->shiptype);
+//		color_u16=draw_vessel_color(data_p->shiptype);
 //		color_spd_u16=DISPLAY_RED;
 //		if (data_p->status_e==MONITORING_STATUS_ALERT)
 //		{
-//			bool old_b=data_p->ticks_u32>(settings_s.lost_target_ticks_u32/2);
+//			bool old_b=data_p->ticks_u32>(Settings_s.lost_target_ticks_u32/2);
 //			Ais_display::draw_vessels(mmsi_u8,data_p->label,data_p->speed_kt,color_u16,color_spd_u16,old_b);
 //			mmsi_u8++;
 //		}
@@ -1124,8 +1032,8 @@ void Ais_monitoring::display_vessels()
 //		min_range(&data_p,&range_nm_d64,&mmsi_u32);
 //		if ((data_p!=(Monitor_data*)0)&&(data_p->status_e!=MONITORING_STATUS_ALERT))
 //		{
-//			bool old_b=data_p->ticks_u32>(settings_s.lost_target_ticks_u32/2);
-//			color_u16=draw_vessels_color(data_p->shiptype);
+//			bool old_b=data_p->ticks_u32>(Settings_s.lost_target_ticks_u32/2);
+//			color_u16=draw_vessel_color(data_p->shiptype);
 //			color_spd_u16=DISPLAY_DARKGREY;
 //			Ais_display::draw_vessels(mmsi_u8,data_p->label,data_p->speed_kt,color_u16,color_spd_u16,old_b);
 //			mmsi_u8++;
@@ -1135,90 +1043,36 @@ void Ais_monitoring::display_vessels()
 }
 
 
+
 /*
  * -----------------------
- * display_gps
+ * draw_vessel_color
  * -----------------------
  */
-void Ais_monitoring::display_gps()
+uint32_t Ais_monitoring::draw_vessel_color(uint8_t shiptype_u8)
 {
-	if (Gps_info_s.fix>0)
+	uint32_t color_u32;
+	switch(shiptype_u8)
 	{
-		//Ais_display::draw_gps_values(Gps_info_s.speed_kt,Gps_info_s.heading_d);
-	} else
-	{
-		//Ais_display::draw_gps_values(0.0,0.0);
-	}
-}
-
-
-void Ais_monitoring::display_pos()
-{
-	//Ais_display::draw_pos_values(Gps_info_s.lon_d,Gps_info_s.lat_d);
-}
-
-void Ais_monitoring::display_date()
-{
-	// TODO Ais_display::draw_date_values(Gps_info_s.utc_s.tm_hour,Gps_info_s.utc_s.tm_min,Gps_info_s.utc_s.tm_sec);
-}
-
-/*
- * -----------------------
- * display_gps
- * -----------------------
- */
-/*
-void Ais_monitoring::display_wifi()
-{
-	LOG_V("Ais_monitoring::state(%d)",Ais_monitoring::state);
-	switch (Ais_monitoring::state){
-	case MONITORING_WIFI_ON:
-		Ais_display::draw_wifi(true);
-		break;
-	case MONITORING_WIFI_OFF:
-		//M5S Ais_display::clear(Ais_display::wifi,DISPLAY_WIFI_X,DISPLAY_WIFI_Y,EPD_WHITE);
-		break;
-	case MONITORING_WIFI_HS:
-		Ais_display::draw_wifi(false);
-		break;
-	default:
-		break;
-	}
-	Ais_monitoring::state=MONITORING_WIFI_ACK;
-}
- */
-
-
-
-
-/*
- * -----------------------
- * draw_vessels_alerts
- * -----------------------
- */
-uint16_t Ais_monitoring::draw_vessels_color(uint8_t shiptype_u8)
-{
-	uint16_t color_u16;
-/*	switch(shiptype_u8){
 	case SAILING:
-		color_u16=DISPLAY_GREEN;
+		color_u32=DISPLAY_GREEN_RGB;
 		break;
 	case CARGO:
 	case TANKER:
 	case PASSENGER:
-		color_u16=DISPLAY_DARKGREY;
+		color_u32=DISPLAY_DARKGREY_RGB;
 		break;
 	case FISH:
 	case PLEASSURE_CRAFT:
 	case HIGH_SPEED_CRAFT:
 	case PILOT:
 	case TUG:
-		color_u16=DISPLAY_NAVY;
+		color_u32=DISPLAY_NAVY_RGB;
 		break;
 	default:
-		color_u16=DISPLAY_DARKGREY;
+		color_u32=DISPLAY_DARKGREY_RGB;
 		break;
-	}*/
-	return color_u16;
+	}
+	return color_u32;
 }
 

@@ -85,14 +85,7 @@ static void ok_to_send();
 static void FlushSerialRequestResend();
 void print_doais();
 
-/*
- * --------------------------
- * Externs
- * --------------------------
- */
-extern StationData Station_data_s; // Cf doais_db_update
-extern Ais_monitoring Monitoring;// Cf doais_db_update
-extern gps_data_t Gps_info_s; // Cf doais_db_update
+
 
 
 /*
@@ -382,17 +375,17 @@ inline void gcode_M103()
  */
 inline void gcode_M104()
 {
-	Monitoring.settings_s.cpa_warn_10thnm_u32=code_seen('C')?code_value_int():Monitoring.settings_s.cpa_warn_10thnm_u32;
-	Monitoring.settings_s.lost_target_mn_u32=code_seen('L')?code_value_int():Monitoring.settings_s.lost_target_mn_u32;
-	Monitoring.settings_s.tcpa_max_mn_u32=code_seen('T')?code_value_int():Monitoring.settings_s.tcpa_max_mn_u32;
-	Monitoring.settings_s.display_target_step_nm_u32=code_seen('S')?code_value_int():Monitoring.settings_s.display_target_step_nm_u32;
-	Monitoring.settings_s.speed_min_kt_u32=code_seen('V')?code_value_int():Monitoring.settings_s.speed_min_kt_u32;
-	if (!Monitoring.settings_s.display_target_step_nm_u32){
-		printf("M104 error: display_target_step_nm_u32(%d) must be positive.",Monitoring.settings_s.display_target_step_nm_u32);
-		Monitoring.settings_s.display_target_step_nm_u32=MONOTORING_DISPLAY_TARGET_STEP_NM;
+	Settings_s.cpa_warn_10thnm_u32=code_seen('C')?code_value_int():Settings_s.cpa_warn_10thnm_u32;
+	Settings_s.lost_target_mn_u32=code_seen('L')?code_value_int():Settings_s.lost_target_mn_u32;
+	Settings_s.tcpa_max_mn_u32=code_seen('T')?code_value_int():Settings_s.tcpa_max_mn_u32;
+	Settings_s.display_target_step_nm_u32=code_seen('S')?code_value_int():Settings_s.display_target_step_nm_u32;
+	Settings_s.speed_min_kt_u32=code_seen('V')?code_value_int():Settings_s.speed_min_kt_u32;
+	if (!Settings_s.display_target_step_nm_u32){
+		printf("M104 error: display_target_step_nm_u32(%d) must be positive.",Settings_s.display_target_step_nm_u32);
+		Settings_s.display_target_step_nm_u32=MONOTORING_DISPLAY_TARGET_STEP_NM;
 	}
-	Monitoring.settings_s.lost_target_ticks_u32=Monitoring.settings_s.lost_target_mn_u32*MONOTORING_TICKS_1MN;
-	LOG_D("lost_target_mn_u32 : %d",Monitoring.settings_s.lost_target_mn_u32);
+	Settings_s.lost_target_ticks_u32=Settings_s.lost_target_mn_u32*MONOTORING_TICKS_1MN;
+	LOG_D("lost_target_mn_u32 : %d",Settings_s.lost_target_mn_u32);
 }
 
 /*
@@ -454,15 +447,15 @@ inline void gcode_M700()
 	int fd;
 	uint32_t bauds_u32=code_seen('B')?code_value_ulong():9600;
 	printf("GPS serial bauds(%d)\n",bauds_u32);
-	Monitoring.settings_s.gps_bauds_u32=bauds_u32;
+	Settings_s.gps_bauds_u32=bauds_u32;
 }
 
 
 /*
  * --------------------------
  * M312 T<type 1 or 18 or 240 or 241>
- * Test chain transmitter /receiver
- * M312 T18
+ *    - Test chain transmitter /receiver
+ *    - M312 T18
  * --------------------------
  * Test
  *   Source: http://www.it-digin.com/blog/?p=20
@@ -484,10 +477,15 @@ inline void gcode_M700()
 #define LAT_D (47.21350504)
 #define LON_D (-1.56928539)
 
+static RXPacket rx_packet_s(MAX_AIS_RX_PACKET_SIZE);
+static TXPacket tx_packet_s(MAX_AIS_RX_PACKET_SIZE);
+static struct orb_ais_db_update_s ais_s;
+
+
 void gcode_M312()
 {
 	uint8_t msg_type_u8=code_seen('T')?code_value_ushort():0;
-	TXPacket tx_packet_s(MAX_AIS_RX_PACKET_SIZE);
+
 	printf("gcode_M312: msg_type_u8(%d) in {1,4,18,12,240,241,100,101,102,104,112,138}\n",msg_type_u8);
 
 	/*
@@ -644,26 +642,35 @@ void gcode_M312()
 	/*
 	 * Send msg to db_update thread.
 	 */
-	if(0){
-		RXPacket rx_packet_s(MAX_AIS_RX_PACKET_SIZE);
+	if(0)
+	{
 		memcpy(rx_packet_s.mPacket,tx_packet_s.mPacket,ORB_AIS_PACKET);
 		rx_packet_s.print_bytes();
 		rx_ais_decode(rx_packet_s,0xFF);
 	}
 
-	if(1){
-		/*struct orb_ais_db_update_s ais_s;
+	if(1)
+	{
 		int ptopic_ais;
 		memcpy(ais_s.packet_au8,tx_packet_s.mPacket,ORB_AIS_PACKET);
-		ais_s.id_u8=3;
+		ais_s.id_u8=0;
+		LOG_D("gcode_M312: publish (%d)",ais_s.id_u8);
+
+/*		if ((ptopic_ais=orb_subscribe(ORB_ID(ais_db_update)))<0)
+		{
+			LOG_E("gcode_M312: ais_db_update_s_s subscribe failed: %d\n", errno);
+			return;
+		}*/
 
 		ptopic_ais=orb_advertise_queue(ORB_ID(ais_db_update),&ais_s,ORB_AIS_DB_UPDATE_QUEUE_SIZE);
 		if (ptopic_ais<0)
 		{
-			LOG_E("timer_thread: orb_ais_db_update advertise failed: %d",errno);
+			LOG_E("gcode_M312: orb_ais_db_update advertise failed: %d",errno);
 		}
+		LOG_D("gcode_M312: publish (%d)",ais_s.id_u8);
 		orb_publish(ORB_ID(ais_db_update),ptopic_ais,&ais_s);
-		orb_unadvertise(ptopic_ais);*/
+
+		//orb_unadvertise(ptopic_ais);
 	}
 
 

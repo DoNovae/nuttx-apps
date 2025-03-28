@@ -71,8 +71,19 @@
 #define LOGGER_BUFSIZE 4
 
 
+typedef struct _settings_t {
+		uint32_t cpa_warn_10thnm_u32;
+		uint32_t lost_target_mn_u32;
+		uint32_t tcpa_max_mn_u32;
+		uint32_t lost_target_ticks_u32;
+		uint32_t display_target_step_nm_u32;
+		uint32_t speed_min_kt_u32;
+		uint32_t gps_bauds_u32;
+} settings_t;
+
 /*
- * Globals
+ * Extern
  */
+extern settings_t Settings_s;
 
 #endif //__TYPES1_H__

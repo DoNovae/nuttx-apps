@@ -30,18 +30,11 @@
 
 /*
  * --------------------------
- * Static
+ * Globals
  * --------------------------
  */
+settings_t Settings_s;
 
-
-/*
- * --------------------------
- * Externs
- * --------------------------
- */
-extern StationData Station_data_s;
-extern Ais_monitoring Monitoring;
 
 
 /*
@@ -89,9 +82,9 @@ void Ais_settings::postprocess()
 	Station_data_s.to_starboard=(Station_data_s.beam+1)>>1;
 
 	/*
-	 * Monitoring
+	 * Settings_s
 	 */
-	Monitoring.settings_s.lost_target_ticks_u32=Monitoring.settings_s.lost_target_mn_u32*MONOTORING_TICKS_1MN;
+	Settings_s.lost_target_ticks_u32=Settings_s.lost_target_mn_u32*MONOTORING_TICKS_1MN;
 }
 
 const char Ais_settings::Version[sizeof(EEPROM_VERSION)]=EEPROM_VERSION;
@@ -169,14 +162,14 @@ void Ais_settings::save()
 	//EEPROM_WRITE(Ais_nmea_gps_s.gps_nmea_on_u8);
 
 	/*
-	 * Monitoring
+	 * Settings_s
 	 */
-	EEPROM_WRITE(Monitoring.settings_s.cpa_warn_10thnm_u32);
-	EEPROM_WRITE(Monitoring.settings_s.lost_target_mn_u32);
-	EEPROM_WRITE(Monitoring.settings_s.tcpa_max_mn_u32);
-	EEPROM_WRITE(Monitoring.settings_s.display_target_step_nm_u32);
-	EEPROM_WRITE(Monitoring.settings_s.speed_min_kt_u32);
-	EEPROM_WRITE(Monitoring.settings_s.gps_bauds_u32);
+	EEPROM_WRITE(Settings_s.cpa_warn_10thnm_u32);
+	EEPROM_WRITE(Settings_s.lost_target_mn_u32);
+	EEPROM_WRITE(Settings_s.tcpa_max_mn_u32);
+	EEPROM_WRITE(Settings_s.display_target_step_nm_u32);
+	EEPROM_WRITE(Settings_s.speed_min_kt_u32);
+	EEPROM_WRITE(Settings_s.gps_bauds_u32);
 
 	/*
 	 * Write the EEPROM header
@@ -251,14 +244,14 @@ int Ais_settings::load()
 	//EEPROM_READ(Ais_nmea_gps_s.gps_nmea_on_u8);
 
 	/*
-	 * Monitoring
+	 * Settings_s
 	 */
-	EEPROM_READ(Monitoring.settings_s.cpa_warn_10thnm_u32);
-	EEPROM_READ(Monitoring.settings_s.lost_target_mn_u32);
-	EEPROM_READ(Monitoring.settings_s.tcpa_max_mn_u32);
-	EEPROM_READ(Monitoring.settings_s.display_target_step_nm_u32);
-	EEPROM_READ(Monitoring.settings_s.speed_min_kt_u32);
-	EEPROM_READ(Monitoring.settings_s.gps_bauds_u32);
+	EEPROM_READ(Settings_s.cpa_warn_10thnm_u32);
+	EEPROM_READ(Settings_s.lost_target_mn_u32);
+	EEPROM_READ(Settings_s.tcpa_max_mn_u32);
+	EEPROM_READ(Settings_s.display_target_step_nm_u32);
+	EEPROM_READ(Settings_s.speed_min_kt_u32);
+	EEPROM_READ(Settings_s.gps_bauds_u32);
 
 	if (Eeprom_checksum_u16==stored_checksum_u16)
 	{
@@ -309,14 +302,14 @@ void Ais_settings::reset()
 	//Ais_nmea_gps_s.gps_nmea_on_u8=0;
 
 	/*
-	 * Monitoring
+	 * Settings_s
 	 */
-	Monitoring.settings_s.cpa_warn_10thnm_u32=MONOTORING_CPA_WARN_10THNM;
-	Monitoring.settings_s.lost_target_mn_u32=MONOTORING_LOST_TARGET_MN;
-	Monitoring.settings_s.tcpa_max_mn_u32=MONOTORING_MAX_TCPA_MN;
-	Monitoring.settings_s.display_target_step_nm_u32=MONOTORING_DISPLAY_TARGET_STEP_NM;
-	Monitoring.settings_s.speed_min_kt_u32=MONITORING_DISPLAY_SPEED_MIN_KT;
-	Monitoring.settings_s.gps_bauds_u32=GPS_DEFAULT_BAUDRATE;
+	Settings_s.cpa_warn_10thnm_u32=MONOTORING_CPA_WARN_10THNM;
+	Settings_s.lost_target_mn_u32=MONOTORING_LOST_TARGET_MN;
+	Settings_s.tcpa_max_mn_u32=MONOTORING_MAX_TCPA_MN;
+	Settings_s.display_target_step_nm_u32=MONOTORING_DISPLAY_TARGET_STEP_NM;
+	Settings_s.speed_min_kt_u32=MONITORING_DISPLAY_SPEED_MIN_KT;
+	Settings_s.gps_bauds_u32=GPS_DEFAULT_BAUDRATE;
 
 	/*
 	 * Post process
@@ -386,20 +379,20 @@ void Ais_settings::report(bool onwifi)
 
 	/*
 	ais_wifi::wifi_printf("%s\n","Monitoring");
-	ais_wifi::wifi_printf("  cpa_warn_10thnm: %d\n",Monitoring.settings_s.cpa_warn_10thnm_u32);
-	ais_wifi::wifi_printf("  lost_target_mn: %d\n",Monitoring.settings_s.lost_target_mn_u32);
-	ais_wifi::wifi_printf("  tcpa_max_mn: %d\n",Monitoring.settings_s.tcpa_max_mn_u32);
-	ais_wifi::wifi_printf("  display_target_step_nm_u32: %d\n",Monitoring.settings_s.display_target_step_nm_u32);
-	ais_wifi::wifi_printf("  speed_min_kt_u32: %d\n",Monitoring.settings_s.speed_min_kt_u32);
-	ais_wifi::wifi_printf("  gps_bauds_u32: %d\n",Monitoring.settings_s.gps_bauds_u32);
+	ais_wifi::wifi_printf("  cpa_warn_10thnm: %d\n",Settings_s.cpa_warn_10thnm_u32);
+	ais_wifi::wifi_printf("  lost_target_mn: %d\n",Settings_s.lost_target_mn_u32);
+	ais_wifi::wifi_printf("  tcpa_max_mn: %d\n",Settings_s.tcpa_max_mn_u32);
+	ais_wifi::wifi_printf("  display_target_step_nm_u32: %d\n",Settings_s.display_target_step_nm_u32);
+	ais_wifi::wifi_printf("  speed_min_kt_u32: %d\n",Settings_s.speed_min_kt_u32);
+	ais_wifi::wifi_printf("  gps_bauds_u32: %d\n",Settings_s.gps_bauds_u32);
 	 */
-	printf("%s\n","Monitoring");
-	printf("  cpa_warn_10thnm: %d\n",Monitoring.settings_s.cpa_warn_10thnm_u32);
-	printf("  lost_target_mn: %d\n",Monitoring.settings_s.lost_target_mn_u32);
-	printf("  tcpa_max_mn: %d\n",Monitoring.settings_s.tcpa_max_mn_u32);
-	printf("  display_target_step_nm_u32: %d\n",Monitoring.settings_s.display_target_step_nm_u32);
-	printf("  speed_min_kt_u32: %d\n",Monitoring.settings_s.speed_min_kt_u32);
-	printf("  gps_bauds_u32: %d\n",Monitoring.settings_s.gps_bauds_u32);
+	printf("%s\n","Settings_s");
+	printf("  cpa_warn_10thnm: %d\n",Settings_s.cpa_warn_10thnm_u32);
+	printf("  lost_target_mn: %d\n",Settings_s.lost_target_mn_u32);
+	printf("  tcpa_max_mn: %d\n",Settings_s.tcpa_max_mn_u32);
+	printf("  display_target_step_nm_u32: %d\n",Settings_s.display_target_step_nm_u32);
+	printf("  speed_min_kt_u32: %d\n",Settings_s.speed_min_kt_u32);
+	printf("  gps_bauds_u32: %d\n",Settings_s.gps_bauds_u32);
 }
 
 

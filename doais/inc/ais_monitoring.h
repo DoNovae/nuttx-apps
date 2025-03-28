@@ -20,8 +20,6 @@
  * -----------------------
  */
 
-
-
 #define MONITORING_DISPLAY_STEPS_NB 3
 #define MONITORING_DISPLAY_SPEED_MIN_KT 0
 
@@ -39,13 +37,6 @@ typedef enum {
 	MONOTORING_CPA_WARN_10THNM=3,
 	MONOTORING_DISPLAY_TARGET_STEP_NM=2
 }monitoring_range_e;
-
-typedef enum {
-	MONOTORING_REFRESH_NONE=0,
-	MONOTORING_REFRESH_PERIODIC=1,
-	MONOTORING_REFRESH_PKT=2,
-	MONOTORING_REFRESH_ASAP=3
-}monitoring_refresh_e;
 
 
 /*
@@ -86,7 +77,7 @@ typedef enum {
 //#define AIS_CHAINED_LIST_MAX_SZ 4
 #define AIS_CHAINED_LIST_MAX_SZ 32
 //#define AIS_CHAINED_LABEL_MAX_SZ 3
-#define AIS_CHAINED_LABEL_MAX_SZ 15
+#define AIS_CHAINED_LABEL_MAX_SZ 20
 
 class Monitor_data
 {
@@ -150,11 +141,6 @@ typedef enum {
 }chained_list_test_e;
 
 
-typedef enum {
-	AIS_MONITORING_Z0=0,
-	AIS_MONITORING_Z1=1,
-	AIS_MONITORING_Z2=2
-}ais_monitoring_zoom_e;
 
 
 /*
@@ -172,22 +158,12 @@ typedef enum {
  *   		TODO : First vessel in alert labeled '?'
  * -------------------------
  */
-class Ais_monitoring : public Chained_list<Monitor_data> {
+class Ais_monitoring : public Chained_list<Monitor_data>
+{
 public:
-	struct settings_t {
-		uint32_t cpa_warn_10thnm_u32;
-		uint32_t lost_target_mn_u32;
-		uint32_t tcpa_max_mn_u32;
-		uint32_t lost_target_ticks_u32;
-		uint32_t display_target_step_nm_u32;
-		uint32_t speed_min_kt_u32;
-		uint32_t gps_bauds_u32;
-	};
-	static settings_t settings_s;
 	static monitoriring_display_status_e display_status;
 	static uint8_t sys_status_u8;
 	static uint32_t min_time_to_cpa_mn_u32;
-	static monitoring_refresh_e refresh_b;
 	static bool is_pkt_b;
 	static bool is_cross_b;
 
@@ -213,7 +189,6 @@ public:
 	/*
 	 * Display
 	 */
-	void start();
 	void display_target_ais();
 	void display_alerts();
 	void status_alerts();
@@ -222,31 +197,21 @@ public:
 	void display_date();
 	void beep();
 	void voice();
-	static uint16_t draw_vessels_color(uint8_t shiptype_u8);
+	static uint32_t draw_vessel_color(uint8_t shiptype_u8);
 	void display_vessels();
-
-	static void zoom(int8_t p_i8);
+	void display_target_ais_filtering(float max_nm_d32,float scale_px_nm_d32,monitoriring_status_e filter_e);
 private:
 	Circular_queue_simple<char> labels;
-	static ais_monitoring_zoom_e zoom_s;
-	void display_target_ais_filtering(float max_nm_d32,float scale_px_nm_d32,monitoriring_status_e filter_e);
 };
+
+
 
 /*
  * ======================
  * Externals
  * ======================
  */
-
 extern Ais_monitoring Monitoring;
-//extern Gui_page Page_target;
-//extern Gui_page Page_vessels;
-//extern Gui_page Page_settings;
-//extern Gui_animation Animation_wifi;
-//extern Gui_animation Animation_spk;
-//extern Gui_animation Animation_gps;
-//extern Gui_animation Animation_bell;
-//extern Gui_slider Slider;
 
 
 #endif //__AIS_MONITORING_H__

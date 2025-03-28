@@ -18,7 +18,6 @@
 #include <lvgl/src/draw/lv_draw_label.h>
 #include <lvgl/src/core/lv_obj_draw.h>
 
-
 #include  "display.h"
 #include  "types.h"
 
@@ -38,17 +37,58 @@
 #define TARGET_CANVAS_HEIGHT 224
 #define CANVAS_BUF_SIZE (TARGET_CANVAS_WIDTH*TARGET_CANVAS_HEIGHT*LV_IMG_PX_SIZE_ALPHA_BYTE)
 
+#define TARGET_CENTER_POSX 112
+#define TARGET_CENTER_POSY 112
+
+#define TARGET_LABEL_WIDTH 14
+#define TARGET_LABEL_HEIGHT 18
 
 
 /*
  * ===================
- * Extern
+ * Defines
  * -------------------
  */
-LV_IMG_DECLARE(Img_target_s);
-LV_IMG_DECLARE(Img_bell_s);
-LV_IMG_DECLARE(Target_canavas_s);
-extern lv_style_t Style_btn, Style_bg;// cf ui_settings.c
+#define LABEL_MG_NB 16
+
+
+
+/*
+ * ===================
+ * Types
+ * -------------------
+ */
+typedef struct
+{
+	FAR lv_img_dsc_t * img_p;
+	char ltr;
+} label_img_t;
+
+
+
+
+/*
+ * Target labels
+ */
+LV_IMG_DECLARE(Img0_s);
+
+#define TARGET_LABEL_NBR 15
+LV_IMG_DECLARE(Img2_s);
+LV_IMG_DECLARE(Img4_s);
+LV_IMG_DECLARE(Img5_s);
+LV_IMG_DECLARE(Img7_s);
+LV_IMG_DECLARE(ImgA_s);
+LV_IMG_DECLARE(ImgB_s);
+LV_IMG_DECLARE(ImgF_s);
+LV_IMG_DECLARE(ImgG_s);
+LV_IMG_DECLARE(ImgJ_s);
+LV_IMG_DECLARE(ImgP_s);
+LV_IMG_DECLARE(ImgT_s);
+LV_IMG_DECLARE(ImgV_s);
+LV_IMG_DECLARE(ImgY_s);
+LV_IMG_DECLARE(ImgQ_s);
+LV_IMG_DECLARE(ImgR_s);
+
 
 /*
  * ===================
@@ -69,6 +109,22 @@ static const char *Target_bt_psm_map[]=
 		" ","X",""
 };
 
+ais_monitoring_zoom_e Zoom_s=AIS_MONITORING_Z0;
+bool Is_cross_b=false;
+
+static label_img_t Label_img_a[LABEL_MG_NB];
+
+/*
+ * ===================
+ * Extern
+ * -------------------
+ */
+LV_IMG_DECLARE(Img_target_s);
+LV_IMG_DECLARE(Img_bell_s);
+LV_IMG_DECLARE(Target_canavas_s);
+
+
+
 /*
  * ===================
  * Prototypes
@@ -76,12 +132,63 @@ static const char *Target_bt_psm_map[]=
  */
 void lv_display_target(lv_obj_t *parent);
 void lv_target_bell(lv_obj_t *parent);
+lv_img_dsc_t* label_ing_get(char c);
 
 
 /*
  * ================================================================
  *           TARGET FUNCTIONS
  */
+
+/*
+ * ======================
+ * label_ing_init
+ * ----------------------
+ */
+void label_ing_init()
+{
+	Label_img_a[0].ltr='2';Label_img_a[0].img_p=&Img2_s;
+	Label_img_a[1].ltr='4';Label_img_a[1].img_p=&Img4_s;
+	Label_img_a[2].ltr='5';Label_img_a[2].img_p=&Img5_s;
+	Label_img_a[3].ltr='7';Label_img_a[3].img_p=&Img7_s;
+
+	Label_img_a[4].ltr='A';Label_img_a[4].img_p=&ImgA_s;
+	Label_img_a[5].ltr='B';Label_img_a[5].img_p=&ImgB_s;
+	Label_img_a[6].ltr='F';Label_img_a[6].img_p=&ImgF_s;
+	Label_img_a[7].ltr='G';Label_img_a[7].img_p=&ImgG_s;
+	Label_img_a[8].ltr='J';Label_img_a[8].img_p=&ImgJ_s;
+
+	Label_img_a[9].ltr='P';Label_img_a[9].img_p=&ImgP_s;
+	Label_img_a[10].ltr='T';Label_img_a[10].img_p=&ImgT_s;
+
+	Label_img_a[11].ltr='V';Label_img_a[11].img_p=&ImgV_s;
+	Label_img_a[12].ltr='Y';Label_img_a[12].img_p=&ImgY_s;
+
+	Label_img_a[13].ltr='Q';Label_img_a[13].img_p=&ImgQ_s;
+	Label_img_a[14].ltr='R';Label_img_a[14].img_p=&ImgR_s;
+	Label_img_a[15].ltr='?';Label_img_a[15].img_p=&Img0_s;
+}
+
+
+/*
+ * ======================
+ * label_ing_gets
+ * ----------------------
+ */
+lv_img_dsc_t* label_ing_get(char c)
+{
+	uint8_t u8;
+	for (u8=0;u8<TARGET_LABEL_NBR;u8++)
+	{
+		if (Label_img_a[u8].ltr==c)
+		{
+			//LOG_D("label_ing_get: get(%c)",c);
+			return Label_img_a[u8].img_p;
+		}
+	}
+	return 0;
+}
+
 
 /**
  * ===================
@@ -158,7 +265,7 @@ void lv_target_display(lv_obj_t *parent)
 
 /*
  * Set the zoom factor of the image.
- * Zoom factor.
+ * Zoom factor.v
  *    - 256 or LV_ZOOM_IMG_NONE for no zoom
  *    - <256: scale down
  *    - >256 scale up
@@ -200,6 +307,8 @@ void lv_target_bell(lv_obj_t *parent)
 }
 
 
+
+
 /*
  * ===================
  * target_cmd_event_cb
@@ -226,10 +335,15 @@ void target_cmd_event_cb(lv_event_t *e)
 			LOG_D("target_cmd_event_cb: %s",txt);
 			if (strcmp("+",txt)==0)
 			{
+				if (Zoom_s==AIS_MONITORING_Z0) Zoom_s=AIS_MONITORING_Z1;
+				else Zoom_s=AIS_MONITORING_Z2;
 			} else if (strcmp("-",txt)==0)
 			{
+				if (Zoom_s==AIS_MONITORING_Z2) Zoom_s=AIS_MONITORING_Z1;
+				else Zoom_s=AIS_MONITORING_Z0;
 			} else if (strcmp("X",txt) == 0)
 			{
+				if (Is_cross_b) Is_cross_b=false; else Is_cross_b=true;
 			} else
 			{
 				LOG_W("target_cmd_event_cb: wrong cmd(%s)",txt);
@@ -270,8 +384,6 @@ void lv_display_target(lv_obj_t *parent)
 	Target_canvas_ps=lv_canvas_create(parent);
 	memset(Target_canavas_au8,0,CANVAS_BUF_SIZE);
 	lv_canvas_set_buffer(Target_canvas_ps,Target_canavas_au8,TARGET_CANVAS_WIDTH,TARGET_CANVAS_HEIGHT,LV_IMG_CF_TRUE_COLOR_ALPHA);
-
-	//lv_canvas_fill_bg(Target_canvas_ps,lv_color_white(),LV_OPA_COVER);
 	lv_obj_set_pos(Target_canvas_ps,TARGET_CORNER_RL_POSX,TARGET_CORNER_RL_POSY);
 
 	lv_update_status();
@@ -279,41 +391,18 @@ void lv_display_target(lv_obj_t *parent)
 
 
 /*
- * ===================
- * lv_update_target
- * -------------------
- *
- */
-//void lv_update_target(void)
-//{
-//	/*
-//	 * Edit Target_canavas_au8
-//	 */
-//	lv_canvas_copy_buf(Target_canvas_ps,Target_canavas_s.data,0,0,TARGET_CANVAS_WIDTH,TARGET_CANVAS_HEIGHT);
-//
-//	/*
-//	 * Display target
-//	 */
-//	lv_canvas_set_buffer(Target_canvas_ps,Target_canavas_au8,TARGET_CANVAS_WIDTH,TARGET_CANVAS_HEIGHT,LV_IMG_CF_TRUE_COLOR_ALPHA);
-//}
-
-
-
-/*
  * ==========================
  * lv_update_target
  * --------------------------
- *    Cf void Ais_monitoring::display_target_ais()
+ *
  * --------------------------
  */
 
 #define SCALE_POSX 196
 #define SCALE_POSY 25
 #define SCALE_WIDTH 33
-#define ARC_CENTER_POSX 112
-#define ARC_CENTER_POSY 112
 
-void lv_target_update(float max_nm_d32)
+void lv_target_update(float max_nm_d32,float *scale_px_nm_d32_p)
 {
 	float alert_circ_d32;
 
@@ -322,7 +411,6 @@ void lv_target_update(float max_nm_d32)
 	 */
 	lv_canvas_copy_buf(Target_canvas_ps,Target_canavas_s.data,0,0,TARGET_CANVAS_WIDTH,TARGET_CANVAS_HEIGHT);
 
-
 	/*
 	 * Circles
 	 */
@@ -330,65 +418,81 @@ void lv_target_update(float max_nm_d32)
 	lv_draw_arc_dsc_init(&arc_dsc);
 	arc_dsc.color=lv_color_black();
 	arc_dsc.width=1;
-	lv_canvas_draw_arc(Target_canvas_ps,ARC_CENTER_POSX,ARC_CENTER_POSY,DISPLAY_TARGET_R2,0,360,&arc_dsc);
-	lv_canvas_draw_arc(Target_canvas_ps,ARC_CENTER_POSX,ARC_CENTER_POSY,DISPLAY_TARGET_R1,0,360,&arc_dsc);
 
-		//scale_px_nm_d32=(float)DISPLAY_TARGET_R3/Monitoring.settings_s.display_target_step_nm_u32/(float)MONITORING_DISPLAY_STEPS_NB;
-	//	Ais_display::target.drawCircle(DISPLAY_TARGET_CENTER_X,DISPLAY_TARGET_CENTER_Y,DISPLAY_TARGET_R3,TFT_BLACK);
-	//	max_nm_d32=(float)settings_s.display_target_step_nm_u32*(float)MONITORING_DISPLAY_STEPS_NB;
-	//	alert_circ_d32=(float)DISPLAY_TARGET_R3*(float)settings_s.cpa_warn_10thnm_u32/(float)10.0/max_nm_d32;
-	//	switch (zoom_s){
-	//	case AIS_MONITORING_Z0:
-	//		Ais_display::target.drawCircle(DISPLAY_TARGET_CENTER_X,DISPLAY_TARGET_CENTER_Y,DISPLAY_TARGET_R2,TFT_BLACK);
-	//		Ais_display::target.drawCircle(DISPLAY_TARGET_CENTER_X,DISPLAY_TARGET_CENTER_Y,DISPLAY_TARGET_R1,TFT_BLACK);
-	//		break;
-	//	case AIS_MONITORING_Z1:
-	//		Ais_display::target.drawCircle(DISPLAY_TARGET_CENTER_X,DISPLAY_TARGET_CENTER_Y,DISPLAY_TARGET_R32,TFT_BLACK);
-	//		scale_px_nm_d32*=(float)3/2;
-	//		max_nm_d32=(float)max_nm_d32*(float)2.0/(float)3.0;
-	//		alert_circ_d32=alert_circ_d32*(float)3.0/(float)2.0;
-	//		break;
-	//	case AIS_MONITORING_Z2:
-	//		scale_px_nm_d32*=(float)3;
-	//		max_nm_d32=(float)max_nm_d32/(float)3;
-	//		alert_circ_d32=alert_circ_d32*(float)3.0;
-	//		break;
-	//	}
-	//	Ais_display::target.drawCircle(DISPLAY_TARGET_CENTER_X,DISPLAY_TARGET_CENTER_Y,(int16_t)(alert_circ_d32+(float)0.5),DISPLAY_RED);
-	//
-	//	/*
-	//	 * Lines
-	//	 */
-	//	Ais_display::target.drawLine(0,DISPLAY_TARGET_CENTER_Y,DISPLAY_TARGET_SX,DISPLAY_TARGET_CENTER_Y,TFT_BLACK);
-	//	Ais_display::target.drawLine(DISPLAY_TARGET_CENTER_X,0,DISPLAY_TARGET_CENTER_X,DISPLAY_TARGET_SY,TFT_BLACK);
-	//
-	//	/*
-	//	 * Cross
-	//	 */
-	//	if (is_cross_b) {
-	//		Ais_display::target.drawLine(DISPLAY_TARGET_CENTER_X-10,DISPLAY_TARGET_CENTER_Y-10,DISPLAY_TARGET_CENTER_X+10,DISPLAY_TARGET_CENTER_Y+10,DISPLAY_RED);
-	//		Ais_display::target.drawLine(DISPLAY_TARGET_CENTER_X-10,DISPLAY_TARGET_CENTER_Y+10,DISPLAY_TARGET_CENTER_X+10,DISPLAY_TARGET_CENTER_Y-10,DISPLAY_RED);
-	//	}
-	//
-	//	/*
-	//	 * Display filtered vessels
-	//	 */
-	//	display_target_ais_filtering(max_nm_d32,scale_px_nm_d32,MONITORING_STATUS_NONE);
-	//	display_target_ais_filtering(max_nm_d32,scale_px_nm_d32,MONITORING_STATUS_ALERT);
-	//
-	//	// Scale in NM
-	//	Ais_display::draw_target_scale((int16_t)(max_nm_d32+(float)0.5));
-	//	M5.Lcd.pushImage(DISPLAY_TARGET_POSX,DISPLAY_TARGET_POSY,DISPLAY_TARGET_SX,DISPLAY_TARGET_SY,(m5gfx::rgb565_t*)Ais_display::target.getBuffer());
-	    lv_draw_label_dsc_t scale_dsc;
-	    lv_draw_label_dsc_init(&scale_dsc);
-	    scale_dsc.color=lv_color_white();
-	    scale_dsc.font=&lv_font_doais_20;
+	*scale_px_nm_d32_p=(float)DISPLAY_TARGET_R3/Settings_s.display_target_step_nm_u32/(float)MONITORING_DISPLAY_STEPS_NB;
+	lv_canvas_draw_arc(Target_canvas_ps,TARGET_CENTER_POSX,TARGET_CENTER_POSY,DISPLAY_TARGET_R3,0,360,&arc_dsc);
 
-		memset((void*)Target_scale_str,0,TARGET_SCALE_STR_LEN);
-		sprintf(Target_scale_str,"%1dN",(int16_t)(max_nm_d32+(float)0.5));
-	    lv_canvas_draw_text(Target_canvas_ps,SCALE_POSX,SCALE_POSY,SCALE_WIDTH,&scale_dsc,Target_scale_str);
+	max_nm_d32=(float)Settings_s.display_target_step_nm_u32*(float)MONITORING_DISPLAY_STEPS_NB;
+	alert_circ_d32=(float)DISPLAY_TARGET_R3*(float)Settings_s.cpa_warn_10thnm_u32/(float)10.0/max_nm_d32;
+
+	switch (Zoom_s){
+	case AIS_MONITORING_Z0:
+		lv_canvas_draw_arc(Target_canvas_ps,TARGET_CENTER_POSX,TARGET_CENTER_POSY,DISPLAY_TARGET_R2,0,360,&arc_dsc);
+		lv_canvas_draw_arc(Target_canvas_ps,TARGET_CENTER_POSX,TARGET_CENTER_POSY,DISPLAY_TARGET_R1,0,360,&arc_dsc);
+		break;
+	case AIS_MONITORING_Z1:
+		lv_canvas_draw_arc(Target_canvas_ps,TARGET_CENTER_POSX,TARGET_CENTER_POSY,DISPLAY_TARGET_R32,0,360,&arc_dsc);
+		*scale_px_nm_d32_p*=(float)3/2;
+		max_nm_d32=(float)max_nm_d32*(float)2.0/(float)3.0;
+		alert_circ_d32=alert_circ_d32*(float)3.0/(float)2.0;
+		break;
+	case AIS_MONITORING_Z2:
+		*scale_px_nm_d32_p*=(float)3;
+		max_nm_d32=(float)max_nm_d32/(float)3;
+		alert_circ_d32=alert_circ_d32*(float)3.0;
+		break;
+	}
+	arc_dsc.color=lv_color_hex(DISPLAY_RED_RGB);
+	lv_canvas_draw_arc(Target_canvas_ps,TARGET_CENTER_POSX,TARGET_CENTER_POSY,(int16_t)(alert_circ_d32+(float)0.5),0,360,&arc_dsc);
+
+	/*
+	 * Lines
+	 */
+	lv_draw_line_dsc_t line_dsc;
+	lv_draw_line_dsc_init(&line_dsc);
+	line_dsc.color=lv_color_black();
+	line_dsc.width=1;
+	lv_point_t line[2];
+
+	line[0].x=0;line[0].y=TARGET_CENTER_POSY;
+	line[1].x=TARGET_CANVAS_WIDTH;line[1].y=TARGET_CENTER_POSY;
+	lv_canvas_draw_line(Target_canvas_ps,line,2,&line_dsc);
+	line[0].x=TARGET_CENTER_POSX;line[0].y=0;
+	line[1].x=TARGET_CENTER_POSX;line[1].y=TARGET_CANVAS_HEIGHT;
+	lv_canvas_draw_line(Target_canvas_ps,line,2,&line_dsc);
+
+	/*
+	 * Cross
+	 */
+	if (Is_cross_b) {
+		line_dsc.color=lv_color_hex(DISPLAY_RED_RGB);
+		line[0].x=TARGET_CENTER_POSX-10;line[0].y=TARGET_CENTER_POSY-10;
+		line[1].x=TARGET_CENTER_POSX+10;line[1].y=TARGET_CENTER_POSY+10;
+		lv_canvas_draw_line(Target_canvas_ps,line,2,&line_dsc);
+		line[0].x=TARGET_CENTER_POSX-10;line[0].y=TARGET_CENTER_POSY+10;
+		line[1].x=TARGET_CENTER_POSX+10;line[1].y=TARGET_CENTER_POSY-10;
+		lv_canvas_draw_line(Target_canvas_ps,line,2,&line_dsc);
+	}
+
+	// Scale in NM
+	lv_draw_label_dsc_t scale_dsc;
+	lv_draw_label_dsc_init(&scale_dsc);
+	scale_dsc.color=lv_color_white();
+	scale_dsc.font=&lv_font_doais_20;
+
+	memset((void*)Target_scale_str,0,TARGET_SCALE_STR_LEN);
+	sprintf(Target_scale_str,"%1dN",(int16_t)(max_nm_d32+(float)0.5));
+	lv_canvas_draw_text(Target_canvas_ps,SCALE_POSX,SCALE_POSY,SCALE_WIDTH,&scale_dsc,Target_scale_str);
 
 
+	/*
+	 * Display target
+	 */
+	//lv_target_push();
+}
+
+void lv_target_push()
+{
 	/*
 	 * Display target
 	 */
@@ -397,174 +501,29 @@ void lv_target_update(float max_nm_d32)
 
 
 /*
- * ======================
- * draw_circle
- * ----------------------
+ * ====================
+ * draw_target_vessel
+ * --------------------
  */
-void draw_circle(int32_t x, int32_t y, int32_t r)
+void draw_target_vessel(char label,int16_t posx_i16,int16_t posy_i16,float head_d32,uint32_t color_u32)
 {
-//  if ( r <= 0 ) {
-//    drawPixel(x, y);
-//    return;
-//  }
-//
-//  startWrite();
-//  int32_t f = 1 - r;
-//  int32_t ddF_y = - (r << 1);
-//  int32_t ddF_x = 1;
-//  int32_t i = 0;
-//  int32_t j = -1;
-//  do {
-//    while (f < 0) {
-//      ++i;
-//      f += (ddF_x += 2);
-//    }
-//    f += (ddF_y += 2);
-//
-//    writeFastHLine(x - i    , y + r, i - j);
-//    writeFastHLine(x - i    , y - r, i - j);
-//    writeFastHLine(x + j + 1, y - r, i - j);
-//    writeFastHLine(x + j + 1, y + r, i - j);
-//
-//    writeFastVLine(x + r, y + j + 1, i - j);
-//    writeFastVLine(x + r, y - i    , i - j);
-//    writeFastVLine(x - r, y - i    , i - j);
-//    writeFastVLine(x - r, y + j + 1, i - j);
-//    j = i;
-//  } while (i < --r);
-//  endWrite();
+	lv_img_dsc_t * img_p;
+	img_p=label_ing_get(label);
+	if (!img_p)
+	{
+		LOG_E("draw_target_vessels: label unknown %c",label);
+		return;
+	}
+
+	lv_draw_img_dsc_t img_dsc;
+	lv_draw_img_dsc_init(&img_dsc);
+	img_dsc.opa=LV_OPA_COVER;
+	img_dsc.recolor=lv_color_hex(color_u32);
+	img_dsc.recolor_opa=LV_OPA_COVER;
+	img_dsc.angle=head_d32*10;
+	img_dsc.pivot.x=TARGET_LABEL_WIDTH/2;
+	img_dsc.pivot.y=TARGET_LABEL_HEIGHT/2;
+	lv_canvas_draw_img(Target_canvas_ps,TARGET_CENTER_POSX+posx_i16-TARGET_LABEL_WIDTH/2,TARGET_CENTER_POSY-posy_i16-TARGET_LABEL_HEIGHT/2,img_p,&img_dsc);
 }
 
 
-
-
-//#include "../../hal/lv_hal_disp.h"
-#include <lvgl/src/misc/lv_math.h>
-#include <lvgl/src/misc/lv_assert.h>
-#include <lvgl/src/misc/lv_area.h>
-#include <lvgl/src/misc/lv_style.h>
-#include <lvgl/src/misc/lv_style.h>
-#include <lvgl/src/core/lv_refr.h>
-#include <lvgl/src/font/lv_font.h>
-
-
-
-
-static void LV_ATTRIBUTE_FAST_MEM draw_letter_normal(lv_draw_ctx_t * draw_ctx, const lv_draw_label_dsc_t * dsc,const lv_point_t * pos, lv_font_glyph_dsc_t * g, const uint8_t * map_p)
-{
-    const uint8_t * bpp_opa_table_p;
-    uint32_t bitmask_init;
-    uint32_t bitmask;
-    uint32_t bpp = g->bpp;
-    lv_opa_t opa = dsc->opa;
-    uint32_t shades;
-    if(bpp == 3) bpp = 4;
-
-//LV_LOG_WARN("HBL");
-
-    if(bpp == LV_IMGFONT_BPP)
-    { //is imgfont
-        lv_area_t fill_area;
-        fill_area.x1 = pos->x;
-        fill_area.y1 = pos->y;
-        fill_area.x2 = pos->x + g->box_w - 1;
-        fill_area.y2 = pos->y + g->box_h - 1;
-        lv_draw_img_dsc_t img_dsc;
-        lv_draw_img_dsc_init(&img_dsc);
-        img_dsc.angle = 45;
-        img_dsc.zoom = LV_IMG_ZOOM_NONE;
-        img_dsc.opa = dsc->opa;
-        img_dsc.blend_mode = dsc->blend_mode;
-        //lv_draw_img(draw_ctx, &img_dsc, &fill_area, map_p);
-        lv_canvas_draw_img(Target_canvas_ps, pos->x, pos->y, (void *) map_p,&img_dsc);
-        return;
-    }
-}
-
-
-void lv_canavas_draw_letter(lv_draw_ctx_t * draw_ctx, const lv_draw_label_dsc_t * dsc,  const lv_point_t * pos_p,
-                       uint32_t letter)
-{
-    lv_font_glyph_dsc_t g;
-    bool g_ret = lv_font_get_glyph_dsc(dsc->font, &g, letter, '\0');
-/*Don't draw anything if the character is empty. E.g. space*/
-if((g.box_h == 0) || (g.box_w == 0)) return;
-
-lv_point_t gpos;
-gpos.x = pos_p->x + g.ofs_x;
-gpos.y = pos_p->y + (dsc->font->line_height - dsc->font->base_line) - g.box_h - g.ofs_y;
-
-/*If the letter is completely out of mask don't draw it*/
-if(gpos.x + g.box_w < draw_ctx->clip_area->x1 ||
-   gpos.x > draw_ctx->clip_area->x2 ||
-   gpos.y + g.box_h < draw_ctx->clip_area->y1 ||
-   gpos.y > draw_ctx->clip_area->y2)  {
-    return;
-}
-
-const uint8_t * map_p = lv_font_get_glyph_bitmap(g.resolved_font, letter);
-if(map_p == NULL) {
-    LV_LOG_WARN("lv_draw_letter: character's bitmap not found");
-    return;
-}
-
-    draw_letter_normal(draw_ctx, dsc, &gpos, &g, map_p);
-}
-
-
-//font->line_height
-//font->base_line
-//const uint8_t * map_p = lv_font_get_glyph_bitmap(font_p, letter);
-//    if(map_p == NULL) {
-//        LV_LOG_WARN("lv_draw_letter: character's bitmap not found");
-//        return;
-//    }
-
-//void draw_char_rot_at(int16_t posx_i16,int16_t posy_i16,char c,const GFXfont *Font,float rot_d32,uint16_t color_u16)
-//{
-//	int16_t xshift_i16,yshift_i16;
-//	//setTextColor(GUI_TARGET_VSL_COLOR);
-//	//setFont(Font);
-//	uint8_t first=Font->first;
-//	GFXglyph *glyph=(Font->glyph)+(uint8_t)(c-first);
-//	uint8_t gw=glyph->width;
-//	uint8_t gh=glyph->height;
-//	int8_t xo=glyph->xOffset;
-//	int8_t yo=glyph->yOffset;
-//	uint16_t bo=glyph->bitmapOffset;
-//	uint8_t *bitmap=Font->bitmap;
-//	int16_t xx, yy, bits = 0, bit = 0;
-//	int16_t ic,jc;
-//	int16_t px1,py1;
-//	float deg_r=rot_d32*(float)M_PI/(float)180.0;
-//	float res_d32;
-//
-//	xshift_i16=xo+gw/2;
-//	yshift_i16=yo+gh/2;
-//	log_v("xshift_i16(%d) - yshift_i16(%d)",xshift_i16,yshift_i16);
-//
-//	for (yy=0;yy<gh;yy++) {
-//		for (xx=0;xx<gw;xx++) {
-//			if (!(bit++ & 7)) {
-//				bits = pgm_read_byte(&bitmap[bo++]);
-//			}
-//			if (bits & 0x80) {
-//				ic=xo+xx-xshift_i16;
-//				jc=yo+yy-yshift_i16;
-//				/*
-//				 * Matrix of rotation
-//				 * 	-Reference at (0x)
-//				 * 	-Rotation in direction of (Oy)
-//				 *     cos(t) -sin(t)
-//				 *     sin(t) costx)
-//				 */
-//				res_d32=((float)ic*cosf(deg_r)-(float)jc*sinf(deg_r))/2+(float)posx_i16;
-//				px1=(int16_t)(res_d32);
-//				res_d32=((float)ic*sinf(deg_r)+(float)jc*cosf(deg_r))/2+(float)posy_i16;
-//				py1=(int16_t)(res_d32);
-//				drawPixel(px1,py1,color_u16);
-//			}
-//			bits <<= 1;
-//		}
-//	}
-//};

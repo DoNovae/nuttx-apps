@@ -34,4 +34,12 @@ int setBaudrate(int _serial_fd, unsigned baud);
 FAR void *gps_thread(pthread_addr_t arg);
 
 
+/*
+ * --------------------------
+ * Externs
+ * --------------------------
+ */
+extern gps_data_t Gps_info_s; // Cf doais_db_update
+
+
 #endif //DOAIS_GPS_H

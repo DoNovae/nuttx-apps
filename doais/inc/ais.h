@@ -36,5 +36,6 @@
 extern gps_data_t Gps_info_s;
 extern StationData Station_data_s;
 extern FAR mutex_t Gps_data_mutex_s;
+extern FAR mutex_t Monitoring_data_mutex_s;
 
 #endif //AIS_H

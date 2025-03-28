@@ -41,3 +41,5 @@ private:
 };
 
 #endif // CONFIGURATION_STORE_H
+
+

@@ -305,6 +305,13 @@ class StationData
     };
 };
 
+/*
+ * --------------------------
+ * Externs
+ * --------------------------
+ */
+extern StationData Station_data_s;
+
 
 
 #endif /* AISCHANNELS_H_ */

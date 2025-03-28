@@ -91,65 +91,16 @@ extern Ais_monitoring Monitoring;
 #define ORB_DB_UPDATE_ID 1
 #define ORB_DB_POLL_NB 2
 #define ORB_DB_TIMEOUT (-1)
+
+static RXPacket rx_packet_s(MAX_AIS_RX_PACKET_SIZE);
+static struct orb_ais_db_update_s ais_s;
+
 FAR void *db_update_thread(pthread_addr_t arg)
 {
 	struct pollfd fds[2];
 	struct orb_timer_db_update_s timer_s;
-	struct orb_ais_db_update_s ais_s;
 	bool updated;
 	int sfd;
-
-//	/*
-//	 * Subscribe timer_db_update
-//	 */
-//	if ((sfd=orb_subscribe(ORB_ID(timer_db_update)))<0)
-//	{
-//		LOG_E("db_update_thread: timer_db_update_s subscribe failed: %d\n", errno);
-//		return NULL;
-//	}
-//
-//		/* Get all published messages,
-//		 * ensure that publish and subscribe message match
-//		 */
-//		do
-//		{
-//			// Check and get
-//			orb_check(sfd,&updated);
-//			if (updated)
-//			{
-//				orb_copy(ORB_ID(timer_db_update),sfd,&timer_s);
-//			}
-//		}
-//
-//		fds[0].fd     = sfd;
-//		fds[0].events = POLLIN;
-//
-//	while(1)
-//	{
-//		int poll_ret;
-//
-//		// Timeout 500ms
-//		poll_ret = poll(fds, 1,1000);
-//		if (poll_ret == 0){
-//			//printf("mng_dev_subscriber_task: poll timeout\n");
-//		}
-//
-//		if (OK != orb_check(sfd, &updated))
-//		{
-//			printf("mng_dev_subscriber_task: check failed\n");
-//			return 0;
-//		}
-//		else if (poll_ret < 0 && errno != EINTR)
-//		{
-//			printf("mng_dev_subscriber_task: poll error (%d, %d)\n", poll_ret, errno);
-//		}
-//
-//				if (fds[ORB_DB_IMER_ID].revents & POLLIN)
-//				{
-//					orb_copy(ORB_ID(timer_db_update),fds[ORB_DB_IMER_ID].fd,&timer_s);
-//					LOG_D("db_update_thread: timer_s.dummy_u8(%d)\n",timer_s.dummy_u8);
-//				}
-//	}
 
 	/*
 	 * Subscribe timer_db_update
@@ -185,7 +136,7 @@ FAR void *db_update_thread(pthread_addr_t arg)
 	sfd=orb_advertise_queue(ORB_ID(ais_db_update),&ais_s,ORB_AIS_DB_UPDATE_QUEUE_SIZE);
 	if (sfd<0)
 	{
-		printf("db_update_thread: advertise failed: %d",errno);
+		LOG_E("db_update_thread: advertise failed: %d",errno);
 		return NULL;
 	}
 
@@ -247,20 +198,22 @@ FAR void *db_update_thread(pthread_addr_t arg)
 		 */
 		if (fds[ORB_DB_UPDATE_ID].revents & POLLIN)
 		{
-			RXPacket rx_packet_s(MAX_AIS_RX_PACKET_SIZE);
-
 			// Get bit_payload_pu8 from uORB msg
 			orb_copy(ORB_ID(ais_db_update),fds[ORB_DB_UPDATE_ID].fd,&ais_s);
 			LOG_D("db_update_thread : ais_s.id_u8(%d)",ais_s.id_u8);
 
+			rx_packet_s.reset();
 			memcpy(rx_packet_s.mPacket,ais_s.packet_au8,ORB_AIS_PACKET);
+
 			LOG_D("db_update_thread : rx_packet_s");
 			rx_packet_s.print_bytes();
 
 			/*
 			 * Decode
 			 */
+			nxmutex_lock(&Monitoring_data_mutex_s);
 			rx_ais_decode(rx_packet_s,0xFF);
+			nxmutex_unlock(&Monitoring_data_mutex_s);
 		}
 	}
 

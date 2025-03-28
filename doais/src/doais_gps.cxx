@@ -320,7 +320,7 @@ FAR void *gps_thread(pthread_addr_t arg)
 	/*
 	 * setBaudrate
 	 */
-	setBaudrate(GPS_TTYS_FD,Monitoring.settings_s.gps_bauds_u32);
+	setBaudrate(GPS_TTYS_FD,Settings_s.gps_bauds_u32);
 
 	/*
 	 * Init Gps_info_ps

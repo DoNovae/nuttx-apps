@@ -55,15 +55,41 @@
  * lv_palette_main(LV_PALETTE_GREY)
  * lv_color_white()
  * lv_color_black()
- * lv_color_hex(DISPLAY_WHITE_RGB)
+ * lv_color_hex(DISPLAY_RED_RGB)
+ * lv_color_t c = lv_color_make(red, green, blue); // All channels are 0-255
+ * lv_color_t c = lv_color_hex(0x123456); // From hex code 0x000000..0xFFFFFF interpreted as RED + GREEN + BLUE
+ * lv_color_t c = lv_color_hex3(0x123); // From 3 digits. Same as lv_color_hex(0x112233)
  * -----------------
  */
-#define DISPLAY_GREEN_RGB 0x8fc748
-#define DISPLAY_GOLD_RGB 0x998579
-#define DISPLAY_RED_RGB 0xff0000
+#define BLACK_RGB                0x000000      /*   0,   0,   0 */
+#define NAVY_RGB                 0x000080      /*   0,   0, 128 */
+#define DARKGREEN_RGB            0x008000      /*   0, 128,   0 */
+#define DARKCYAN_RGB             0x008080      /*   0, 128, 128 */
+#define PURPLE_RGB               0x800080      /* 128,   0, 128 */
+#define OLIVE_RGB                0x808000      /* 128, 128,   0 */
+#define LIGHTGREY_RGB            0xC0C0C0      /* 192, 192, 192 */
+#define DARKGREY_RGB             0x808080      /* 128, 128, 128 */
+#define BLUE_RGB                 0x0000FF      /*   0,   0, 255 */
+#define GREEN_RGB                0x00FF00      /*   0, 255,   0 */
+#define CYAN_RGB                 0x00FFFF      /*   0, 255, 255 */
+#define RED_RGB                  0xFF0000      /* 255,   0,   0 */
+#define MAGENTA_RGB              0xFF00FF      /* 255,   0, 255 */
+#define YELLOW_RGB               0xFFFF00      /* 255, 255,   0 */
+#define WHITE_RGB                0xFFFFFF      /* 255, 255, 255 */
+#define ORANGE_RGB               0xFFA500      /* 255, 165,   0 */
+#define GREENYELLOW_RGB          0xADFF2F      /* 173, 255,  47 */
+#define PINK_RGB                 0xFF66B2      /* 255, 102,  178 */
+#define MARRON_RGB               0x660000      /* 102,   0,    0 */
+
+
+#define DISPLAY_GREEN_RGB    0x8fc748
+#define DISPLAY_GOLD_RGB     0x998579
+#define DISPLAY_RED_RGB      0xff0000
 #define DISPLAY_DARKGREY_RGB 0x4b4b4b
-#define DISPLAY_BLACK_RGB 0x0
-#define DISPLAY_WHITE_RGB 0xffffff
+#define DISPLAY_BLACK_RGB    0x000000
+#define DISPLAY_WHITE_RGB    0xffffff
+#define DISPLAY_NAVY_RGB     DARKCYAN_RGB
+
 
 
 /**
@@ -287,6 +313,25 @@ typedef enum
 } vessels_canvas_e;
 
 
+typedef enum {
+	AIS_MONITORING_Z0=0,
+	AIS_MONITORING_Z1=1,
+	AIS_MONITORING_Z2=2
+} ais_monitoring_zoom_e;
+
+
+/*
+ * DISPLAY
+ */
+typedef enum {
+	DISPLAY_REFRESH_NONE=0,
+	DISPLAY_REFRESH_PERIODIC=1,
+	DISPLAY_REFRESH_PKT=2,
+	DISPLAY_REFRESH_ASAP=3
+} monitoring_refresh_e;
+
+
+
 /*
  * ===================
  * Globals
@@ -318,9 +363,14 @@ void lv_settings_update_time(int32_t hour_i32, int32_t mn_i32,int32_t s_i32);
 
 void lv_update_speed(float speed_f, uint16_t heading_u16);
 void lv_wifi_cmd(lv_obj_t *parent);
-void lv_target_cmd(lv_obj_t *parent);
-void lv_target_update(float max_nm_d32s);
 void lv_update_status(void);
+
+void lv_target_push(void);
+void lv_target_update(float max_nm_d32,float *scale_px_nm_d32_p);
+void lv_target_cmd(lv_obj_t *parent);
+
+void draw_target_vessel(char label,int16_t posx_i16,int16_t posy_i16,float head_d32,uint32_t color_u32);
+void label_ing_init();
 
 /*void lv_wind_display(lv_obj_t * parent);
 void wind_update_cb(void);
@@ -338,6 +388,8 @@ LV_FONT_DECLARE(lv_font_doais_status);
 LV_FONT_DECLARE(lv_font_doais_24);
 LV_FONT_DECLARE(lv_font_doais_20);
 LV_FONT_DECLARE(lv_font_doais_12);
+extern lv_style_t Style_btn, Style_bg;// cf ui_settings.c
+extern monitoring_refresh_e Refresh_b;// cf ui_settings.c
 
 extern lv_updatable_display_t Displays_as[DISPLAY_NBR];
 extern Display_id_e Display_id;

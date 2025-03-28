@@ -24,7 +24,8 @@
  *   Dequeue from the head
  * ------------------
  */
-template<class T> class Circular_queue {
+template<class T> class Circular_queue
+{
 public:
 
 	uint8_t head_u8; // Read
@@ -109,7 +110,6 @@ public:
 		return count_u8==0;
 	}
 
-
 	inline bool is_full()
 	{
 		return (count_u8==size_u8);
@@ -119,7 +119,6 @@ public:
 	{
 		return size_u8;
 	}
-
 
 	inline uint8_t count()
 	{
@@ -145,7 +144,8 @@ public:
 	T def_T;
 	inline Circular_queue_simple(uint8_t sz_u8,T def):Circular_queue<T>(sz_u8){def_T=def;}
 
-	inline bool enqueue(T data){
+	inline bool enqueue(T data)
+	{
 		if (Circular_queue<T>::is_full()) return false;
 
 		Circular_queue<T>::queue_a[Circular_queue<T>::tail_u8]=data;
@@ -155,7 +155,8 @@ public:
 		return true;
 	}
 
-	inline T dequeue() {
+	inline T dequeue()
+	{
 		if (Circular_queue<T>::is_empty()) return (T)def_T;
 		T rtn=Circular_queue<T>::queue_a[Circular_queue<T>::head_u8];
 		Circular_queue<T>::count_u8--;
@@ -269,7 +270,7 @@ public:
 	 */
 	inline bool del_next(List<T> **prev_p){
 		List<T>* nxt_p;
-		LOG_D("count_u8(%d) - *prev_p(0x%04x) - orig_p(0x%04x)",count_u8,(uint16_t*)*prev_p,(uint16_t*)orig_p);
+		LOG_D("count_u8(%d) - *prev_p(0x%04x) - orig_p(0x%04x)",count_u8,(uint32_t*)*prev_p,(uint32_t*)orig_p);
 		/*
 		 * prev_p null means it is the origin
 		 * nexp_p null means it is the last element

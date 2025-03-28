@@ -148,16 +148,17 @@ void Ais_test_vessel::set(const gps_data_t * gps_s)
 	gps_i_s.heading_d=gps_s->heading_d;
 }
 
+static TXPacket tx_packet_s(MAX_AIS_RX_PACKET_SIZE);
+static struct orb_ais_db_update_s ais_s;
+
 void Ais_test_vessel::ais_ready_to_send()
 {
-	TXPacket tx_packet_s(MAX_AIS_RX_PACKET_SIZE);
-	struct orb_ais_db_update_s ais_s;
 	int ptopic_ais;
 
 	ptopic_ais=orb_advertise_queue(ORB_ID(ais_db_update),&ais_s,ORB_AIS_DB_UPDATE_QUEUE_SIZE);
 	if (ptopic_ais<0)
 	{
-		LOG_E("timer_thread: orb_ais_db_update advertise failed: %d",errno);
+		LOG_E("ais_ready_to_send: orb_advertise_queue advertise failed: %d",errno);
 	}
 
 	tx_packet_s.reset();
@@ -165,23 +166,26 @@ void Ais_test_vessel::ais_ready_to_send()
 	tx_packet_s.ais_finalize();
 	memcpy(ais_s.packet_au8,tx_packet_s.mPacket,ORB_AIS_PACKET);
 	ais_s.id_u8=0;
+	LOG_D("ais_ready_to_send: publish msg18");
 	orb_publish(ORB_ID(ais_db_update),ptopic_ais,&ais_s);
 
 	tx_packet_s.reset();
 	msg24A.encode(station_data_s,gps_i_s,tx_packet_s);
 	tx_packet_s.ais_finalize();
 	memcpy(ais_s.packet_au8,tx_packet_s.mPacket,ORB_AIS_PACKET);
-	ais_s.id_u8=0;
+	ais_s.id_u8=1;
+	LOG_D("ais_ready_to_send: publish msg24A");
 	orb_publish(ORB_ID(ais_db_update),ptopic_ais,&ais_s);
 
 	tx_packet_s.reset();
 	msg24B.encode(station_data_s,gps_i_s,tx_packet_s);
 	tx_packet_s.ais_finalize();
 	memcpy(ais_s.packet_au8,tx_packet_s.mPacket,ORB_AIS_PACKET);
-	ais_s.id_u8=0;
+	ais_s.id_u8=2;
+	LOG_D("ais_ready_to_send: publish msg24B");
 	orb_publish(ORB_ID(ais_db_update),ptopic_ais,&ais_s);
 
-	orb_unadvertise(ptopic_ais);
+	//orb_unadvertise(ptopic_ais);
 }
 
 

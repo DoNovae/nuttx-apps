@@ -11,6 +11,7 @@
 
 #include <stdio.h>
 #include <lvgl/src/misc/lv_anim.h>
+#include  "ais.h"
 #include  "types.h"
 #include  "gps.h"
 #include "ais_channels.h"
@@ -29,15 +30,7 @@ extern "C" {
 
 
 
-/*
- * ===================
- * Extern
- * -------------------
- */
-extern StationData Station_data_s; // Cf doais_db_update
-extern Ais_monitoring Monitoring;// Cf doais_db_update
-extern gps_data_t Gps_info_s; // Cf doais_db_update
-extern FAR mutex_t Gps_data_mutex_s;// Cf ais_main.c
+
 
 
 
@@ -90,6 +83,7 @@ void lv_display_init()
 	 * Buttons styles
 	 */
 	lv_button_init();
+	label_ing_init();
 
 	/*
 	 * Gui animation
@@ -145,26 +139,47 @@ void lv_display_prev(void)
  */
 void lv_displays_update(void)
 {
-	float max_nm_d32;
-	nxmutex_lock(&Gps_data_mutex_s);
+	float max_nm_d32,scale_px_nm_d32;
 	/*
 	 * Update gps status
 	 */
+	nxmutex_lock(&Gps_data_mutex_s);
 	Gui_animation_s.gps=(gui_animation_gps_e)Gps_info_s.fix;
 	lv_update_status_gps();
+	nxmutex_unlock(&Gps_data_mutex_s);
 
-	switch(Display_id ){
+	switch(Display_id )
+	{
 	case DISPLAY_TARGET_ID:
+		/*
+		 * Speed
+		 */
+		nxmutex_lock(&Gps_data_mutex_s);
 		lv_update_speed((float)Gps_info_s.speed_kt,(uint16_t)Gps_info_s.heading_d);
-		max_nm_d32=(float)Monitoring.settings_s.display_target_step_nm_u32*(float)MONITORING_DISPLAY_STEPS_NB;
-		lv_target_update(max_nm_d32);
+		nxmutex_unlock(&Gps_data_mutex_s);
+
+		/*
+		 * Target
+		 */
+		max_nm_d32=(float)Settings_s.display_target_step_nm_u32*(float)MONITORING_DISPLAY_STEPS_NB;
+
+		lv_target_update(max_nm_d32,&scale_px_nm_d32);
+		Monitoring.display_target_ais_filtering(max_nm_d32,scale_px_nm_d32,MONITORING_STATUS_NONE);
+		Monitoring.display_target_ais_filtering(max_nm_d32,scale_px_nm_d32,MONITORING_STATUS_ALERT);
+
+		lv_target_push();
 		break;
 	case DISPLAY_VESSELS_ID:
 		break;
 	case DISPLAY_SETTINGS_ID:
+		/*
+		 * Gps time and position
+		 */
+		nxmutex_lock(&Gps_data_mutex_s);
 		lv_settings_update_pos(Gps_info_s.lon_d,Gps_info_s.lat_d);
 		lv_settings_update_time(Gps_info_s.utc_s.tm_hour,Gps_info_s.utc_s.tm_min,Gps_info_s.utc_s.tm_sec);
 		//LOG_D("update_gps_info: tm_hour(%d) - tm_min(%d) - tm_sec(%d)",Gps_info_s.utc_s.tm_hour,Gps_info_s.utc_s.tm_min,Gps_info_s.utc_s.tm_sec);
+		nxmutex_unlock(&Gps_data_mutex_s);
 		break;
 	case DISPLAY_CHARTS_ID:
 		break;
@@ -172,6 +187,5 @@ void lv_displays_update(void)
 		LOG_E("lv_displays_update: ERR Display_id(%d) unknown",Display_id);
 		break;
 	}
-	nxmutex_unlock(&Gps_data_mutex_s);
 }
 

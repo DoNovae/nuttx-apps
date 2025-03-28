@@ -64,6 +64,7 @@
 #include "ais_channels.h"
 #include "ais_monitoring.h"
 #include "doais_gui.h"
+#include "display.h"
 
 
 /*
@@ -82,7 +83,7 @@
  * 	DISPLAY|  100   | 4096
  * 	DB_UP  |  100   | 4096
  */
-#define THREAD_TIMER_STACK_SIZE 4096
+#define THREAD_TIMER_STACK_SIZE 2048
 #define THREAD_DISPLAY_STACK_SIZE 4096
 #define THREAD_SERIAL_STACK_SIZE 4096
 #define THREAD_DB_UPDATE_STACK_SIZE 4096
@@ -91,6 +92,7 @@
 //#define THREAD_DISPLAY_PRIORITY ((2*sched_get_priority_max(SCHED_FIFO)+sched_get_priority_min(SCHED_FIFO))/3)
 #define THREAD_PRIORITY 100
 #define THREAD_DISPLAY_PRIORITY 100
+#define THREAD_DB_UPDATE_PRIORITY 150
 
 
 
@@ -129,11 +131,14 @@ static lv_group_t * Grp_objects_s;
 lv_updatable_display_t Displays_as[DISPLAY_NBR];
 Display_id_e Display_id=DISPLAY_TARGET_ID;
 
-
 /*
  * Mutex
+ *   No protection needed between GUI data
+ *   in handler and update in display_thread.
  */
-FAR mutex_t Gps_data_mutex_s;
+FAR mutex_t Gps_data_mutex_s; // Protect Gps_info_s
+FAR mutex_t Monitoring_data_mutex_s;// Protect all ais_monitoring data
+
 
 #if defined(CONFIG_LIBC_EXECFUNCS) && defined(CONFIG_EXECFUNCS_SYMTAB)
 const struct symtab_s CONFIG_EXECFUNCS_SYMTAB[1];
@@ -198,6 +203,7 @@ int main(int argc, FAR char *argv[])
 	 * Mutex
 	 */
 	nxmutex_init(&Gps_data_mutex_s);
+	nxmutex_init(&Monitoring_data_mutex_s);
 
 	/*
 	 * Tasks
@@ -229,7 +235,6 @@ int main(int argc, FAR char *argv[])
 		pthread_setname_np(pid, "display_thread");
 	}
 
-
 	/*
 	 * Serial Thread
 	 */
@@ -248,7 +253,7 @@ int main(int argc, FAR char *argv[])
 	/*
 	 * Timer
 	 */
-	{
+/*	{
 		pthread_t pid;
 		pthread_attr_t tattr;
 		struct sched_param sparam;
@@ -259,7 +264,7 @@ int main(int argc, FAR char *argv[])
 		pthread_attr_setstacksize(&tattr,THREAD_TIMER_STACK_SIZE);
 		pthread_create(&pid,&tattr,timer_thread,(pthread_addr_t)0);
 		pthread_setname_np(pid,"timer_thread");
-	}
+	}*/
 
 	/*
 	 * DB update
@@ -270,7 +275,7 @@ int main(int argc, FAR char *argv[])
 		struct sched_param sparam;
 
 		pthread_attr_init(&tattr);
-		sparam.sched_priority=THREAD_PRIORITY;
+		sparam.sched_priority=THREAD_DB_UPDATE_PRIORITY;
 		pthread_attr_setschedparam(&tattr, &sparam);
 		pthread_attr_setstacksize(&tattr,THREAD_DB_UPDATE_STACK_SIZE);
 		pthread_create(&pid,&tattr,db_update_thread,(pthread_addr_t)0);
@@ -383,8 +388,24 @@ static int display_init(void)
 	/* src/hal/lv_hal_indev.h */
 	Touchscreen_drv_s.type =LV_INDEV_TYPE_POINTER;
 	Touchscreen_drv_s.read_cb =indev_read_cb;
+	/*
 	// LV_INDEV_DEF_LONG_PRESS_TIME
-	Touchscreen_drv_s.long_press_time = 10;
+	Touchscreen_drv_s.scroll_limit         = 5; // Drag threshold in pixels : 10
+	Touchscreen_drv_s.scroll_throw         = 20; // Drag throw slow-down in [%]. Greater value -> faster slow-down: 10
+	Touchscreen_drv_s.long_press_time      = 30; // Long press time in milliseconds: 400
+	Touchscreen_drv_s.long_press_repeat_time  = 10; // *Repeated trigger period in long press [ms]: 100
+	Touchscreen_drv_s.gesture_limit        = 25; // Gesture threshold in pixels: 50
+	Touchscreen_drv_s.gesture_min_velocity = LV_INDEV_DEF_GESTURE_MIN_VELOCITY; // Gesture min velocity at release before swipe (pixels): 3
+	*/
+
+	/*
+	Touchscreen_drv_s.scroll_limit         = LV_INDEV_DEF_SCROLL_LIMIT; // Drag threshold in pixels : 10
+	Touchscreen_drv_s.scroll_throw         = LV_INDEV_DEF_SCROLL_THROW; // Drag throw slow-down in [%]. Greater value -> faster slow-down: 10
+	Touchscreen_drv_s.long_press_time      = LV_INDEV_DEF_LONG_PRESS_TIME; // 400
+	Touchscreen_drv_s.long_press_repeat_time  = LV_INDEV_DEF_LONG_PRESS_REP_TIME;
+	Touchscreen_drv_s.gesture_limit        = LV_INDEV_DEF_GESTURE_LIMIT; // 50
+	Touchscreen_drv_s.gesture_min_velocity = LV_INDEV_DEF_GESTURE_MIN_VELOCITY;
+	*/
 
 	/*
 	 * Called when an action happened on the input device.
@@ -392,15 +413,6 @@ static int display_init(void)
 	 * For example to play a sound asoociate to click.
 	 * */
 	//Touchscreen_drv_s.feedback_cb=indev_click_cb;
-
-	/*	Touchscreen_drv_s.scroll_limit         = LV_INDEV_DEF_SCROLL_LIMIT;
-	Touchscreen_drv_s.scroll_throw         = LV_INDEV_DEF_SCROLL_THROW;
-	Touchscreen_drv_s.long_press_time      = LV_INDEV_DEF_LONG_PRESS_TIME;
-	Touchscreen_drv_s.long_press_repeat_time  = LV_INDEV_DEF_LONG_PRESS_REP_TIME;
-	Touchscreen_drv_s.gesture_limit        = LV_INDEV_DEF_GESTURE_LIMIT;
-	Touchscreen_drv_s.gesture_min_velocity = LV_INDEV_DEF_GESTURE_MIN_VELOCITY;*/
-
-	//Indev_drv.long_press_time=10;
 
 	/**
 	 * Register an initialized input device driver.
@@ -472,9 +484,10 @@ FAR void *display_thread(pthread_addr_t arg)
 		/*
 		 * Displays update
 		 */
-		if (cpt_u8>>3)
+		if (cpt_u8>>3||(Refresh_b==DISPLAY_REFRESH_ASAP))
 		{
 			cpt_u8=0;
+			Refresh_b=DISPLAY_REFRESH_PERIODIC;
 			lv_displays_update();
 		}
 		cpt_u8++;

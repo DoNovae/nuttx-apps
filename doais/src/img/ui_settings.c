@@ -94,6 +94,7 @@ void wifi_event_cb(lv_event_t *e);
  * -------------------
  */
 lv_style_t Style_btn, Style_bg;
+monitoring_refresh_e Refresh_b=DISPLAY_REFRESH_ASAP;
 static lv_obj_t *Status_header_ps;
 static lv_obj_t *Target_display_bt_ps;
 static lv_obj_t *Audio_bt_ps, *Wifi_bt_ps;
@@ -316,6 +317,7 @@ void displays_cmd_event_cb(lv_event_t *e)
 				lv_obj_clean(Displays_as[disp_id_bk_e].display_ps);
 				// load next display
 				lv_display_load(Display_id);
+			    Refresh_b=DISPLAY_REFRESH_ASAP;
 			}
 		}
 	}
@@ -439,6 +441,8 @@ void lv_wifi_cmd(lv_obj_t *parent)
 }
 
 
+
+
 /*
  * ===========================
  * lv_display_header_status
@@ -462,6 +466,9 @@ void lv_display_status(lv_obj_t *parent)
 
 	lv_update_status();
 }
+
+
+
 
 /* ===========================
  * lv_update_status
@@ -501,6 +508,10 @@ void lv_update_status(void)
 
 	lv_canvas_set_buffer(Canvas_head_ps,Canvas_header_au8,CANVAS_HD_WIDTH,CANVAS_HD_HEIGHT,LV_IMG_CF_TRUE_COLOR);
 }
+
+
+
+
 
 /* ===========================
  * lv_update_status_gps
