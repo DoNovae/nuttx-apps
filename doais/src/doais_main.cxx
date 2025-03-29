@@ -76,12 +76,13 @@
 /*
  *  TASK   |PIORITIY|STACK
  * 	---------------------
- * 	UORB   |  100   | 2048
+ * 	NSH    |  100   | 2048
+ * 	UORB   |  160   | 4096
  * 	SERIAL |  100   | 2048
- * 	GPS    |  100   | 1024
+ * 	GPS    |  100   | 4096
  * 	TIMER  |  100   | 1024
  * 	DISPLAY|  100   | 4096
- * 	DB_UP  |  100   | 4096
+ * 	DB_UP  |  150   | 4096
  */
 #define THREAD_TIMER_STACK_SIZE 2048
 #define THREAD_DISPLAY_STACK_SIZE 4096
@@ -253,7 +254,7 @@ int main(int argc, FAR char *argv[])
 	/*
 	 * Timer
 	 */
-/*	{
+	{
 		pthread_t pid;
 		pthread_attr_t tattr;
 		struct sched_param sparam;
@@ -264,7 +265,7 @@ int main(int argc, FAR char *argv[])
 		pthread_attr_setstacksize(&tattr,THREAD_TIMER_STACK_SIZE);
 		pthread_create(&pid,&tattr,timer_thread,(pthread_addr_t)0);
 		pthread_setname_np(pid,"timer_thread");
-	}*/
+	}
 
 	/*
 	 * DB update

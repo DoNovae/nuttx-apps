@@ -148,6 +148,7 @@ void lv_displays_update(void)
 	lv_update_status_gps();
 	nxmutex_unlock(&Gps_data_mutex_s);
 
+
 	switch(Display_id )
 	{
 	case DISPLAY_TARGET_ID:
@@ -159,18 +160,45 @@ void lv_displays_update(void)
 		nxmutex_unlock(&Gps_data_mutex_s);
 
 		/*
+		 * Cross
+		 */
+		nxmutex_lock(&Monitoring_data_mutex_s);
+		Monitoring.is_cross_b=Is_cross_b;
+		if (Monitoring.display_status==MONITORING_DISPLAY_STATUS_ALERT)
+		{
+			lv_target_bell_on();
+		}else
+		{
+			lv_target_bell_off();
+		}
+		nxmutex_unlock(&Monitoring_data_mutex_s);
+
+		/*
 		 * Target
 		 */
 		max_nm_d32=(float)Settings_s.display_target_step_nm_u32*(float)MONITORING_DISPLAY_STEPS_NB;
 
 		lv_target_update(max_nm_d32,&scale_px_nm_d32);
+
+		/*
+		 * Mutex inside display_target_ais_filtering
+		 */
 		Monitoring.display_target_ais_filtering(max_nm_d32,scale_px_nm_d32,MONITORING_STATUS_NONE);
 		Monitoring.display_target_ais_filtering(max_nm_d32,scale_px_nm_d32,MONITORING_STATUS_ALERT);
 
+		/*
+		 * Push canavas
+		 */
 		lv_target_push();
 		break;
+
 	case DISPLAY_VESSELS_ID:
+		nxmutex_lock(&Monitoring_data_mutex_s);
+		Monitoring.list_vessel_alerts();
+		Monitoring.list_vessels();
+		nxmutex_unlock(&Monitoring_data_mutex_s);
 		break;
+
 	case DISPLAY_SETTINGS_ID:
 		/*
 		 * Gps time and position

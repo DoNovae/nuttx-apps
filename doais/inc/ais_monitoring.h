@@ -190,7 +190,7 @@ public:
 	 * Display
 	 */
 	void display_target_ais();
-	void display_alerts();
+	void list_vessel_alerts();
 	void status_alerts();
 	void display_gps();
 	void display_pos();
@@ -198,7 +198,7 @@ public:
 	void beep();
 	void voice();
 	static uint32_t draw_vessel_color(uint8_t shiptype_u8);
-	void display_vessels();
+	void list_vessels();
 	void display_target_ais_filtering(float max_nm_d32,float scale_px_nm_d32,monitoriring_status_e filter_e);
 private:
 	Circular_queue_simple<char> labels;

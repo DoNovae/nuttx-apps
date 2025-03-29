@@ -91,6 +91,9 @@
 #define DISPLAY_NAVY_RGB     DARKCYAN_RGB
 
 
+#define DISPLAY_VESSELS_NBR 10
+
+
 
 /**
  * ================================================
@@ -300,18 +303,6 @@ typedef struct
 } gui_animation_t;
 
 
-/*
- * -----------------------
- * Vessels
- * -----------------------
- */
-typedef enum
-{
-	VESSELS_CANNVAS_N0NE=0,
-	VESSELS_CANVAS1=1,
-	VESSELS_CANVAS2=2
-} vessels_canvas_e;
-
 
 typedef enum {
 	AIS_MONITORING_Z0=0,
@@ -369,14 +360,13 @@ void lv_target_push(void);
 void lv_target_update(float max_nm_d32,float *scale_px_nm_d32_p);
 void lv_target_cmd(lv_obj_t *parent);
 
-void draw_target_vessel(char label,int16_t posx_i16,int16_t posy_i16,float head_d32,uint32_t color_u32);
+void draw_target_vessel(char label,int16_t posx_i16,int16_t posy_i16,float head_d32,uint32_t color_u32,lv_opa_t opa_e);
 void label_ing_init();
+void lv_target_bell_off(void);
+void lv_target_bell_on(void);
 
-/*void lv_wind_display(lv_obj_t * parent);
-void wind_update_cb(void);
-
-void autopilot_update_cb(void);
-void lv_autopilot_display(lv_obj_t *parent);*/
+void vessels_list_one_alert(int16_t id_i16,char label,uint32_t time_to_cpa_mn_u32,char * name_pc,uint16_t color_u16);
+void vessels_list_vessel(int16_t id_u16,char label,uint32_t speed_kt,uint16_t color_u16,uint16_t color_spd_u16, bool old_b);
 
 /**
  * ==================
@@ -387,9 +377,12 @@ LV_FONT_DECLARE(lv_font_doais_speed);
 LV_FONT_DECLARE(lv_font_doais_status);
 LV_FONT_DECLARE(lv_font_doais_24);
 LV_FONT_DECLARE(lv_font_doais_20);
+LV_FONT_DECLARE(lv_font_doais_16);
 LV_FONT_DECLARE(lv_font_doais_12);
+
 extern lv_style_t Style_btn, Style_bg;// cf ui_settings.c
 extern monitoring_refresh_e Refresh_b;// cf ui_settings.c
+extern bool Is_cross_b;// cf ui_settings.c
 
 extern lv_updatable_display_t Displays_as[DISPLAY_NBR];
 extern Display_id_e Display_id;

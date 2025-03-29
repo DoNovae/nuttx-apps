@@ -786,6 +786,8 @@ void Ais_monitoring::beep()
 	//Speaker.play_tone2k();
 }
 
+
+
 /*
  * -----------------------
  * voice
@@ -824,7 +826,10 @@ void Ais_monitoring::voice()
  * =============================
  * display_target_ais_filtering
  * -----------------------------
- *
+ *  For Target display,
+ *  draw vessels depending on
+ *  their monitoriring_status_e
+ * -----------------------------
  */
 void Ais_monitoring::display_target_ais_filtering(float max_nm_d32,float scale_px_nm_d32,monitoriring_status_e filter_e)
 {
@@ -876,14 +881,23 @@ void Ais_monitoring::display_target_ais_filtering(float max_nm_d32,float scale_p
 				 */
 				float lon_d32=d_lon_d32*cosf(gps_heading_r)-d_lat_d32*sinf(gps_heading_r);
 				float lat_d32=d_lat_d32*cosf(gps_heading_r)+d_lon_d32*sinf(gps_heading_r);
+				lv_opa_t opa_e;
+
 				color_u32=draw_vessel_color(data_p->shiptype);
 				if (data_p->status_e==MONITORING_STATUS_ALERT)
 				{
 					color_u32=DISPLAY_RED_RGB;
 				}
 
+				if (data_p->ticks_u32>(Settings_s.lost_target_ticks_u32/2))
+				{
+					opa_e=LV_OPA_50;
+				} else
+				{
+					opa_e=LV_OPA_100;
+				}
 				heading_d=is_cross_b?data_p->rel_heading_d:(float)data_p->cog_d/(float)10.0;
-				draw_target_vessel(data_p->label,(int16_t)(lon_d32+0.5),(int16_t)(lat_d32+0.5),heading_d-gps_heading_r*M_RAD_TO_DEG,color_u32);
+				draw_target_vessel(data_p->label,(int16_t)(lon_d32+0.5),(int16_t)(lat_d32+0.5),heading_d-gps_heading_r*M_RAD_TO_DEG,color_u32,opa_e);
 			}
 		}
 		/*
@@ -895,55 +909,13 @@ void Ais_monitoring::display_target_ais_filtering(float max_nm_d32,float scale_p
 }
 
 
-
-
-/*
- * -----------------------
- * display_alerts
- * -----------------------
- */
-void Ais_monitoring::display_alerts()
-{
-//	List<Monitor_data> *cur_p=(List<Monitor_data>*)0;
-//	List<Monitor_data> *next_p=(List<Monitor_data>*)0;
-//	Monitor_data *data_p;
-//	cur_p=orig_p;
-//	uint8_t alert_u8=0;
-//	uint32_t color_u32;
-//	monitoriring_display_status_e status_s;
-//
-//	//M5S Ais_display::clear(Ais_display::alert,DISPLAY_ALERT_X,DISPLAY_ALERT_Y,EPD_WHITE);
-//	status_s=MONITORING_DISPLAY_STATUS_NONE;
-//	Ais_monitoring::min_time_to_cpa_mn_u32=MONITORING_MIN_TIME_CPA_RST;
-//
-//	Ais_display::draw_alerts_clear();
-//	while (cur_p&&next_T(cur_p,&data_p,&next_p)){
-//		if (data_p==(Monitor_data*)0) {
-//			LOG_E("No data");
-//			break;
-//		}
-//		if (data_p->status_e==MONITORING_STATUS_ALERT)
-//		{
-//			status_s=MONITORING_DISPLAY_STATUS_ALERT;
-//
-//			color_u32=draw_vessel_color(data_p->shiptype);
-//			Ais_display::draw_vessels_one_alert(alert_u8,data_p->label,data_p->time_to_cpa_mn_u32,data_p->shipname,color_u32);
-//			alert_u8++;
-//			if (data_p->time_to_cpa_mn_u32 < min_time_to_cpa_mn_u32) min_time_to_cpa_mn_u32=data_p->time_to_cpa_mn_u32;
-//		}
-//
-//		/*
-//		 * Next
-//		 */
-//		cur_p=next_p;
-//	}
-//	Ais_display::alerts_push();
-//	Ais_monitoring::display_status=status_s;
-}
-
 /*
  * -----------------------
  * status_alerts
+ * -----------------------
+ * Update global status_e
+ *   - MONITORING_STATUS_ALERT
+ *   - MONITORING_DISPLAY_STATUS_NONE
  * -----------------------
  */
 void Ais_monitoring::status_alerts()
@@ -976,77 +948,139 @@ void Ais_monitoring::status_alerts()
 	Ais_monitoring::display_status=status_s;
 }
 
+
+
 /*
  * -----------------------
- * display_vessels
+ * list_vessel_alerts
+ * -----------------------
+ * For Vessels left panel display,
+ * list vessels in alarm
  * -----------------------
  */
-void Ais_monitoring::display_vessels()
+void Ais_monitoring::list_vessel_alerts()
 {
-//	List<Monitor_data> *cur_p=(List<Monitor_data>*)0;
-//	List<Monitor_data> *next_p=(List<Monitor_data>*)0;
-//	Monitor_data *data_p;
-//	uint8_t mmsi_u8=0;
-//	uint16_t color_u16,color_spd_u16;
-//
-//	Ais_display::draw_vessels_clear();
-//	// First display vessels in alert
-//	cur_p=orig_p;
-//	next_p=(List<Monitor_data>*)0;
-//	while (cur_p&&next_T(cur_p,&data_p,&next_p)){
-//		if (data_p==(Monitor_data*)0) {
-//			LOG_E("No data");
-//			break;
-//		}
-//		//HBL260623
-//		if (mmsi_u8==DISPLAY_VESSELS_NBR){
-//			break;
-//		}
-//		/*
-//		 * Caption
-//		 */
-//		color_u16=draw_vessel_color(data_p->shiptype);
-//		color_spd_u16=DISPLAY_RED;
-//		if (data_p->status_e==MONITORING_STATUS_ALERT)
-//		{
-//			bool old_b=data_p->ticks_u32>(Settings_s.lost_target_ticks_u32/2);
-//			Ais_display::draw_vessels(mmsi_u8,data_p->label,data_p->speed_kt,color_u16,color_spd_u16,old_b);
-//			mmsi_u8++;
-//		}
-//		/*
-//		 * Next
-//		 */
-//		cur_p=next_p;
-//	}
-//	// Then display first vessels nearest in the list not in alert
-//	cur_p=orig_p;
-//	data_p=&orig_p->data;
-//	double range_nm_d64=0;
-//	uint32_t mmsi_u32=0;
-//	while ((mmsi_u8<DISPLAY_VESSELS_NBR)&&data_p)
-//	{
-//		//HBL260623
-//		if (mmsi_u8==DISPLAY_VESSELS_NBR){
-//			break;
-//		}
-//		min_range(&data_p,&range_nm_d64,&mmsi_u32);
-//		if ((data_p!=(Monitor_data*)0)&&(data_p->status_e!=MONITORING_STATUS_ALERT))
-//		{
-//			bool old_b=data_p->ticks_u32>(Settings_s.lost_target_ticks_u32/2);
-//			color_u16=draw_vessel_color(data_p->shiptype);
-//			color_spd_u16=DISPLAY_DARKGREY;
-//			Ais_display::draw_vessels(mmsi_u8,data_p->label,data_p->speed_kt,color_u16,color_spd_u16,old_b);
-//			mmsi_u8++;
-//		}
-//	}
-//	Ais_display::vessels_push();
+	List<Monitor_data> *cur_p=(List<Monitor_data>*)0;
+	List<Monitor_data> *next_p=(List<Monitor_data>*)0;
+	Monitor_data *data_p;
+	cur_p=orig_p;
+	uint8_t alert_u8=0;
+	uint32_t color_u32;
+	monitoriring_display_status_e status_s;
+
+	status_s=MONITORING_DISPLAY_STATUS_NONE;
+	Ais_monitoring::min_time_to_cpa_mn_u32=MONITORING_MIN_TIME_CPA_RST;
+
+	while (cur_p&&next_T(cur_p,&data_p,&next_p))
+	{
+		if (data_p==(Monitor_data*)0)
+		{
+			LOG_E("No data");
+			break;
+		}
+		if (data_p->status_e==MONITORING_STATUS_ALERT)
+		{
+			status_s=MONITORING_DISPLAY_STATUS_ALERT;
+
+			color_u32=draw_vessel_color(data_p->shiptype);
+			vessels_list_one_alert(alert_u8,data_p->label,data_p->time_to_cpa_mn_u32,data_p->shipname,color_u32);
+			alert_u8++;
+			if (data_p->time_to_cpa_mn_u32 < min_time_to_cpa_mn_u32) min_time_to_cpa_mn_u32=data_p->time_to_cpa_mn_u32;
+		}
+
+		/*
+		 * Next
+		 */
+		cur_p=next_p;
+	}
+	Ais_monitoring::display_status=status_s;
 }
 
 
 
 /*
  * -----------------------
+ * display_vessels
+ * -----------------------
+ * For Vessels right panel display,list
+ *   - boats in alert
+ *   - nearest not in alert
+ * -----------------------
+ */
+void Ais_monitoring::list_vessels()
+{
+	List<Monitor_data> *cur_p=(List<Monitor_data>*)0;
+	List<Monitor_data> *next_p=(List<Monitor_data>*)0;
+	Monitor_data *data_p;
+	uint8_t mmsi_u8=0;
+	uint32_t color_u32,color_spd_u32;
+
+	// First display vessels in alert
+	cur_p=orig_p;
+	next_p=(List<Monitor_data>*)0;
+	while (cur_p&&next_T(cur_p,&data_p,&next_p))
+	{
+		if (data_p==(Monitor_data*)0)
+		{
+			LOG_E("No data");
+			break;
+		}
+		//HBL260623
+		if (mmsi_u8==DISPLAY_VESSELS_NBR)
+		{
+			break;
+		}
+		/*
+		 * Caption
+		 */
+		color_u32=draw_vessel_color(data_p->shiptype);
+		color_spd_u32=DISPLAY_RED_RGB;
+		if (data_p->status_e==MONITORING_STATUS_ALERT)
+		{
+			bool old_b=data_p->ticks_u32>(Settings_s.lost_target_ticks_u32/2);
+			vessels_list_vessel(mmsi_u8,data_p->label,data_p->speed_kt,color_u32,color_spd_u32,old_b);
+			mmsi_u8++;
+		}
+		/*
+		 * Next
+		 */
+		cur_p=next_p;
+	}
+
+	// Then display first vessels nearest in the list not in alert
+	cur_p=orig_p;
+	data_p=&orig_p->data;
+	double range_nm_d64=0;
+	uint32_t mmsi_u32=0;
+	while ((mmsi_u8<DISPLAY_VESSELS_NBR)&&data_p)
+	{
+		//HBL260623
+		if (mmsi_u8==DISPLAY_VESSELS_NBR)
+		{
+			break;
+		}
+		min_range(&data_p,&range_nm_d64,&mmsi_u32);
+		if ((data_p!=(Monitor_data*)0)&&(data_p->status_e!=MONITORING_STATUS_ALERT))
+		{
+			bool old_b=data_p->ticks_u32>(Settings_s.lost_target_ticks_u32/2);
+			color_u32=draw_vessel_color(data_p->shiptype);
+			color_spd_u32=DISPLAY_DARKGREY_RGB;
+			//Ais_display::draw_vessels(mmsi_u8,data_p->label,data_p->speed_kt,color_u32,color_spd_u32,old_b);
+			mmsi_u8++;
+		}
+	}
+}
+
+
+
+
+
+/*
+ * -----------------------
  * draw_vessel_color
+ * -----------------------
+ *  Give vessel color depending
+ *  on the type of vessel
  * -----------------------
  */
 uint32_t Ais_monitoring::draw_vessel_color(uint8_t shiptype_u8)

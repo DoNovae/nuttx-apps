@@ -66,7 +66,6 @@ typedef struct
 
 
 
-
 /*
  * Target labels
  */
@@ -122,7 +121,6 @@ static label_img_t Label_img_a[LABEL_MG_NB];
 LV_IMG_DECLARE(Img_target_s);
 LV_IMG_DECLARE(Img_bell_s);
 LV_IMG_DECLARE(Target_canavas_s);
-
 
 
 /*
@@ -303,7 +301,27 @@ void lv_target_bell(lv_obj_t *parent)
 	lv_anim_set_repeat_count(&a,LV_ANIM_REPEAT_INFINITE);
 
 	lv_anim_start(&a);
-	//lv_obj_add_flag(Bell_display_ps,LV_OBJ_FLAG_HIDDEN);
+	lv_obj_add_flag(Bell_display_ps,LV_OBJ_FLAG_HIDDEN);
+}
+
+/*
+ * ===================
+ * lv_target_bell_off
+ * -------------------
+ */
+void lv_target_bell_off(void)
+{
+	lv_obj_add_flag(Bell_display_ps,LV_OBJ_FLAG_HIDDEN);
+}
+
+/*
+ * ===================
+ * lv_target_bell_on
+ * -------------------
+ */
+void lv_target_bell_on(void)
+{
+	lv_obj_clear_flag(Bell_display_ps,LV_OBJ_FLAG_HIDDEN);
 }
 
 
@@ -464,7 +482,8 @@ void lv_target_update(float max_nm_d32,float *scale_px_nm_d32_p)
 	/*
 	 * Cross
 	 */
-	if (Is_cross_b) {
+	if (Is_cross_b)
+	{
 		line_dsc.color=lv_color_hex(DISPLAY_RED_RGB);
 		line[0].x=TARGET_CENTER_POSX-10;line[0].y=TARGET_CENTER_POSY-10;
 		line[1].x=TARGET_CENTER_POSX+10;line[1].y=TARGET_CENTER_POSY+10;
@@ -491,6 +510,12 @@ void lv_target_update(float max_nm_d32,float *scale_px_nm_d32_p)
 	//lv_target_push();
 }
 
+
+/*
+ * ====================
+ * lv_target_push
+ * --------------------
+ */
 void lv_target_push()
 {
 	/*
@@ -505,7 +530,7 @@ void lv_target_push()
  * draw_target_vessel
  * --------------------
  */
-void draw_target_vessel(char label,int16_t posx_i16,int16_t posy_i16,float head_d32,uint32_t color_u32)
+void draw_target_vessel(char label,int16_t posx_i16,int16_t posy_i16,float head_d32,uint32_t color_u32, lv_opa_t opa_e)
 {
 	lv_img_dsc_t * img_p;
 	img_p=label_ing_get(label);
@@ -517,13 +542,17 @@ void draw_target_vessel(char label,int16_t posx_i16,int16_t posy_i16,float head_
 
 	lv_draw_img_dsc_t img_dsc;
 	lv_draw_img_dsc_init(&img_dsc);
-	img_dsc.opa=LV_OPA_COVER;
+	img_dsc.opa=opa_e;
 	img_dsc.recolor=lv_color_hex(color_u32);
-	img_dsc.recolor_opa=LV_OPA_COVER;
+	img_dsc.recolor_opa=LV_OPA_100;
 	img_dsc.angle=head_d32*10;
 	img_dsc.pivot.x=TARGET_LABEL_WIDTH/2;
 	img_dsc.pivot.y=TARGET_LABEL_HEIGHT/2;
 	lv_canvas_draw_img(Target_canvas_ps,TARGET_CENTER_POSX+posx_i16-TARGET_LABEL_WIDTH/2,TARGET_CENTER_POSY-posy_i16-TARGET_LABEL_HEIGHT/2,img_p,&img_dsc);
 }
+
+
+
+
 
 

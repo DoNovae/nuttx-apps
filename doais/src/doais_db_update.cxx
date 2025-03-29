@@ -35,6 +35,7 @@
  */
 #define TIMER_INTERVAL_1MS 1000
 #define TIMER_INTERVAL_1S (1000*TIMER_INTERVAL_1MS)
+#define TICKS_INTERVAL_6S 6
 
 /*
  * --------------------------
@@ -169,6 +170,7 @@ FAR void *db_update_thread(pthread_addr_t arg)
 	while(1)
 	{
 		int poll_ret;
+		static uint8_t ticks_u8=0;
 
 		/*
 		 * Infinite timeout
@@ -191,6 +193,19 @@ FAR void *db_update_thread(pthread_addr_t arg)
 		{
 			orb_copy(ORB_ID(timer_db_update),fds[ORB_DB_IMER_ID].fd,&timer_s);
 			//LOG_D("db_update_thread: timer_s.dummy_u8(%d)\n",timer_s.dummy_u8);
+			/*
+			 * Update ticks every 6s
+			 */
+			ticks_u8++;
+			if (ticks_u8%TICKS_INTERVAL_6S==0)
+			{
+				Monitoring.update_dates_range(1);
+				//LOG_D("db_update_thread: update_dates_range\n");
+			}
+			/*
+			 * Update alarm status
+			 */
+			Monitoring.status_alerts();
 		}
 
 		/*
