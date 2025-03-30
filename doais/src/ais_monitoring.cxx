@@ -971,6 +971,11 @@ void Ais_monitoring::list_vessel_alerts()
 	status_s=MONITORING_DISPLAY_STATUS_NONE;
 	Ais_monitoring::min_time_to_cpa_mn_u32=MONITORING_MIN_TIME_CPA_RST;
 
+	/*
+	 * Reset panel
+	 */
+	vessels_list_one_alert(-1,0,0,0,0);
+
 	while (cur_p&&next_T(cur_p,&data_p,&next_p))
 	{
 		if (data_p==(Monitor_data*)0)

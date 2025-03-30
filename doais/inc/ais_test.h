@@ -29,7 +29,7 @@ public:
     void init(const StationData &station_data_s,const gps_data_t & gps_s);
     void set(const gps_data_t * gps_info_s);
     void turn(const int32_t direction_i32);
-    void ais_ready_to_send();
+    void ais_ready_to_send(int ptopic_ais);
 	inline Ais_test_vessel(){;};
 	void new_postion(float azimuth_d,float dist_nm,float speed_kt,float direction);
 };
@@ -51,7 +51,7 @@ public:
 	static Ais_test_vessel vessel1,vessel2,vessel3;
 	static void init();
 	static void set_direction(int32_t direction_i32);
-	static void ais_ready_to_send();
+	static void ais_ready_to_send(int ptopic_ais);
 
 	static int8_t on_off;
 };

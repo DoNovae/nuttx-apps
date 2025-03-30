@@ -19,8 +19,6 @@
  */
 static ORB_DEFINE(ais_db_update,struct orb_ais_db_update_s,0); // const struct orb_metadata g_orb_ais_db_update=...
 
-
-
 /*
  * -----------------------
  * AIS test
@@ -95,13 +93,13 @@ void Ais_test_bench::set_direction(int32_t direction_i32) {
 }
 
 
-void Ais_test_bench::ais_ready_to_send()
+void Ais_test_bench::ais_ready_to_send(int ptopic_ais)
 {
-	vessel1.ais_ready_to_send();
+	vessel1.ais_ready_to_send(ptopic_ais);
 	usleep(1000*1000);
-	vessel2.ais_ready_to_send();
+	vessel2.ais_ready_to_send(ptopic_ais);
 	usleep(1000*1000);
-	vessel3.ais_ready_to_send();
+	vessel3.ais_ready_to_send(ptopic_ais);
 }
 
 /*
@@ -115,8 +113,9 @@ void Ais_test_vessel::init(const StationData &station_s,const gps_data_t & gps_s
 	msg18=AISMessage18();
 	msg24A=AISMessage24A();
 	msg24B=AISMessage24B();
-	station_data_s=station_s;
+	memcpy((void*)&station_data_s,(void*)&station_s,sizeof(StationData));
 	memcpy((void*)&gps_i_s,(void*)&gps_s,sizeof(gps_data_t));
+	LOG_D("Ais_test_vessel.init: shipname(%s)",station_data_s.shipname);
 }
 
 void Ais_test_vessel::new_postion(float azimuth_d,float dist_nm,float speed_kt,float direction_d)
@@ -129,7 +128,7 @@ void Ais_test_vessel::new_postion(float azimuth_d,float dist_nm,float speed_kt,f
 	gps_i_s.lon_d=(int32_t)((float)nmea_radian2degree(end_pos.lon_r)*LAT_LONG_SCALE);
 	gps_i_s.speed_kt=speed_kt;
 	gps_i_s.heading_d=direction_d;
-	LOG_W("start_pos(lon %.2f,lat %.2f) - end_pos(lon %.2f,lat %.2f)",(float)Gps_info_s.lon_d/LAT_LONG_SCALE,
+	LOG_D("start_pos(lon %.2f,lat %.2f) - end_pos(lon %.2f,lat %.2f)",(float)Gps_info_s.lon_d/LAT_LONG_SCALE,
 			(float)Gps_info_s.lat_d/LAT_LONG_SCALE,(float)gps_i_s.lon_d/LAT_LONG_SCALE,(float)gps_i_s.lat_d/LAT_LONG_SCALE);
 }
 
@@ -148,18 +147,11 @@ void Ais_test_vessel::set(const gps_data_t * gps_s)
 	gps_i_s.heading_d=gps_s->heading_d;
 }
 
-static TXPacket tx_packet_s(MAX_AIS_RX_PACKET_SIZE);
-static struct orb_ais_db_update_s ais_s;
 
-void Ais_test_vessel::ais_ready_to_send()
+void Ais_test_vessel::ais_ready_to_send(int ptopic_ais)
 {
-	int ptopic_ais;
-
-	ptopic_ais=orb_advertise_queue(ORB_ID(ais_db_update),&ais_s,ORB_AIS_DB_UPDATE_QUEUE_SIZE);
-	if (ptopic_ais<0)
-	{
-		LOG_E("ais_ready_to_send: orb_advertise_queue advertise failed: %d",errno);
-	}
+	static TXPacket tx_packet_s(MAX_AIS_RX_PACKET_SIZE);
+	static struct orb_ais_db_update_s ais_s;
 
 	tx_packet_s.reset();
 	msg18.encode(station_data_s,gps_i_s,tx_packet_s);
@@ -170,6 +162,7 @@ void Ais_test_vessel::ais_ready_to_send()
 	orb_publish(ORB_ID(ais_db_update),ptopic_ais,&ais_s);
 
 	tx_packet_s.reset();
+	LOG_D("Ais_test_vessel.ais_ready_to_send: shipname(%s)",station_data_s.shipname);
 	msg24A.encode(station_data_s,gps_i_s,tx_packet_s);
 	tx_packet_s.ais_finalize();
 	memcpy(ais_s.packet_au8,tx_packet_s.mPacket,ORB_AIS_PACKET);
@@ -184,8 +177,6 @@ void Ais_test_vessel::ais_ready_to_send()
 	ais_s.id_u8=2;
 	LOG_D("ais_ready_to_send: publish msg24B");
 	orb_publish(ORB_ID(ais_db_update),ptopic_ais,&ais_s);
-
-	//orb_unadvertise(ptopic_ais);
 }
 
 

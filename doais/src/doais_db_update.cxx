@@ -46,9 +46,6 @@ gps_data_t Gps_info_s;
 StationData Station_data_s;
 Ais_monitoring Monitoring(AIS_CHAINED_LIST_MAX_SZ,AIS_CHAINED_LABEL_MAX_SZ);
 
-
-
-
 /*
  * Cf doais_main.c
  */
@@ -56,14 +53,11 @@ extern "C" ORB_DEFINE(timer_db_update,struct orb_timer_db_update_s,0);
 extern "C" ORB_DEFINE(ais_db_update,struct orb_ais_db_update_s,0);
 
 
-
-
 /*
  * --------------------------
  * Prototypes
  * --------------------------
  */
-
 
 
 /*
@@ -95,6 +89,8 @@ extern Ais_monitoring Monitoring;
 
 static RXPacket rx_packet_s(MAX_AIS_RX_PACKET_SIZE);
 static struct orb_ais_db_update_s ais_s;
+
+
 
 FAR void *db_update_thread(pthread_addr_t arg)
 {
@@ -131,15 +127,6 @@ FAR void *db_update_thread(pthread_addr_t arg)
 	fds[ORB_DB_IMER_ID].fd     = sfd;
 	fds[ORB_DB_IMER_ID].events = POLLIN;
 
-	/*
-	 * Advertise ais_db_update
-	 */
-	sfd=orb_advertise_queue(ORB_ID(ais_db_update),&ais_s,ORB_AIS_DB_UPDATE_QUEUE_SIZE);
-	if (sfd<0)
-	{
-		LOG_E("db_update_thread: advertise failed: %d",errno);
-		return NULL;
-	}
 
 	/*
 	 * Subscribe ais_db_update
@@ -259,53 +246,53 @@ FAR void *db_update_thread(pthread_addr_t arg)
  * rx_ais_decode
  * --------------------------
  */
-bool rx_ais_decode(RXPacket &rx_packet_s, uint8_t ch_u8)
+bool rx_ais_decode(RXPacket &rx_pkt_s, uint8_t ch_u8)
 {
 	bool newmsg_ok=false;
 	Monitor_data* monit_p=0;
-	if (ch_u8==0xFF) ch_u8=rx_packet_s.mChannel;
-	rx_packet_s.ais_finalize();
+	if (ch_u8==0xFF) ch_u8=rx_pkt_s.mChannel;
+	rx_pkt_s.ais_finalize();
 
-	if (rx_packet_s.checkCRC())
+	if (rx_pkt_s.checkCRC())
 	{
-		LOG_I("rx_packet_s.ais_type(%d)",rx_packet_s.ais_type());
-		switch (rx_packet_s.ais_type())
+		LOG_I("rx_pkt_s.ais_type(%d)",rx_pkt_s.ais_type());
+		switch (rx_pkt_s.ais_type())
 		{
 		case MSG_1:
 		case MSG_2:
 		case MSG_3:
 		{
 			AISMessage123 msg123;
-			if (msg123.decode(rx_packet_s,ch_u8))
+			if (msg123.decode(rx_pkt_s,ch_u8))
 			{
 				newmsg_ok=Monitoring.update(&msg123,&monit_p,ch_u8);
-				msg123.nmea_encode(rx_packet_s);
+				msg123.nmea_encode(rx_pkt_s);
 			}
 			break;
 		}
 		case MSG_18:
 		{
 			AISMessage18 msg18;
-			if (msg18.decode(rx_packet_s,ch_u8))
+			if (msg18.decode(rx_pkt_s,ch_u8))
 			{
 				newmsg_ok=Monitoring.update(&msg18,&monit_p,ch_u8);
-				msg18.nmea_encode(rx_packet_s);
+				msg18.nmea_encode(rx_pkt_s);
 			}
 			break;
 		}
 		case MSG_24:
 		{
-			uint8_t partno=rx_packet_s.get_partno(rx_packet_s);
+			uint8_t partno=rx_pkt_s.get_partno(rx_pkt_s);
 			switch(partno)
 			{
 			case PARTNO_24A:
 			{
 				AISMessage24A msg24A;
 				LOG_D("PARTNO_24A");
-				if (msg24A.decode(rx_packet_s,ch_u8)) {
+				if (msg24A.decode(rx_pkt_s,ch_u8)) {
 					if (Monitoring.is_mmsi(msg24A.mmsi,&monit_p)){
 						Monitoring.update_from_msg(&msg24A,monit_p);
-						msg24A.nmea_encode(rx_packet_s);
+						msg24A.nmea_encode(rx_pkt_s);
 						newmsg_ok=true;
 					}
 				}
@@ -315,10 +302,10 @@ bool rx_ais_decode(RXPacket &rx_packet_s, uint8_t ch_u8)
 			{
 				AISMessage24B msg24B;
 				LOG_D("PARTNO_24B");
-				if (msg24B.decode(rx_packet_s,ch_u8)) {
+				if (msg24B.decode(rx_pkt_s,ch_u8)) {
 					if (Monitoring.is_mmsi(msg24B.mmsi,&monit_p)){
 						Monitoring.update_from_msg(&msg24B,monit_p);
-						msg24B.nmea_encode(rx_packet_s);
+						msg24B.nmea_encode(rx_pkt_s);
 						newmsg_ok=true;
 					}
 				}
@@ -326,7 +313,7 @@ bool rx_ais_decode(RXPacket &rx_packet_s, uint8_t ch_u8)
 			}
 			default:
 			{
-				LOG_W("AISMessage24A mmsi(%d) - error partno(%d)",rx_packet_s.ais_mmsi(),partno);
+				LOG_W("AISMessage24A mmsi(%d) - error partno(%d)",rx_pkt_s.ais_mmsi(),partno);
 				return false;
 			}
 			}
@@ -334,7 +321,7 @@ bool rx_ais_decode(RXPacket &rx_packet_s, uint8_t ch_u8)
 		}
 		default:
 		{
-			LOG_V("mmsi(%d) - type(%d) not processed",rx_packet_s.ais_mmsi(),rx_packet_s.ais_type());
+			LOG_V("mmsi(%d) - type(%d) not processed",rx_pkt_s.ais_mmsi(),rx_pkt_s.ais_type());
 		}
 		}
 	}

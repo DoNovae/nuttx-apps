@@ -64,17 +64,25 @@ public:
 	inline static uint32_t double2lon_d(const double lon){return Utils::coordinate_uint32(lon,28);};
 	inline static uint32_t double2lat_d(const double lat){return Utils::coordinate_uint32(lat,27);};
 
-    inline void set_shipname(const char* str_pa){
+	 void set_shipname(const char* str_pa);
+	 void set_callsign(const char* str_pa);
+	 void set_vendorid(const char* str_pa);
+    /*
+     void set_shipname(const char* str_pa)
+    {
     	uint8_t len_u8=strlen(str_pa);
+    	LOG_D("len_u8(%d) - str_pa: %s",len_u8,str_pa);
     	strncpy(shipname,str_pa,STATION_SHIP_NAME_SZ-1);
-    	for (uint8_t i=len_u8;i<STATION_SHIP_NAME_SZ-1;i++){
+    	for (uint8_t i=len_u8;i<STATION_SHIP_NAME_SZ-1;i++)
+    	{
     		shipname[i]='@';
     	}
     	shipname[STATION_SHIP_NAME_SZ-1]=0;
     	LOG_D("shipname: %s",shipname);
     };
 
-    inline void set_callsign(const char* str_pa){
+     void set_callsign(const char* str_pa)
+    {
     	uint8_t len_u8=strlen(str_pa);
     	strncpy(callsign,str_pa,STATION_CALLSIGN_SZ-1);
     	for (uint8_t i=len_u8;i<STATION_CALLSIGN_SZ-1;i++){
@@ -84,15 +92,18 @@ public:
     	LOG_D("callsign: %s",callsign);
     };
 
-    inline void set_vendorid(const char* str_pa){
+     void set_vendorid(const char* str_pa)
+    {
     	uint8_t len_u8=strlen(str_pa);
     	strncpy(vendorid,str_pa,AIS_VENDORID_SZ-1);
-    	for (uint8_t i=len_u8;i<AIS_VENDORID_SZ-1;i++){
+    	for (uint8_t i=len_u8;i<AIS_VENDORID_SZ-1;i++)
+    	{
     		vendorid[i]='@';
     	}
     	vendorid[AIS_VENDORID_SZ-1]=0;
     	LOG_D("vendorid: %s",vendorid);
     };
+    */
 
 	/*
 	 * NMEA

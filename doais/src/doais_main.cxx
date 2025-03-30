@@ -544,7 +544,7 @@ void indev_read_cb(lv_indev_drv_t *indevDriver,lv_indev_data_t *indevData)
 		{
 			indevData->point.x=sample.point[0].x;
 			indevData->point.y=sample.point[0].y;
-			LOG_D("indev_read_cb: point.x(%d) - y(%d)",indevData->point.x,indevData->point.y);
+			//LOG_D("indev_read_cb: point.x(%d) - y(%d)",indevData->point.x,indevData->point.y);
 		}
 	}
 	//close(fd);

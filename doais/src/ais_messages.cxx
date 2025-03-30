@@ -254,15 +254,53 @@ uint8_t AISMessage::nmea_crc(const char* buff)
  * send
  * -------------------
  */
-void AISMessage::nmea_send(char* nmea_sentence6_a){
-	LOG_D("%s\n",nmea_sentence6_a);
+void AISMessage::nmea_send(char* nmea_6_a)
+{
+	LOG_D("%s\n",nmea_6_a);
 	/*
 	if (ais_wifi::state==AIS_WIFI_ON)
 	{
-		ais_wifi::wifi_udp_write(nmea_sentence6_a,(int)strlen(nmea_sentence6_a));
+		ais_wifi::wifi_udp_write(nmea_6_a,(int)strlen(nmea_6_a));
 	}
 	*/
 }
+
+
+void AISMessage::set_shipname(const char* str_pa)
+{
+	uint8_t len_u8=strlen(str_pa);
+	LOG_D("len_u8(%d) - str_pa: %s",len_u8,str_pa);
+	strncpy(shipname,str_pa,STATION_SHIP_NAME_SZ-1);
+	for (uint8_t i=len_u8;i<STATION_SHIP_NAME_SZ-1;i++)
+	{
+		shipname[i]='@';
+	}
+	shipname[STATION_SHIP_NAME_SZ-1]=0;
+	LOG_D("shipname: %s",shipname);
+};
+
+void AISMessage::set_callsign(const char* str_pa)
+{
+	uint8_t len_u8=strlen(str_pa);
+	strncpy(callsign,str_pa,STATION_CALLSIGN_SZ-1);
+	for (uint8_t i=len_u8;i<STATION_CALLSIGN_SZ-1;i++){
+		callsign[i]='@';
+	}
+	callsign[STATION_CALLSIGN_SZ-1]=0;
+	LOG_D("callsign: %s",callsign);
+};
+
+void AISMessage::set_vendorid(const char* str_pa)
+{
+	uint8_t len_u8=strlen(str_pa);
+	strncpy(vendorid,str_pa,AIS_VENDORID_SZ-1);
+	for (uint8_t i=len_u8;i<AIS_VENDORID_SZ-1;i++)
+	{
+		vendorid[i]='@';
+	}
+	vendorid[AIS_VENDORID_SZ-1]=0;
+	LOG_D("vendorid: %s",vendorid);
+};
 
 
 /*
@@ -742,6 +780,10 @@ AISMessage24A::AISMessage24A()
 
 void AISMessage24A::encode(const StationData &station,const gps_data_t &gps_info_ps,TXPacket &packet)
 {
+	mmsi=station.mmsi;
+	LOG_D("AISMessage24A::encode: shipname(%s)",station.shipname);
+	set_shipname(station.shipname);
+	LOG_D("AISMessage24A::encode: shipname(%s)",shipname);
 	encode(packet);
 }
 
@@ -1311,7 +1353,7 @@ void AISMessage12::encode(TXPacket &packet)
  */
 bool AISMessage12::decode(const RXPacket &packet,uint8_t ch_u8)
 {
-	uint32_t d_mmsi=0;
+	//HBL310425 uint32_t d_mmsi=0;
 	channel_u8=ch_u8;
 
 	type=(uint8_t)packet.field2u8_msbfirst(0,6);
@@ -1330,7 +1372,7 @@ bool AISMessage12::decode(const RXPacket &packet,uint8_t ch_u8)
 	packet.field2str_msbfirst(txt_ac,MSG12_TXT_SZ,72,MSG12_TXT_SZ*6);
 	txt_ac[MSG12_TXT_SZ]=0;
 
-	LOG_V("Type(%d) - repeat(%d) - MMSI(%d) - d_mmsi(%d) - Ch(%d) - Text: %s",type,repeat,mmsi,d_mmsi,channel_u8,txt_ac);
+	LOG_V("Type(%d) - repeat(%d) - MMSI(%d) - d_mmsi(%d) - Ch(%d) - Text: %s",type,repeat,mmsi,d_mmsil,channel_u8,txt_ac);
 
 	return true;
 }

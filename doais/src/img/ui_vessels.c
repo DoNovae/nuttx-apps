@@ -14,7 +14,7 @@
  * -------------------
  */
 #define VESSELS_PANEL_WIDTH  153
-#define VESSELS_PANEL_HEIGHT 60
+#define VESSELS_PANEL_HEIGHT 134
 #define VESSELS_PANEL_STR_LEN 100
 
 #define VESSELS_PANEL1_POSX 4
@@ -22,6 +22,10 @@
 
 #define VESSELS_PANEL2_POSX 163
 #define VESSELS_PANEL2_POSY 60
+
+#define VESSELS_ALERT_CHR_PER_LINE 17
+#define VESSELS_ALERT_LINE_NBR 6
+#define VESSELS_ALERT_STR_LEN VESSELS_ALERT_CHR_PER_LINE*VESSELS_ALERT_LINE_NBR
 
 
 typedef enum
@@ -44,7 +48,7 @@ void vessels_list_one_vessel(vessels_canvas_e canvas_e,int16_t id_i16,char label
  * Globals
  * -------------------
  */
-static char Panel1_str[VESSELS_PANEL_STR_LEN];
+static char Panel1_str[VESSELS_ALERT_STR_LEN];
 static char Panel2_str[VESSELS_PANEL_STR_LEN];
 static lv_obj_t *Vessels_display_ps;
 static lv_obj_t *Vessels_panel1_ps, *Vessels_panel2_ps;
@@ -67,13 +71,18 @@ void lv_vessels_display(lv_obj_t *parent)
 	Vessels_display_ps=lv_img_create(parent);
 	lv_img_set_src(Vessels_display_ps,&Img_vessels_s);
 
+	/*
+	 * Reset panel
+	 */
+	memset((void*)Panel1_str,' ',VESSELS_PANEL_STR_LEN);
 	Vessels_panel1_ps = lv_label_create(parent);
 	lv_obj_set_style_text_font(Vessels_panel1_ps,&lv_font_doais_16,0);
 	lv_obj_set_style_text_color(Vessels_panel1_ps,lv_color_hex(BLACK_RGB),0);
 
 	lv_obj_set_width(Vessels_panel1_ps,VESSELS_PANEL_WIDTH);
-	lv_obj_set_style_text_align(Vessels_panel1_ps, LV_TEXT_ALIGN_LEFT, 0);
-	lv_obj_align(Vessels_panel1_ps, LV_ALIGN_TOP_LEFT,VESSELS_PANEL1_POSX,VESSELS_PANEL1_POSY);
+	lv_obj_set_style_text_align(Vessels_panel1_ps,LV_TEXT_ALIGN_LEFT,0);
+	lv_obj_align(Vessels_panel1_ps,LV_ALIGN_TOP_LEFT,VESSELS_PANEL1_POSX,VESSELS_PANEL1_POSY);
+	lv_label_set_text_static(Vessels_panel1_ps,Panel1_str);
 
 	lv_display_cmd(parent);
 	lv_display_status(parent);
@@ -91,10 +100,18 @@ void lv_vessels_display(lv_obj_t *parent)
  *
  */
 #define DISPLAY_ALERT_SZ 5
+
 static uint32_t time_to_cpa_mn_au32[DISPLAY_ALERT_SZ];
 
 void vessels_list_one_alert(int16_t id_i16,char label,uint32_t time_to_cpa_mn_u32,char * name_pc,uint16_t color_u16)
 {
+	if (id_i16==-1)
+	{
+		memset((void*)Panel1_str,' ',VESSELS_PANEL_STR_LEN);
+		lv_label_set_text_static(Vessels_panel1_ps,Panel1_str);
+		return;
+	}
+
 	if (id_i16<DISPLAY_ALERT_SZ)
 	{
 		time_to_cpa_mn_au32[id_i16]=time_to_cpa_mn_u32;
@@ -123,7 +140,8 @@ void vessels_list_one_alert(int16_t id_i16,char label,uint32_t time_to_cpa_mn_u3
 		 */
 /*		alert.setCursor(1,(7+26*id_i16));
 		alert.setTextColor(TFT_WHITE,TFT_WHITE);
-		alert.printf("%-20.20s","                             ");*/
+		alert.printf("%-20.20s","                             ");
+*/
 	}
 	/*
 	 * Uppercase to lowercase
@@ -152,13 +170,17 @@ void vessels_list_one_alert(int16_t id_i16,char label,uint32_t time_to_cpa_mn_u3
 	alert.setTextColor(DISPLAY_DARKGREY,TFT_WHITE);
 	alert.printf("%-12.12s",name_pc);// left alignment 14 char min - truncated 14 char
 */
-	memset((void*)Panel1_str,0,VESSELS_PANEL_STR_LEN);
-	//sprintf(Panel1_str,"%03dk%03d" LV_SYMBOL_DEGREE,spd_u16,heading_u16);
-	sprintf(Panel1_str,"%c-%2d%-12.12s",label,time_to_cpa_mn_u32,name_pc);
+	int16_t pos_i16=id_i16*VESSELS_ALERT_CHR_PER_LINE;
+	if (pos_i16>=VESSELS_ALERT_STR_LEN-VESSELS_ALERT_CHR_PER_LINE)
+	{
+		LOG_E("vessels_list_one_alert: ERR out range id(%d)",id_i16);
+		return;
+	}
+	//LOG_D("vessels_list_one_alert: pos_i16(%d)",pos_i16);
+	sprintf(Panel1_str+pos_i16,"%c-%2d\'%-11.11s",label,time_to_cpa_mn_u32,name_pc);
+	Panel1_str[pos_i16+VESSELS_ALERT_CHR_PER_LINE]='\n';
 	lv_label_set_text_static(Vessels_panel1_ps,Panel1_str);
 }
-
-
 
 
 

@@ -71,6 +71,8 @@ static const char *injected_commands_P = NULL;
 ORB_DECLARE(ais_db_update);// Cf doais_db_update.c
 ORB_DECLARE(mng_msg);// Cf doais_mng.c
 
+static int Ptopic_ais;
+
 /*
  * --------------------------
  * Prototypes
@@ -444,7 +446,6 @@ inline void gcode_M603() {
  */
 inline void gcode_M700()
 {
-	int fd;
 	uint32_t bauds_u32=code_seen('B')?code_value_ulong():9600;
 	printf("GPS serial bauds(%d)\n",bauds_u32);
 	Settings_s.gps_bauds_u32=bauds_u32;
@@ -496,6 +497,10 @@ void gcode_M312()
 	Gps_info_s.speed_kt=((float)65/(float)10.0);
 	Gps_info_s.heading_d=0;
 	Gps_info_s.fix=2;
+
+	Station_data_s.set_shipname((char*)"FISH-SAINT_MALO");
+	Station_data_s.mmsi=1111;
+	Station_data_s.shiptype=FISH;
 
 	/*
 	 * Test complete
@@ -651,7 +656,6 @@ void gcode_M312()
 
 	if(1)
 	{
-		int ptopic_ais;
 		memcpy(ais_s.packet_au8,tx_packet_s.mPacket,ORB_AIS_PACKET);
 		ais_s.id_u8=0;
 		LOG_D("gcode_M312: publish (%d)",ais_s.id_u8);
@@ -662,18 +666,14 @@ void gcode_M312()
 			return;
 		}*/
 
-		ptopic_ais=orb_advertise_queue(ORB_ID(ais_db_update),&ais_s,ORB_AIS_DB_UPDATE_QUEUE_SIZE);
-		if (ptopic_ais<0)
+		if (Ptopic_ais<0)
 		{
-			LOG_E("gcode_M312: orb_ais_db_update advertise failed: %d",errno);
+			LOG_E("gcode_M312: orb_ais_db_update advertise failed");
+			return;
 		}
 		LOG_D("gcode_M312: publish (%d)",ais_s.id_u8);
-		orb_publish(ORB_ID(ais_db_update),ptopic_ais,&ais_s);
-
-		//orb_unadvertise(ptopic_ais);
+		orb_publish(ORB_ID(ais_db_update),Ptopic_ais,&ais_s);
 	}
-
-
 }
 
 /*
@@ -684,7 +684,7 @@ void gcode_M312()
  */
 void gcode_M315()
 {
-	int16_t direction_i16, tx_i16;
+	int16_t direction_i16;
 	direction_i16=code_seen('D')?code_value_int():0;
 	/*
 	 * Nantes
@@ -713,7 +713,12 @@ void gcode_M315()
 	 * Test bench
 	 */
 	Ais_test_bench::set_direction(direction_i16%360);
-	Ais_test_bench::ais_ready_to_send();
+	if (Ptopic_ais<0)
+	{
+		LOG_E("gcode_M315: orb_ais_db_update advertise failed");
+		return;
+	}
+	Ais_test_bench::ais_ready_to_send(Ptopic_ais);
 }
 
 
@@ -726,22 +731,21 @@ void gcode_M315()
  * M316 T18 R2 A90 H270 M1111 S60 C250 V45
  * M316 T18 R2 A315 H135 M1111 S60 C250 V45
  *
- * Quadrant 1 : M316 T18 R4 A90 H315 M1111 S60 C45 V60
+ * Quadrant 1: doais_mng "M316 T18 R4 A90 H315 M1111 S60 C45 V60"
  *    - relat_speed_kt(8.5) -> sqrt(2)*6
  *    - rel_heading_d(225.0)
  *    - rel_pos(3.993;-0.003NM) - rel_speed_kt(-8.485;0.000Kt)
  *    - cpa_d64(0.0NM) - cross(1)
  *    - time_to_cpa_mn_u32(28)
- * Quadrant 2 : M316 T18 R4 A135 H270 M1111 S60 C180 V60
- * Quadrant 3 : M316 T18 R4 A225 H90 M1111 S60 C180 V60
- * Quadrant 4 : M316 T18 R4 A315 H90 M1111 S60 C0 V60
+ * Quadrant 2: M316 T18 R4 A135 H270 M1111 S60 C180 V60
+ * Quadrant 3: M316 T18 R4 A225 H90 M1111 S60 C180 V60
+ * Quadrant 4: M316 T18 R4 A315 H90 M1111 S60 C0 V60
  *
  * --------------------------
  */
 void gcode_M316()
 {
 	double range_nm_d64;
-	uint8_t msg_type_u8=code_seen('T')?code_value_ushort():18;
 	uint32_t mmsi_u32=code_seen('M')?code_value_ulong():1234;
 	int32_t heading_d_i32=code_seen('H')?code_value_int():0;
 	uint32_t range_nm_u32=code_seen('R')?code_value_ulong():2;
@@ -766,15 +770,15 @@ void gcode_M316()
 	Gps_info_s.heading_d=myheading_d_i32;
 	Gps_info_s.fix=2;
 
-	station_s.set_shipname((char*)"TETE D'ARTICHAUT      ");
+	station_s.set_shipname((char*)"123412341234");
 	station_s.mmsi=mmsi_u32;
 	station_s.shiptype=SAILING;
 	vessel.init(station_s,Gps_info_s);
 	vessel.new_postion((double)azimut_d_i32,(double)range_nm_u32,(float)speed_kt_u32/(float)10.0,(double)heading_d_i32);
-
 	range_nm_d64=Ais_monitoring::range3_nm((float)vessel.gps_i_s.lon_d/LAT_LONG_SCALE,(float)vessel.gps_i_s.lat_d/LAT_LONG_SCALE);
+
 	LOG_W("range_nm_d64(%.1f)",range_nm_d64);
-	vessel.ais_ready_to_send();
+	vessel.ais_ready_to_send(Ptopic_ais);
 }
 
 
@@ -932,23 +936,38 @@ void ok_to_send(){
  */
 #define ORB_SERIAL_POLL_NB 1
 #define ORB_SERIAL_TIMEOUT (-1)
+
 FAR void *serial_thread(pthread_addr_t arg)
 {
 	struct pollfd fds[1];
-	struct orb_mng_msg_s msg_s;
+	static struct orb_mng_msg_s msg_s;
 	bool updated;
-	int sfd;
+	int sfd, afd;
 	int ret;
 
-	// Advertise
-	sfd = orb_advertise_queue(ORB_ID(mng_msg),&msg_s,ORB_AIS_DB_UPDATE_QUEUE_SIZE);
-	if (sfd < 0)
+	/*
+	 * Advertise ais_db_update
+	 */
+	Ptopic_ais=orb_advertise_queue(ORB_ID(ais_db_update),&ais_s,ORB_AIS_DB_UPDATE_QUEUE_SIZE);
+	if (Ptopic_ais<0)
+	{
+		LOG_E("ais_ready_to_send: orb_advertise_queue advertise failed: %d",errno);
+		return 0;
+	}
+
+	/*
+	 * Advertise mng_msg
+	 */
+	afd = orb_advertise_queue(ORB_ID(mng_msg),&msg_s,ORB_AIS_DB_UPDATE_QUEUE_SIZE);
+	if (afd < 0)
 	{
 		LOG_E("serial_thread: advertise failed: %d",errno);
 		return 0;
 	}
 
-	// Subscribe
+	/*
+	 * Subscribe mng_msg
+	 */
 	if ((sfd=orb_subscribe(ORB_ID(mng_msg)))<0)
 	{
 		LOG_E("serial_thread: subscribe failed: %d\n", errno);
@@ -1009,10 +1028,17 @@ FAR void *serial_thread(pthread_addr_t arg)
 	}
 
 	// unsubscribe
+	ret = orb_unsubscribe(Ptopic_ais);
+	if (ret != OK)
+	{
+		LOG_E("serial_task: orb_unsubscribe ais_db_update failed: %i", ret);
+		return NULL;
+	}
+
 	ret = orb_unsubscribe(fds[0].fd);
 	if (ret != OK)
 	{
-		LOG_E("serial_task: orb_unsubscribe failed: %i", ret);
+		LOG_E("serial_task: orb_unsubscribe mng_msg: %i", ret);
 		return NULL;
 	}
 	return NULL;

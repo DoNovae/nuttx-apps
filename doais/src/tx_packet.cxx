@@ -176,11 +176,13 @@ void TXPacket::ais_nrziEncode()
 	ASSERT(index_i16<=(int16_t)bit_size_i16);
 #endif
 
-	int16_t bit_nb_i16=index_i16;
+	int16_t bit_nb_i16=index_i16,i;// HBL310425
 	reset_mPacket();
 	prevBit=AIS_NRZI_INIT;
-	for (int16_t i=0,index_i16=0;i<bit_nb_i16;i++,index_i16++) {
-		if (bit_payload_pu8[i]){
+	for (i=0,index_i16=0;i<bit_nb_i16;i++,index_i16++)
+	{
+		if (bit_payload_pu8[i])
+		{
 			mPacket[index_i16>>3]|=prevBit<<(index_i16%8);
 		} else
 		{
