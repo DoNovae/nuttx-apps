@@ -194,8 +194,8 @@ void lv_displays_update(void)
 
 	case DISPLAY_VESSELS_ID:
 		nxmutex_lock(&Monitoring_data_mutex_s);
-		Monitoring.list_vessel_alerts();
 		Monitoring.list_vessels();
+		Monitoring.list_vessel_alerts();
 		nxmutex_unlock(&Monitoring_data_mutex_s);
 		break;
 

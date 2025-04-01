@@ -91,7 +91,7 @@
 #define DISPLAY_NAVY_RGB     DARKCYAN_RGB
 
 
-#define DISPLAY_VESSELS_NBR 10
+#define DISPLAY_VESSELS_NBR (2*7)
 
 
 
@@ -367,6 +367,10 @@ void lv_target_bell_on(void);
 
 void vessels_list_one_alert(int16_t id_i16,char label,uint32_t time_to_cpa_mn_u32,char * name_pc,uint16_t color_u16);
 void vessels_list_vessel(int16_t id_u16,char label,uint32_t speed_kt,uint16_t color_u16,uint16_t color_spd_u16, bool old_b);
+void vessels_push();
+void vessels_reset();
+void vessels_alert_push();
+void vessels_alert_reset();
 
 /**
  * ==================
